@@ -1,0 +1,26 @@
+{
+  "name": "tinyclaw-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "plugins/*"
+  ],
+  "scripts": {
+    "dev": "bun run --cwd apps/cli dev",
+    "build": "bun run build:packages && bun run build:apps",
+    "build:packages": "bun run --cwd packages/learning build && bun run --cwd packages/core build",
+    "build:apps": "bun run --cwd apps/web build && bun run --cwd apps/cli build",
+    "start": "bun run --cwd apps/cli start",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "@wgtechlabs/log-engine": "^2.2.0"
+  }
+}

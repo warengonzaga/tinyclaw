@@ -1,0 +1,11 @@
+{
+  "name": "@tinyclaw/learning",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "dev": "bun run --watch src/index.ts"
+  }
+}

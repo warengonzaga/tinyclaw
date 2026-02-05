@@ -1,0 +1,144 @@
+/**
+ * Heartware Context Loader
+ *
+ * Loads heartware configuration files into agent context in priority order:
+ * 1. SOUL.md - Personality first
+ * 2. IDENTITY.md - Who the agent is
+ * 3. USER.md - Who the user is
+ * 4. AGENTS.md - Operating instructions
+ * 5. TOOLS.md - Tool usage notes
+ * 6. Recent memory files (today + yesterday)
+ *
+ * This context is injected into the agent's system prompt on startup
+ */
+
+import type { HeartwareManager } from './manager.js';
+
+/**
+ * Load heartware context for injection into agent system prompt
+ *
+ * @param manager - Initialized HeartwareManager instance
+ * @returns Formatted context string for system prompt
+ */
+export async function loadHeartwareContext(
+  manager: HeartwareManager
+): Promise<string> {
+  const loadOrder = [
+    'SOUL.md',      // Load first - defines personality
+    'IDENTITY.md',  // Who the agent is
+    'USER.md',      // Who the user is
+    'AGENTS.md',    // Operating instructions
+    'TOOLS.md'      // Tool usage notes
+  ];
+
+  let context = '\n\n=== HEARTWARE CONFIGURATION ===\n';
+
+  // Load configuration files in priority order
+  for (const file of loadOrder) {
+    try {
+      const content = await manager.read(file);
+      context += `\n\n--- ${file} ---\n${content}`;
+    } catch (err) {
+      // File might not exist yet (first run)
+      context += `\n\n--- ${file} ---\n[Not configured yet]`;
+    }
+  }
+
+  // Load recent memories (today + yesterday)
+  try {
+    const recentMemories = await loadRecentMemories(manager, 1);
+    if (recentMemories) {
+      context += `\n\n--- Recent Memory ---\n${recentMemories}`;
+    }
+  } catch (err) {
+    // No recent memories - this is fine
+  }
+
+  context += '\n\n=== END HEARTWARE CONFIGURATION ===\n';
+
+  return context;
+}
+
+/**
+ * Load recent memory files (today + N days back)
+ *
+ * @param manager - HeartwareManager instance
+ * @param daysBack - Number of days to look back (0 = today only)
+ * @returns Combined memory content or empty string
+ */
+async function loadRecentMemories(
+  manager: HeartwareManager,
+  daysBack: number
+): Promise<string> {
+  let output = '';
+  const now = new Date();
+
+  for (let i = 0; i <= daysBack; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    const filename = `memory/${dateStr}.md`;
+
+    try {
+      const content = await manager.read(filename);
+      output += `\n${content}\n`;
+    } catch (err) {
+      // File doesn't exist - skip
+      continue;
+    }
+  }
+
+  return output;
+}
+
+/**
+ * Load specific memory file by date
+ *
+ * @param manager - HeartwareManager instance
+ * @param date - Date in YYYY-MM-DD format
+ * @returns Memory content or null if not found
+ */
+export async function loadMemoryByDate(
+  manager: HeartwareManager,
+  date: string
+): Promise<string | null> {
+  try {
+    const content = await manager.read(`memory/${date}.md`);
+    return content;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Load memory files for a date range
+ *
+ * @param manager - HeartwareManager instance
+ * @param startDate - Start date (YYYY-MM-DD)
+ * @param endDate - End date (YYYY-MM-DD)
+ * @returns Array of memory contents
+ */
+export async function loadMemoryRange(
+  manager: HeartwareManager,
+  startDate: string,
+  endDate: string
+): Promise<Array<{ date: string; content: string }>> {
+  const memories: Array<{ date: string; content: string }> = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  let current = new Date(start);
+  while (current <= end) {
+    const dateStr = current.toISOString().split('T')[0];
+    const content = await loadMemoryByDate(manager, dateStr);
+
+    if (content) {
+      memories.push({ date: dateStr, content });
+    }
+
+    // Move to next day
+    current.setDate(current.getDate() + 1);
+  }
+
+  return memories;
+}
