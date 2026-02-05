@@ -1,5 +1,5 @@
 import { existsSync } from 'fs'
-import { extname, join, resolve } from 'path'
+import { join, resolve } from 'path'
 
 const textEncoder = new TextEncoder()
 
@@ -55,22 +55,33 @@ function buildDevNotice() {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TinyClaw UI</title>
+    <title>TinyClaw</title>
     <style>
       body { font-family: ui-sans-serif, system-ui, sans-serif; background: #0b0d12; color: #e7edf4; display: grid; place-items: center; height: 100vh; margin: 0; }
-      .card { max-width: 520px; background: #151c28; padding: 32px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
-      h1 { margin: 0 0 12px; font-size: 24px; }
-      p { margin: 0 0 12px; color: #9aa9ba; }
-      code { background: rgba(255,255,255,0.08); padding: 4px 8px; border-radius: 8px; }
+      .card { max-width: 520px; background: #151c28; padding: 32px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); text-align: center; }
+      h1 { margin: 0 0 16px; font-size: 24px; }
+      p { margin: 0 0 12px; color: #9aa9ba; line-height: 1.6; }
+      code { background: rgba(255,255,255,0.08); padding: 4px 8px; border-radius: 6px; font-size: 14px; }
+      .steps { text-align: left; margin: 20px 0; }
+      .step { margin: 8px 0; }
       a { color: #f5b85b; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .divider { border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0; }
     </style>
   </head>
   <body>
     <div class="card">
-      <h1>TinyClaw UI is not built yet</h1>
-      <p>Run the Vite dev server for the new Svelte UI:</p>
-      <p><code>bun run --cwd apps/web dev</code></p>
-      <p>Then open <a href="http://localhost:5173" target="_blank">http://localhost:5173</a>.</p>
+      <h1>🐾 TinyClaw</h1>
+      <p>The UI needs to be started or built.</p>
+      <div class="divider"></div>
+      <div class="steps">
+        <div class="step"><strong>Development:</strong></div>
+        <div class="step">1. Run <code>bun run --cwd apps/web dev</code></div>
+        <div class="step">2. Open <a href="http://localhost:5173">http://localhost:5173</a></div>
+        <div class="divider"></div>
+        <div class="step"><strong>Production:</strong></div>
+        <div class="step">Run <code>bun run --cwd apps/web build</code></div>
+      </div>
     </div>
   </body>
 </html>`
@@ -157,12 +168,21 @@ export function createWebUI(config) {
               return fileResponse(distIndex)
             }
 
+            // No built files - show setup instructions
             return htmlResponse(buildDevNotice())
           }
 
+          // Serve static files from dist/ or public/
           const staticPath = findStaticFile(pathname.replace(/^\//, ''))
           if (staticPath) {
             return fileResponse(staticPath)
+          }
+
+          // SPA fallback: serve index.html for client-side routing
+          const { distDir } = resolveUiPaths()
+          const distIndex = join(distDir, 'index.html')
+          if (existsSync(distIndex)) {
+            return fileResponse(distIndex)
           }
 
           return jsonResponse({ error: 'Not found' }, 404)
