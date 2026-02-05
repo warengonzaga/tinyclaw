@@ -9,9 +9,11 @@
   ],
   "scripts": {
     "dev": "bun run --cwd apps/cli dev",
+    "dev:ui": "bun run --cwd apps/web dev",
     "build": "bun run build:core && bun run build:apps",
     "build:core": "bun run --cwd core build",
     "build:apps": "bun run --cwd apps/web build && bun run --cwd apps/cli build",
+    "build:ui": "bun run --cwd apps/web build",
     "start": "bun run --cwd apps/cli start",
     "test": "bun test"
   },
