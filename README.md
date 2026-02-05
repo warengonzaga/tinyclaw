@@ -1,5 +1,8 @@
 # TinyClaw 🐜
 
+![GitHub Repo Banner](https://ghrb.waren.build/banner?header=%F0%9F%90%9CTinyClaw&subheader=Small+agent%2C+mighty+friend.&bg=F3F4F6&color=31373D&subheadercolor=31373D&headerfont=Caveat+Brush&subheaderfont=Schoolbell&watermarkpos=bottom-right)
+<!-- Created with GitHub Repo Banner by Waren Gonzaga: https://ghrb.waren.build -->
+
 **Small agent, mighty friend.**
 
 > [!WARNING]
