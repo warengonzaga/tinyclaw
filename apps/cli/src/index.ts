@@ -113,7 +113,11 @@ async function main() {
   
   const stats = learning.getStats();
   logger.log(`🧠 Learning: ${stats.totalPatterns} patterns learned`);
-  logger.log(`🎉 TinyClaw is ready! Open http://localhost:${port} in your browser`);
+  logger.log('');
+  logger.log('🎉 TinyClaw is ready!');
+  logger.log(`   API server: http://localhost:${port}`);
+  logger.log('   Web UI: Run "bun run dev:ui" then open http://localhost:5173');
+  logger.log('');
   
   // Handle graceful shutdown
   process.on('SIGINT', () => {
