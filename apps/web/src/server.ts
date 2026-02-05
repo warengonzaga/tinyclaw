@@ -132,17 +132,37 @@ export function createWebUI(config) {
             if (wantsStream && onMessageStream) {
               const stream = new ReadableStream({
                 start(controller) {
+                  let isClosed = false
+                  
                   const send = (payload) => {
-                    const data = typeof payload === 'string' ? payload : JSON.stringify(payload)
-                    controller.enqueue(textEncoder.encode(`data: ${data}\n\n`))
+                    if (isClosed) return
+                    
+                    try {
+                      const data = typeof payload === 'string' ? payload : JSON.stringify(payload)
+                      controller.enqueue(textEncoder.encode(`data: ${data}\n\n`))
+                      
+                      // Close on done event
+                      if (typeof payload === 'object' && payload?.type === 'done') {
+                        isClosed = true
+                        controller.close()
+                      }
+                    } catch (error) {
+                      // Controller already closed, ignore
+                      isClosed = true
+                    }
                   }
 
                   onMessageStream(message, userId, send)
                     .catch((error) => {
-                      send({ type: 'error', error: error?.message || 'Streaming error.' })
-                    })
-                    .finally(() => {
-                      controller.close()
+                      if (!isClosed) {
+                        send({ type: 'error', error: error?.message || 'Streaming error.' })
+                        isClosed = true
+                        try {
+                          controller.close()
+                        } catch {
+                          // Already closed
+                        }
+                      }
                     })
                 }
               })

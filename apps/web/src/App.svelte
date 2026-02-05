@@ -11,6 +11,7 @@
   let input = $state('')
   let messages = $state([])
   let isStreaming = $state(false)
+  let isUsingTools = $state(false)
   let streamError = $state('')
   let status = $state('checking')
   let messagesContainer = $state(null)
@@ -71,6 +72,7 @@
       timestamp: getTimestamp()
     }
     messages = [...messages, assistantMessage]
+    isUsingTools = false
 
     await tick()
     scrollToBottom()
@@ -114,6 +116,8 @@
   }
 
   function handleStreamPayload(payload, assistantId) {
+    console.log('[Stream Event]', payload)
+    
     if (typeof payload === 'string') {
       appendToMessage(assistantId, payload)
       return
@@ -125,36 +129,47 @@
       appendToMessage(assistantId, payload.content || '')
     }
 
+    if (payload.type === 'tool_start') {
+      console.log('[Tool Start] Setting isUsingTools to true')
+      isUsingTools = true
+    }
+
+    if (payload.type === 'tool_result') {
+      console.log('[Tool Result] Setting isUsingTools to false')
+      isUsingTools = false
+    }
+
     if (payload.type === 'error') {
       streamError = payload.error || 'Streaming error.'
+      isUsingTools = false
     }
 
     if (payload.type === 'done') {
       updateMessage(assistantId, { streaming: false })
       isStreaming = false
+      isUsingTools = false
     }
   }
 
   function parseSseChunk(chunk, assistantId) {
     const lines = chunk.split('\n')
-    let data = ''
 
     for (const line of lines) {
       if (line.startsWith('data:')) {
-        data += line.slice(5).trim()
+        const data = line.slice(5).trim()
+        if (!data) continue
+
+        let payload = data
+        try {
+          payload = JSON.parse(data)
+        } catch (error) {
+          // Plain text payload
+          payload = data
+        }
+
+        handleStreamPayload(payload, assistantId)
       }
     }
-
-    if (!data) return
-
-    let payload = data
-    try {
-      payload = JSON.parse(data)
-    } catch (error) {
-      payload = data
-    }
-
-    handleStreamPayload(payload, assistantId)
   }
 
   async function streamChat(message, assistantId) {
@@ -281,7 +296,9 @@
                 </span>
                 <span class="text-xs text-text-muted">{message.timestamp}</span>
                 {#if message.streaming}
-                  <span class="text-xs text-yellow">typing...</span>
+                  <span class="text-xs text-text-muted/70">
+                    {isUsingTools ? 'working...' : 'thinking...'}
+                  </span>
                 {/if}
               </div>
               <div class="markdown-content text-text-normal mt-0.5">
@@ -336,7 +353,9 @@
       <div class="flex items-center justify-between mt-2 text-xs text-text-muted px-1">
         <span>Press <kbd class="px-1.5 py-0.5 bg-bg-secondary rounded text-[10px]">Enter</kbd> to send, <kbd class="px-1.5 py-0.5 bg-bg-secondary rounded text-[10px]">Shift+Enter</kbd> for new line</span>
         {#if isStreaming}
-          <span class="text-yellow">TinyClaw is thinking...</span>
+          <span class="text-text-muted/70">
+            {isUsingTools ? 'TinyClaw is working...' : 'TinyClaw is thinking...'}
+          </span>
         {/if}
       </div>
     </form>
