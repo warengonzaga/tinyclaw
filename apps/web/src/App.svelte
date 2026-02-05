@@ -8,27 +8,24 @@
     gfm: true
   })
 
-  const suggestedPrompts = [
-    'Summarize my last session and plan next steps.',
-    'List all available tools and what each one does.',
-    'Help me refactor this file with a careful diff.',
-    'Scan the repo for TODOs and propose a roadmap.'
-  ]
-
-  let input = ''
-  let messages = []
-  let toolEvents = []
-  let isStreaming = false
-  let streamError = ''
-  let status = 'checking'
-  let bottomAnchor
+  let input = $state('')
+  let messages = $state([])
+  let isStreaming = $state(false)
+  let streamError = $state('')
+  let status = $state('checking')
+  let messagesContainer = $state(null)
 
   const userId = 'default-user'
 
   const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`
 
-  $: activeToolCount = toolEvents.filter((tool) => tool.status === 'running').length
-  $: lastTool = toolEvents[0]
+  const getTimestamp = () => {
+    return new Date().toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    })
+  }
 
   onMount(() => {
     checkHealth()
@@ -58,17 +55,22 @@
     streamError = ''
     input = ''
 
-    const userMessage = { id: createId(), role: 'user', content: message }
+    const userMessage = { 
+      id: createId(), 
+      role: 'user', 
+      content: message,
+      timestamp: getTimestamp()
+    }
     messages = [...messages, userMessage]
 
     const assistantMessage = {
       id: createId(),
       role: 'assistant',
       content: '',
-      streaming: true
+      streaming: true,
+      timestamp: getTimestamp()
     }
     messages = [...messages, assistantMessage]
-    toolEvents = []
 
     await tick()
     scrollToBottom()
@@ -78,7 +80,7 @@
     } catch (error) {
       streamError = error instanceof Error ? error.message : 'Streaming failed.'
       updateMessage(assistantMessage.id, {
-        content: 'I had trouble streaming that response. Please try again.',
+        content: 'I had trouble processing that request. Please try again.',
         streaming: false
       })
     }
@@ -94,93 +96,21 @@
   function updateMessage(id, patch) {
     messages = messages.map((message) => {
       if (message.id !== id) return message
-      return normalizeMessage({ ...message, ...patch })
+      return { ...message, ...patch }
     })
   }
 
   function appendToMessage(id, text) {
     messages = messages.map((message) => {
       if (message.id !== id) return message
-      const updated = { ...message, content: `${message.content}${text}` }
-      return normalizeMessage(updated)
-    })
-  }
-
-  function normalizeMessage(message) {
-    if (!message || message.role !== 'assistant') return message
-
-    const extraction = extractToolPayload(message.content || '')
-    if (!extraction) return message
-
-    const mergedText = [extraction.before, extraction.after].filter(Boolean).join('\n\n')
-    return {
-      ...message,
-      content: mergedText,
-      rawToolPayload: extraction.raw,
-      showToolPayload: message.showToolPayload ?? false
-    }
-  }
-
-  function extractToolPayload(text) {
-    const start = text.indexOf('{')
-    const end = text.lastIndexOf('}')
-    if (start === -1 || end === -1 || end <= start) return null
-
-    const raw = text.slice(start, end + 1).trim()
-    let parsed
-    try {
-      parsed = JSON.parse(raw)
-    } catch (error) {
-      return null
-    }
-
-    if (!parsed || typeof parsed !== 'object') return null
-
-    const hasToolKeys =
-      'action' in parsed ||
-      'tool' in parsed ||
-      'tool_calls' in parsed ||
-      'file_path' in parsed
-
-    if (!hasToolKeys) return null
-
-    return {
-      raw,
-      before: text.slice(0, start).trim(),
-      after: text.slice(end + 1).trim()
-    }
-  }
-
-  function toggleToolPayload(id) {
-    messages = messages.map((message) => {
-      if (message.id !== id) return message
-      return { ...message, showToolPayload: !message.showToolPayload }
+      return { ...message, content: `${message.content}${text}` }
     })
   }
 
   function scrollToBottom() {
-    bottomAnchor?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }
-
-  function pushToolEvent(tool, status, result) {
-    toolEvents = [
-      {
-        id: createId(),
-        name: tool,
-        status,
-        result: result || '',
-        timestamp: new Date().toLocaleTimeString()
-      },
-      ...toolEvents
-    ]
-  }
-
-  function updateLatestTool(name, update) {
-    const index = toolEvents.findIndex((tool) => tool.name === name && tool.status === 'running')
-    if (index === -1) return
-    toolEvents = toolEvents.map((tool, idx) =>
-      idx === index ? { ...tool, ...update } : tool
-    )
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight
+    }
   }
 
   function handleStreamPayload(payload, assistantId) {
@@ -195,23 +125,8 @@
       appendToMessage(assistantId, payload.content || '')
     }
 
-    if (payload.type === 'tool_start') {
-      pushToolEvent(payload.tool || 'unknown_tool', 'running')
-    }
-
-    if (payload.type === 'tool_result') {
-      updateLatestTool(payload.tool || 'unknown_tool', {
-        status: 'done',
-        result: payload.result || ''
-      })
-    }
-
     if (payload.type === 'error') {
       streamError = payload.error || 'Streaming error.'
-      updateLatestTool(payload.tool || 'unknown_tool', {
-        status: 'error',
-        result: payload.error || payload.result || ''
-      })
     }
 
     if (payload.type === 'done') {
@@ -279,6 +194,9 @@
           if (chunk) parseSseChunk(chunk, assistantId)
           boundaryIndex = buffer.indexOf('\n\n')
         }
+
+        await tick()
+        scrollToBottom()
       }
 
       if (buffer.trim()) {
@@ -304,138 +222,123 @@
     isStreaming = false
     scrollToBottom()
   }
-
-  function usePrompt(prompt) {
-    input = prompt
-  }
 </script>
 
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="badge">TinyClaw</div>
-      <p class="subtitle">Agent console with live tools telemetry.</p>
+<div class="h-full flex flex-col bg-bg-tertiary">
+  <!-- Header -->
+  <header class="h-12 min-h-12 px-4 flex items-center border-b border-bg-modifier-active bg-bg-tertiary shadow-sm">
+    <div class="flex items-center gap-2">
+      <span class="text-text-muted">#</span>
+      <h1 class="text-base font-semibold text-text-normal">tinyclaw</h1>
     </div>
-
-    <div class="status">
-      <span class={`dot ${status}`}></span>
-      <div>
-        <div class="status-label">System status</div>
-        <div class="status-value">{status}</div>
-      </div>
-      <div class="status-meta">
-        <div class="status-count">{activeToolCount}</div>
-        <div class="status-caption">active tools</div>
+    <div class="ml-auto flex items-center gap-3">
+      <div class="flex items-center gap-2 text-sm">
+        <span class={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-green' : status === 'offline' ? 'bg-red' : 'bg-yellow'}`}></span>
+        <span class="text-text-muted">{status}</span>
       </div>
     </div>
+  </header>
 
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Tool Activity</h2>
-        {#if lastTool}
-          <span class="panel-meta">latest {lastTool.timestamp}</span>
-        {/if}
-      </div>
-
-      {#if toolEvents.length === 0}
-        <p class="muted">No tools used yet. Trigger a query to see live tool calls.</p>
-      {:else}
-        <div class="tool-list">
-          {#each toolEvents as tool (tool.id)}
-            <article class={`tool-card ${tool.status}`}>
-              <div class="tool-row">
-                <span class="tool-name">{tool.name}</span>
-                <span class={`tool-status ${tool.status}`}>{tool.status}</span>
-              </div>
-              {#if tool.result}
-                <div class="tool-result">{tool.result}</div>
-              {/if}
-            </article>
-          {/each}
+  <!-- Messages Area -->
+  <div 
+    bind:this={messagesContainer}
+    class="flex-1 overflow-y-auto px-4 py-4"
+  >
+    {#if messages.length === 0}
+      <!-- Welcome State -->
+      <div class="flex flex-col items-center justify-center h-full text-center">
+        <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-4">
+          <span class="text-4xl">🐾</span>
         </div>
-      {/if}
-    </section>
-
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Quick Prompts</h2>
-        <span class="panel-meta">tap to load</span>
+        <h2 class="text-2xl font-bold text-text-normal mb-2">Welcome to TinyClaw</h2>
+        <p class="text-text-muted max-w-md">
+          This is the start of your conversation. Ask me anything and I'll do my best to help!
+        </p>
       </div>
-      <div class="prompt-list">
-        {#each suggestedPrompts as prompt}
-          <button class="prompt" type="button" on:click={() => usePrompt(prompt)}>
-            {prompt}
-          </button>
-        {/each}
-      </div>
-    </section>
-  </aside>
-
-  <main class="chat">
-    <header class="chat-header">
-      <div>
-        <h1>Conversation</h1>
-        <p class="muted">Streaming responses and tool usage appear here in real time.</p>
-      </div>
-      <div class="header-meta">
-        <div class="chip">User: {userId}</div>
-        <div class={`chip ${isStreaming ? 'active' : ''}`}>
-          {isStreaming ? 'Streaming' : 'Idle'}
-        </div>
-      </div>
-    </header>
-
-    <section class="messages">
-      {#if messages.length === 0}
-        <div class="empty">
-          <h3>Ready when you are.</h3>
-          <p>Start a request and watch the response stream in.</p>
-        </div>
-      {/if}
-
-      {#each messages as message (message.id)}
-        <article class={`bubble ${message.role}`}>
-          <div class="bubble-header">
-            <span class="role">{message.role === 'user' ? 'You' : 'TinyClaw'}</span>
-            {#if message.streaming}
-              <span class="streaming">streaming</span>
-            {/if}
-          </div>
-          <div class="bubble-content">
-            {@html renderMarkdown(message.content || (message.streaming ? '...' : ''))}
-          </div>
-          {#if message.rawToolPayload}
-            <div class="tool-payload">
-              <button type="button" class="tool-toggle" on:click={() => toggleToolPayload(message.id)}>
-                {message.showToolPayload ? 'Hide tool details' : 'Show tool details'}
-              </button>
-              {#if message.showToolPayload}
-                <pre class="tool-raw">{message.rawToolPayload}</pre>
+    {:else}
+      <!-- Message List -->
+      <div class="space-y-4">
+        {#each messages as message (message.id)}
+          <div class="group flex gap-4 py-0.5 px-2 rounded hover:bg-bg-modifier-hover transition-colors">
+            <!-- Avatar -->
+            <div class="flex-shrink-0 mt-0.5">
+              {#if message.role === 'user'}
+                <div class="w-10 h-10 rounded-full bg-brand flex items-center justify-center">
+                  <span class="text-white text-sm font-medium">U</span>
+                </div>
+              {:else}
+                <div class="w-10 h-10 rounded-full bg-green flex items-center justify-center">
+                  <span class="text-lg">🐾</span>
+                </div>
               {/if}
             </div>
-          {/if}
-        </article>
-      {/each}
-      <div bind:this={bottomAnchor}></div>
-    </section>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2">
+                <span class={`font-medium ${message.role === 'user' ? 'text-brand' : 'text-green'}`}>
+                  {message.role === 'user' ? 'You' : 'TinyClaw'}
+                </span>
+                <span class="text-xs text-text-muted">{message.timestamp}</span>
+                {#if message.streaming}
+                  <span class="text-xs text-yellow">typing...</span>
+                {/if}
+              </div>
+              <div class="markdown-content text-text-normal mt-0.5">
+                {#if message.content}
+                  {@html renderMarkdown(message.content)}
+                {:else if message.streaming}
+                  <div class="flex gap-1 py-2">
+                    <span class="typing-dot w-2 h-2 bg-text-muted rounded-full"></span>
+                    <span class="typing-dot w-2 h-2 bg-text-muted rounded-full"></span>
+                    <span class="typing-dot w-2 h-2 bg-text-muted rounded-full"></span>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
 
-    <form class="composer" on:submit|preventDefault={sendMessage}>
-      <textarea
-        bind:value={input}
-        on:keydown={handleKeydown}
-        placeholder="Ask TinyClaw anything..."
-        rows="3"
-      ></textarea>
-      <div class="actions">
-        <div class="helper">Shift + Enter for a new line</div>
-        <button type="submit" disabled={isStreaming || !input.trim()}>
-          {isStreaming ? 'Working...' : 'Send'}
+  <!-- Input Area -->
+  <div class="px-4 pb-6 pt-2">
+    {#if streamError}
+      <div class="mb-2 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm">
+        {streamError}
+      </div>
+    {/if}
+    
+    <form onsubmit={(e) => { e.preventDefault(); sendMessage(); }} class="relative">
+      <div class="bg-input-bg rounded-lg flex items-end gap-2 pr-2">
+        <textarea
+          bind:value={input}
+          onkeydown={handleKeydown}
+          placeholder="Message #tinyclaw"
+          rows="1"
+          class="flex-1 bg-transparent text-text-normal placeholder-text-muted px-4 py-3 resize-none outline-none max-h-48 min-h-[48px]"
+          style="field-sizing: content;"
+        ></textarea>
+        
+        <button 
+          type="submit" 
+          disabled={isStreaming || !input.trim()}
+          aria-label="Send message"
+          class="mb-2 p-2 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-bg-modifier-hover text-text-muted hover:text-text-normal flex items-center justify-center flex-shrink-0"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+            <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+          </svg>
         </button>
       </div>
+      
+      <div class="flex items-center justify-between mt-2 text-xs text-text-muted px-1">
+        <span>Press <kbd class="px-1.5 py-0.5 bg-bg-secondary rounded text-[10px]">Enter</kbd> to send, <kbd class="px-1.5 py-0.5 bg-bg-secondary rounded text-[10px]">Shift+Enter</kbd> for new line</span>
+        {#if isStreaming}
+          <span class="text-yellow">TinyClaw is thinking...</span>
+        {/if}
+      </div>
     </form>
-
-    {#if streamError}
-      <div class="error">{streamError}</div>
-    {/if}
-  </main>
+  </div>
 </div>
