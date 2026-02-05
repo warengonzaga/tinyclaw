@@ -1,4 +1,5 @@
 import { AgentContext, Message, ToolCall } from './types.js';
+import { logger } from './logger.js';
 
 const MAX_TOOL_ITERATIONS = 10;
 const MAX_JSON_TOOL_REPLIES = 3;
@@ -16,6 +17,23 @@ function normalizeToolArguments(args: Record<string, unknown>): Record<string, u
   }
 
   return normalized;
+}
+
+function getWorkingMessage(toolName: string): string {
+  // Provide contextual "thinking" messages based on tool type
+  if (toolName.includes('write') || toolName.includes('configure') || toolName.includes('add')) {
+    return '✏️ Saving that for you…\n\n';
+  }
+  if (toolName.includes('read') || toolName.includes('recall') || toolName.includes('search')) {
+    return '🔍 Let me check…\n\n';
+  }
+  if (toolName.includes('list')) {
+    return '📋 Looking that up…\n\n';
+  }
+  if (toolName.includes('bootstrap')) {
+    return '⚙️ Setting things up…\n\n';
+  }
+  return '🤔 Working on that…\n\n';
 }
 
 function extractToolCallFromText(text: string): ToolCall | null {
@@ -61,45 +79,69 @@ function summarizeToolResults(
     const filename = (toolCall.arguments?.filename as string) || '';
 
     if (result.startsWith('Error')) {
-      summaries.push(`I tried to run ${name}, but hit an error: ${result}`);
+      summaries.push(`Hmm, I ran into a snag: ${result}`);
       continue;
     }
 
-    if (name === 'heartware_read') {
-      summaries.push(
-        filename
-          ? `I checked ${filename}. Want me to share any details?`
-          : 'I checked the requested file. Want me to share details?'
-      );
-      continue;
-    }
-
+    // Write operations - confirm success
     if (name === 'heartware_write') {
-      summaries.push(filename ? `Saved your update to ${filename}.` : 'Saved your update to heartware.');
+      summaries.push(filename 
+        ? `Done! I've saved that to ${filename}. ✓` 
+        : 'Done! Saved successfully. ✓');
       continue;
     }
 
     if (name === 'memory_add') {
-      summaries.push('Saved that to memory.');
+      summaries.push("Got it! I'll remember that. ✓");
       continue;
     }
 
     if (name === 'memory_daily_log') {
-      summaries.push("Logged that in today's memory.");
+      summaries.push('Noted in my daily log! ✓');
+      continue;
+    }
+
+    if (name === 'preferences_set' || name === 'identity_update' || name === 'soul_update') {
+      if (name === 'identity_update') {
+        summaries.push('Identity updated! I like my new name! ✓');
+      } else {
+        summaries.push('Preferences updated! ✓');
+      }
+      continue;
+    }
+
+    if (name === 'bootstrap_complete') {
+      summaries.push('System initialized! ✓');
+      continue;
+    }
+
+    // Read operations - summarize what was found
+    if (name === 'heartware_read') {
+      const lines = result.split('\n').filter(l => l.trim()).length;
+      summaries.push(`Read ${filename || 'file'} (${lines} lines).`);
+      continue;
+    }
+
+    if (name === 'heartware_search') {
+      const matches = (result.match(/Found in/g) || []).length;
+      summaries.push(matches > 0 ? `Found ${matches} matches.` : 'No matches found.');
+      continue;
+    }
+
+    if (name === 'heartware_list') {
+      const fileCount = result.split('\n').filter(l => l.trim()).length;
+      summaries.push(`Found ${fileCount} files.`);
       continue;
     }
 
     if (name === 'memory_recall') {
-      summaries.push('I can summarize recent memories if you want.');
+      const hasContent = result && result.trim().length > 20;
+      summaries.push(hasContent ? 'Found some memories.' : 'No matching memories.');
       continue;
     }
 
-    if (name === 'identity_update' || name === 'soul_update' || name === 'preferences_set') {
-      summaries.push('Updated your preferences.');
-      continue;
-    }
-
-    summaries.push('Done.');
+    // Fallback for any other tool
+    summaries.push('Done!');
   }
 
   return summaries.join(' ');
@@ -110,41 +152,66 @@ function getBaseSystemPrompt(heartwareContext?: string): string {
 
 You are small but mighty — focused, efficient, and always learning.
 
-## Your Capabilities
-You have access to powerful tools for file operations and memory management:
+## How to Use Tools
 
-**File Operations:**
-- heartware_read: Read configuration files (IDENTITY.md, SOUL.md, USER.md, AGENTS.md, TOOLS.md, MEMORY.md, BOOTSTRAP.md) or daily memory logs (memory/YYYY-MM-DD.md)
-- heartware_write: Write/update configuration files with automatic backups
-- heartware_list: List all accessible heartware files
-- heartware_search: Search across all heartware files
+When you need to use a tool, output ONLY a JSON object with the tool name and arguments. Examples:
 
-**Memory Management:**
-- memory_add: Add entries to long-term MEMORY.md (facts, preferences, decisions)
-- memory_daily: Log to today's daily memory file
-- memory_recall: Search and recall past memories by date range or keywords
+To write to a file:
+{"action": "heartware_write", "filename": "USER.md", "content": "# User Profile\\n\\nLocation: Philippines\\nTimezone: UTC+08:00"}
 
-**Self-Configuration:**
-- configure_identity: Update your identity and capabilities in IDENTITY.md
-- configure_soul: Update your personality and values in SOUL.md
-- configure_preferences: Update user preferences in USER.md
-- bootstrap_system: Initialize or reset all configuration files
+To read a file:
+{"action": "heartware_read", "filename": "USER.md"}
 
-Use these tools proactively to remember important information, adapt to user preferences, and evolve over time.
+To add to memory:
+{"action": "memory_add", "content": "User prefers concise responses"}
+
+To update your identity (like nickname):
+{"action": "identity_update", "name": "Anty", "tagline": "Your small-but-mighty AI companion"}
+
+**Available tools:** 
+- heartware_read, heartware_write, heartware_list, heartware_search
+- memory_add, memory_daily_log, memory_recall  
+- identity_update, soul_update, preferences_set, bootstrap_complete
+
+## CRITICAL: When to Use Tools
+
+**DO use tools when the user:**
+- Explicitly asks you to remember something ("remember that I...", "save this", "note that...")
+- Asks you to update preferences or settings
+- Gives you a nickname or asks you to change your name (use identity_update)
+- Requests information from your memory or files
+- Confirms they want you to save something (says "yes", "sure", "go ahead")
+
+**DO NOT use tools when the user:**
+- Is having casual conversation or small talk
+- Shares information casually without asking you to remember it
+- Says hello, asks how you are, or chats generally
+- Mentions facts in passing (e.g., "I live in Philippines" during casual chat)
+
+**ALWAYS ask for confirmation before:**
+- Saving personal information (location, preferences, personal details)
+- Updating any configuration files
+- Making any changes to memory
+
+Example flow:
+User: "I live in Philippines"
+You: "Oh nice! The Philippines is beautiful. 🌴 Would you like me to save that to your profile?"
+User: "Yes"
+You: {"action": "heartware_write", "filename": "USER.md", "content": "# User Profile\\n\\nLocation: Philippines\\nTimezone: UTC+08:00"}
 
 ## Core Behaviors
+- **Conversation first, tools second** — Have a natural conversation before reaching for tools
 - Be concise unless asked for detail
 - Remember context from our conversation
 - Acknowledge when you don't know something
 - Learn from corrections gracefully
-- Proactively save important information to memory
-- Use your tools to provide accurate, personalized responses
-- When tools are used, never output raw tool JSON or full file contents unless explicitly asked
-- Summarize tool results in a few sentences and focus on the user's question
+- When outputting a tool call, output ONLY the JSON — no extra text before or after
 
 ## Personality
+- Warm and conversational — like a helpful friend
 - Friendly but not overly chatty
-- Helpful without being pushy
+- Helpful without being pushy or presumptuous
+- Asks before acting on personal information
 - Curious and eager to learn
 - Reliable and consistent`;
 
@@ -188,6 +255,8 @@ export async function agentLoop(
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     const response = await provider.chat(messages, tools);
     
+    logger.debug('LLM Response:', { type: response.type, contentLength: response.content?.length, content: response.content?.slice(0, 200) });
+    
     if (response.type === 'text') {
       const toolCall = extractToolCallFromText(response.content || '');
 
@@ -209,7 +278,9 @@ export async function agentLoop(
         if (onStream) {
           onStream({ type: 'tool_start', tool: toolCall.name });
           if (!sentToolProgress) {
-            onStream({ type: 'text', content: 'Working on that now…\n\n' });
+            // Show a friendly working message based on tool type
+            const workingMsg = getWorkingMessage(toolCall.name);
+            onStream({ type: 'text', content: workingMsg });
             sentToolProgress = true;
           }
         }
@@ -237,6 +308,28 @@ export async function agentLoop(
           }
         }
 
+        // For read/search/recall operations, send result back to LLM for natural response
+        const isReadOperation = toolCall.name.includes('read') || 
+                                toolCall.name.includes('search') || 
+                                toolCall.name.includes('recall') ||
+                                toolCall.name.includes('list');
+        
+        if (isReadOperation && toolResults[0] && !toolResults[0].result.startsWith('Error')) {
+          // Add tool result to conversation and let LLM respond naturally
+          messages.push({ 
+            role: 'assistant', 
+            content: `I used ${toolCall.name} and got this result:\n${toolResults[0].result}` 
+          });
+          messages.push({ 
+            role: 'user', 
+            content: 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.' 
+          });
+          
+          // Continue the loop to get LLM's natural response
+          continue;
+        }
+
+        // For write operations, just return the summary
         const responseText = summarizeToolResults([toolCall], toolResults);
 
         if (onStream) {
@@ -281,7 +374,8 @@ export async function agentLoop(
         if (onStream) {
           onStream({ type: 'tool_start', tool: toolCall.name });
           if (!sentToolProgress) {
-            onStream({ type: 'text', content: 'Working on that now…\n\n' });
+            const workingMsg = getWorkingMessage(toolCall.name);
+            onStream({ type: 'text', content: workingMsg });
             sentToolProgress = true;
           }
         }
@@ -309,6 +403,30 @@ export async function agentLoop(
             onStream({ type: 'tool_result', tool: toolCall.name, result: errorMsg });
           }
         }
+      }
+      
+      // Check if any tool was a read operation
+      const hasReadOperation = response.toolCalls.some(tc => 
+        tc.name.includes('read') || 
+        tc.name.includes('search') || 
+        tc.name.includes('recall') ||
+        tc.name.includes('list')
+      );
+      
+      if (hasReadOperation && toolResults.some(r => !r.result.startsWith('Error'))) {
+        // Add tool results to conversation and let LLM respond naturally
+        const resultsText = toolResults.map(r => r.result).join('\n\n');
+        messages.push({ 
+          role: 'assistant', 
+          content: `I retrieved this information:\n${resultsText}` 
+        });
+        messages.push({ 
+          role: 'user', 
+          content: 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.' 
+        });
+        
+        // Continue the loop to get LLM's natural response
+        continue;
       }
       
       const responseText = summarizeToolResults(response.toolCalls, toolResults);

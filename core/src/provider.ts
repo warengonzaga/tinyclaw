@@ -36,9 +36,21 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         
         const data = await response.json();
         
+        // Debug: log raw API response to understand its structure
+        logger.debug('Raw API response:', JSON.stringify(data).slice(0, 500));
+        
+        // Try multiple response formats (different APIs structure responses differently)
+        const content = 
+          data.message?.content ||      // Ollama format
+          data.choices?.[0]?.message?.content ||  // OpenAI format
+          data.response ||              // Simple format
+          data.content ||               // Direct content
+          data.text ||                  // Text format
+          '';
+        
         return {
           type: 'text',
-          content: data.message?.content || '',
+          content,
         };
       } catch (error) {
         logger.error('Ollama provider error:', error);
