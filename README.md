@@ -41,6 +41,34 @@ bun dev      # Development mode with hot reload
 bun build    # Build all packages
 ```
 
-## License
+## 🐛 Issues
 
-MIT
+Please report any issues and bugs by [creating a new issue here](https://github.com/warengonzaga/magic-release/issues/new/choose), also make sure you're reporting an issue that doesn't exist. Any help to improve the project would be appreciated. Thanks! 🙏✨
+
+## 🙏 Sponsor
+
+Like this project? Leave a star! ⭐⭐⭐⭐⭐
+
+Want to support my work and get some perks? [Become a sponsor](https://github.com/sponsors/warengonzaga)! 💖
+
+Or, you just love what I do? [Buy me a coffee](https://buymeacoffee.com/warengonzaga)! ☕
+
+Recognized my open-source contributions? [Nominate me](https://stars.github.com/nominate) as GitHub Star! 💫
+
+## 📋 Code of Conduct
+
+Read the project's [code of conduct](https://github.com/warengonzaga/magic-release/blob/main/CODE_OF_CONDUCT.md).
+
+## 📃 License
+
+This project is licensed under [MIT License](https://opensource.org/license/MIT).
+
+## 📝 Author
+
+This project is created by [Waren Gonzaga](https://github.com/warengonzaga), with the help of awesome [contributors](https://github.com/warengonzaga/magic-release/graphs/contributors).
+
+[![contributors](https://contrib.rocks/image?repo=warengonzaga/tinyclaw)](https://github.com/warengonzaga/magic-release/graphs/contributors)
+
+---
+
+💻💖☕ by [Waren Gonzaga](https://warengonzaga.com) | [YHWH](https://www.youtube.com/watch?v=VOZbswniA-g) 🙏 - Without _Him_, none of this exists, _even me_.
