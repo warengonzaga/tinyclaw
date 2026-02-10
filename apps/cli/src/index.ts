@@ -111,9 +111,18 @@ async function main() {
   logger.log('');
   
   // Handle graceful shutdown
+  let isShuttingDown = false;
+
   process.on('SIGINT', async () => {
+    if (isShuttingDown) {
+      logger.info('Shutdown already in progress, ignoring signal');
+      return;
+    }
+    isShuttingDown = true;
+
     logger.info('👋 Shutting down TinyClaw...');
 
+    // 1. Stop accepting new requests
     try {
       if (typeof (webUI as any).stop === 'function') {
         await (webUI as any).stop();
@@ -125,6 +134,27 @@ async function main() {
       logger.error('Error stopping Web UI:', err);
     }
 
+    // 2. Persist learning data before tearing down services
+    try {
+      if (typeof (learning as any).close === 'function') {
+        await (learning as any).close();
+      }
+      logger.info('Learning engine closed');
+    } catch (err) {
+      logger.error('Error closing learning engine:', err);
+    }
+
+    // 3. Close heartware manager
+    try {
+      if (typeof (heartwareManager as any).close === 'function') {
+        await (heartwareManager as any).close();
+      }
+      logger.info('Heartware manager closed');
+    } catch (err) {
+      logger.error('Error closing heartware manager:', err);
+    }
+
+    // 4. Close secrets engine
     try {
       secretsManager.close();
       logger.info('Secrets engine closed');
@@ -132,6 +162,7 @@ async function main() {
       logger.error('Error closing secrets engine:', err);
     }
 
+    // 5. Close database last (other services may flush to it)
     try {
       db.close();
       logger.info('Database closed');
