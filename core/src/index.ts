@@ -8,6 +8,9 @@ export { ProviderOrchestrator, type OrchestratorConfig } from './router/index.js
 // Heartware exports
 export * from './heartware/index.js';
 
+// Config exports
+export * from './config/index.js';
+
 // Secrets exports
 export * from './secrets/index.js';
 
