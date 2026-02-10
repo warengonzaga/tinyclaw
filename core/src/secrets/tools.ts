@@ -131,15 +131,15 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
       description:
         'List all secret key names matching an optional glob pattern. ' +
         'Returns only key names, never secret values. ' +
-        'Use pattern "provider.*" to list all provider API keys.',
+        'Use pattern "provider.*.*" to list all provider API keys (glob * does not cross dots).',
       parameters: {
         type: 'object',
         properties: {
           pattern: {
             type: 'string',
             description:
-              'Optional glob pattern to filter keys (e.g., "provider.*"). ' +
-              'Omit to list all keys.'
+              'Optional glob pattern to filter keys (e.g., "provider.*.*"). ' +
+              'Note: * matches within a single dot-segment only. Omit to list all keys.'
           }
         },
         required: []
