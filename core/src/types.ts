@@ -1,5 +1,7 @@
 // Core type definitions for TinyClaw
 
+import type { SecretsManagerInterface } from './secrets/types.js';
+
 export interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
@@ -49,6 +51,7 @@ export interface AgentContext {
   learning: LearningEngine;
   tools: Tool[];
   heartwareContext?: string; // Optional heartware configuration context
+  secrets?: SecretsManagerInterface; // Optional secrets manager for API key storage
 }
 
 export interface Database {
@@ -75,4 +78,8 @@ export interface TinyClawConfig {
   dataDir?: string;
   provider?: Provider;
   tools?: Tool[];
+  secrets?: {
+    /** Explicit path to secrets storage directory (defaults to ~/.secrets-engine/) */
+    path?: string;
+  };
 }

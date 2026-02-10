@@ -13,7 +13,6 @@
   "dependencies": {
     "@tinyclaw/core": "workspace:*",
     "@tinyclaw/ui": "workspace:*",
-    "dotenv": "^17.2.3",
     "@wgtechlabs/log-engine": "^2.2.0"
   }
 }

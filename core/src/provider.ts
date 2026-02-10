@@ -1,12 +1,20 @@
 import { logger } from './logger.js';
 import type { Provider, Message, LLMResponse } from './types.js';
+import type { SecretsManager } from './secrets/manager.js';
 
 export interface OllamaConfig {
-  apiKey: string;
+  apiKey?: string;
+  secrets?: SecretsManager;
   model?: string;
   baseUrl?: string;
 }
 
+/**
+ * Create an Ollama provider.
+ *
+ * API key resolution: uses `config.apiKey` if given, otherwise resolves
+ * `provider.ollama.apiKey` from the SecretsManager at call time.
+ */
 export function createOllamaProvider(config: OllamaConfig): Provider {
   const baseUrl = config.baseUrl || 'https://ollama.com';
   const model = config.model || 'gpt-oss:120b-cloud';
@@ -17,10 +25,19 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
     
     async chat(messages: Message[]): Promise<LLMResponse> {
       try {
+        // Resolve API key: explicit value or secrets-engine lookup
+        const apiKey = config.apiKey ?? (await config.secrets?.resolveProviderKey('ollama'));
+        if (!apiKey) {
+          throw new Error(
+            'No API key available for Ollama. ' +
+            'Store one with: store_secret key="provider.ollama.apiKey" value="sk-..."'
+          );
+        }
+
         const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${config.apiKey}`,
+            'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -60,9 +77,12 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
     
     async isAvailable(): Promise<boolean> {
       try {
+        const apiKey = config.apiKey ?? (await config.secrets?.resolveProviderKey('ollama'));
+        if (!apiKey) return false;
+
         const response = await fetch(`${baseUrl}/api/tags`, {
           headers: {
-            'Authorization': `Bearer ${config.apiKey}`,
+            'Authorization': `Bearer ${apiKey}`,
           },
         });
         return response.ok;

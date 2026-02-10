@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
-import { dirname, resolve, join } from 'path';
+import { dirname, join } from 'path';
 import { homedir } from 'os';
 import {
   createDatabase,
@@ -14,6 +13,8 @@ import {
   createHeartwareTools,
   loadHeartwareContext,
   createLearningEngine,
+  SecretsManager,
+  createSecretsTools,
   type HeartwareConfig
 } from '@tinyclaw/core';
 import { createWebUI } from '@tinyclaw/ui';
@@ -22,27 +23,11 @@ import { createWebUI } from '@tinyclaw/ui';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load .env from project root (go up 3 levels: dist -> tinyclaw -> apps -> root)
-config({ path: resolve(__dirname, '../../../.env') });
-
 async function main() {
   logger.log('🐜 TinyClaw - Small agent, mighty friend');
   
   // Get data directory
   const dataDir = process.env.TINYCLAW_DATA_DIR || join(homedir(), '.tinyclaw');
-  
-  // Check for API key
-  const apiKey = process.env.OLLAMA_API_KEY;
-  
-  if (!apiKey) {
-    logger.error('❌ No API key found!');
-    logger.error('\nPlease set OLLAMA_API_KEY environment variable:');
-    logger.error('\nTo get an Ollama API key:');
-    logger.error('  1. Sign up at https://ollama.com/signup');
-    logger.error('  2. Go to https://ollama.com/settings/keys');
-    logger.error('  3. Create a new API key\n');
-    process.exit(1);
-  }
   
   logger.info('\ud83d\udcc2 Data directory:', { dataDir });
   
@@ -73,17 +58,22 @@ async function main() {
   const heartwareContext = await loadHeartwareContext(heartwareManager);
   logger.info('✅ Heartware context loaded');
 
-  // Initialize provider orchestrator
-  const defaultProvider = createOllamaProvider({ apiKey: process.env.OLLAMA_API_KEY! });
+  // Initialize secrets manager (encrypted store at ~/.secrets-engine/)
+  const secretsManager = await SecretsManager.create();
+  logger.info('✅ Secrets engine initialized', { storagePath: secretsManager.storagePath });
+
+  // Initialize provider orchestrator (API key resolved from secrets-engine)
+  const defaultProvider = createOllamaProvider({ secrets: secretsManager });
   const orchestrator = new ProviderOrchestrator({ defaultProvider });
   
   // Select and verify active provider
   const provider = await orchestrator.selectActiveProvider();
   logger.info('✅ Provider initialized and verified');
   
-  // Initialize tools with heartware
+  // Initialize tools with heartware + secrets
   const tools = [
-    ...createHeartwareTools(heartwareManager)
+    ...createHeartwareTools(heartwareManager),
+    ...createSecretsTools(secretsManager)
   ];
   logger.info('✅ Loaded tools', { count: tools.length });
   
@@ -93,7 +83,8 @@ async function main() {
     provider,
     learning,
     tools,
-    heartwareContext
+    heartwareContext,
+    secrets: secretsManager
   };
   
   // Initialize Web UI
@@ -122,6 +113,7 @@ async function main() {
   // Handle graceful shutdown
   process.on('SIGINT', () => {
     logger.info('👋 Shutting down TinyClaw...');
+    secretsManager.close();
     db.close();
     process.exit(0);
   });

@@ -8,5 +8,8 @@ export { ProviderOrchestrator, type OrchestratorConfig } from './router/index.js
 // Heartware exports
 export * from './heartware/index.js';
 
+// Secrets exports
+export * from './secrets/index.js';
+
 // Learning exports
 export { createLearningEngine, type LearningEngineConfig } from './learning/index.js';
