@@ -49,8 +49,15 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         required: ['key', 'value']
       },
       async execute(args: Record<string, unknown>): Promise<string> {
-        const key = args.key as string;
-        const value = args.value as string;
+        if (typeof args.key !== 'string' || args.key.trim() === '') {
+          return 'Invalid secret key: must be a non-empty string';
+        }
+        if (typeof args.value !== 'string' || args.value.trim() === '') {
+          return 'Invalid secret value: must be a non-empty string';
+        }
+
+        const key = args.key.trim();
+        const value = args.value;
 
         try {
           const existed = await manager.check(key);
@@ -81,7 +88,11 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         required: ['key']
       },
       async execute(args: Record<string, unknown>): Promise<string> {
-        const key = args.key as string;
+        if (typeof args.key !== 'string' || args.key.trim() === '') {
+          return 'Invalid secret key: must be a non-empty string';
+        }
+
+        const key = args.key.trim();
 
         try {
           const exists = await manager.check(key);
@@ -112,7 +123,11 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         required: ['key']
       },
       async execute(args: Record<string, unknown>): Promise<string> {
-        const key = args.key as string;
+        if (typeof args.key !== 'string' || args.key.trim() === '') {
+          return 'Invalid secret key: must be a non-empty string';
+        }
+
+        const key = args.key.trim();
 
         try {
           const value = await manager.retrieve(key);

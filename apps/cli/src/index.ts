@@ -111,10 +111,34 @@ async function main() {
   logger.log('');
   
   // Handle graceful shutdown
-  process.on('SIGINT', () => {
+  process.on('SIGINT', async () => {
     logger.info('👋 Shutting down TinyClaw...');
-    secretsManager.close();
-    db.close();
+
+    try {
+      if (typeof (webUI as any).stop === 'function') {
+        await (webUI as any).stop();
+      } else if (typeof (webUI as any).close === 'function') {
+        await (webUI as any).close();
+      }
+      logger.info('Web UI stopped');
+    } catch (err) {
+      logger.error('Error stopping Web UI:', err);
+    }
+
+    try {
+      secretsManager.close();
+      logger.info('Secrets engine closed');
+    } catch (err) {
+      logger.error('Error closing secrets engine:', err);
+    }
+
+    try {
+      db.close();
+      logger.info('Database closed');
+    } catch (err) {
+      logger.error('Error closing database:', err);
+    }
+
     process.exit(0);
   });
 }
