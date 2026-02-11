@@ -8,7 +8,8 @@
   "scripts": {
     "build": "bun build src/index.ts --outdir ./dist --target bun",
     "dev": "bun run --watch src/index.ts",
-    "start": "bun dist/index.js"
+    "start": "bun dist/index.js",
+    "test": "bun test"
   },
   "dependencies": {
     "@clack/prompts": "^1.0.0",
