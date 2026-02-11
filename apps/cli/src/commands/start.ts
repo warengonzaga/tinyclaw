@@ -11,8 +11,6 @@
 
 import { join } from 'path';
 import { homedir } from 'os';
-import { join } from 'path';
-import { homedir } from 'os';
 import {
   createDatabase,
   agentLoop,
@@ -97,7 +95,7 @@ export async function startCommand(): Promise<void> {
       `    Run ${theme.cmd('tinyclaw setup')} to configure your provider.`
     );
     console.log();
-    secretsManager.close();
+    await secretsManager.close();
     process.exit(1);
   }
 
@@ -251,7 +249,7 @@ export async function startCommand(): Promise<void> {
 
     // 5. Secrets engine
     try {
-      secretsManager.close();
+      await secretsManager.close();
       logger.info('Secrets engine closed');
     } catch (err) {
       logger.error('Error closing secrets engine:', err);

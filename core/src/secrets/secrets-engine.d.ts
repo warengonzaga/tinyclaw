@@ -58,7 +58,7 @@ declare module '@wgtechlabs/secrets-engine' {
     destroy(): Promise<void>;
 
     /** Close the database connection. Instance cannot be reused. */
-    close(): void;
+    close(): Promise<void>;
 
     /** Number of secrets currently stored. */
     get size(): number;

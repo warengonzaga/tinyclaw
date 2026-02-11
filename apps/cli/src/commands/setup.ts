@@ -66,7 +66,7 @@ export async function setupCommand(): Promise<void> {
 
     if (p.isCancel(reconfigure) || !reconfigure) {
       p.outro(theme.dim('Setup cancelled — existing config unchanged.'));
-      cleanup(secretsManager, configManager);
+      await cleanup(secretsManager, configManager);
       return;
     }
   }
@@ -86,7 +86,7 @@ export async function setupCommand(): Promise<void> {
 
   if (p.isCancel(provider)) {
     p.outro(theme.dim('Setup cancelled.'));
-    cleanup(secretsManager, configManager);
+    await cleanup(secretsManager, configManager);
     return;
   }
 
@@ -103,7 +103,7 @@ export async function setupCommand(): Promise<void> {
 
   if (p.isCancel(apiKey)) {
     p.outro(theme.dim('Setup cancelled.'));
-    cleanup(secretsManager, configManager);
+    await cleanup(secretsManager, configManager);
     return;
   }
 
@@ -120,7 +120,7 @@ export async function setupCommand(): Promise<void> {
 
   if (p.isCancel(model)) {
     p.outro(theme.dim('Setup cancelled.'));
-    cleanup(secretsManager, configManager);
+    await cleanup(secretsManager, configManager);
     return;
   }
 
@@ -142,7 +142,7 @@ export async function setupCommand(): Promise<void> {
 
   if (p.isCancel(baseUrl)) {
     p.outro(theme.dim('Setup cancelled.'));
-    cleanup(secretsManager, configManager);
+    await cleanup(secretsManager, configManager);
     return;
   }
 
@@ -169,7 +169,7 @@ export async function setupCommand(): Promise<void> {
     persistSpinner.stop(theme.error('Failed to save configuration'));
     p.log.error(String(err));
     p.outro(theme.error('Setup failed. Please try again.'));
-    cleanup(secretsManager, configManager);
+    await cleanup(secretsManager, configManager);
     process.exit(1);
   }
 
@@ -217,13 +217,13 @@ export async function setupCommand(): Promise<void> {
     theme.success('You\'re all set!') + ' Run ' + theme.cmd('tinyclaw start') + ' to begin.'
   );
 
-  cleanup(secretsManager, configManager);
+  await cleanup(secretsManager, configManager);
 }
 
 /**
  * Gracefully close manager connections
  */
-function cleanup(secrets: SecretsManager, config: ConfigManager): void {
+async function cleanup(secrets: SecretsManager, config: ConfigManager): Promise<void> {
   try { config.close(); } catch { /* ignore */ }
-  try { secrets.close(); } catch { /* ignore */ }
+  try { await secrets.close(); } catch { /* ignore */ }
 }

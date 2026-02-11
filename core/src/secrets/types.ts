@@ -29,7 +29,7 @@ export interface SecretsManagerInterface {
   /** Convenience: resolve a provider API key by provider name */
   resolveProviderKey(providerName: string): Promise<string | null>;
   /** Close the underlying secrets engine */
-  close(): void;
+  close(): Promise<void>;
 }
 
 /**

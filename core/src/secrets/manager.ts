@@ -104,8 +104,8 @@ export class SecretsManager implements SecretsManagerInterface {
   /**
    * Close the underlying secrets engine connection
    */
-  close(): void {
-    this.engine.close();
+  async close(): Promise<void> {
+    await this.engine.close();
     logger.debug('Secrets engine closed');
   }
 }
