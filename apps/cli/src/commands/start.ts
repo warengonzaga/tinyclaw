@@ -11,6 +11,8 @@
 
 import { join } from 'path';
 import { homedir } from 'os';
+import { join } from 'path';
+import { homedir } from 'os';
 import {
   createDatabase,
   agentLoop,
@@ -44,7 +46,38 @@ export async function startCommand(): Promise<void> {
 
   // --- Initialize secrets engine ----------------------------------------
 
-  const secretsManager = await SecretsManager.create();
+  let secretsManager: SecretsManager;
+
+  try {
+    secretsManager = await SecretsManager.create();
+  } catch (err: unknown) {
+    // Detect IntegrityError from @wgtechlabs/secrets-engine
+    // The HMAC stored in meta.json does not match the database contents.
+    // This may indicate file corruption, tampering, or a partial write.
+    if (
+      err instanceof Error &&
+      'code' in err &&
+      (err as { code: string }).code === 'INTEGRITY_ERROR'
+    ) {
+      const storePath = join(homedir(), '.secrets-engine');
+
+      console.log();
+      console.log(theme.error('  ✖ Secrets store integrity check failed.'));
+      console.log();
+      console.log('    The secrets store may have been corrupted or tampered with.');
+      console.log('    This can happen due to disk errors, power loss, or external changes.');
+      console.log();
+      console.log('    To resolve, delete the store and re-run setup:');
+      console.log();
+      console.log(`      1. ${theme.cmd(`rm -rf ${storePath}`)}`);
+      console.log(`      2. ${theme.cmd('tinyclaw setup')}`);
+      console.log();
+      process.exit(1);
+    }
+
+    throw err;
+  }
+
   logger.info('✅ Secrets engine initialized', {
     storagePath: secretsManager.storagePath,
   });
