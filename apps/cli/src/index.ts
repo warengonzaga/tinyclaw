@@ -1,180 +1,83 @@
 #!/usr/bin/env node
 
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { homedir } from 'os';
-import {
-  createDatabase,
-  agentLoop,
-  createOllamaProvider,
-  ProviderOrchestrator,
-  logger,
-  HeartwareManager,
-  createHeartwareTools,
-  loadHeartwareContext,
-  createLearningEngine,
-  SecretsManager,
-  createSecretsTools,
-  type HeartwareConfig
-} from '@tinyclaw/core';
-import { createWebUI } from '@tinyclaw/ui';
+/**
+ * TinyClaw CLI — Entry Point
+ *
+ * Lightweight argument router. No framework — just process.argv.
+ *
+ * Usage:
+ *   tinyclaw              Show banner + help
+ *   tinyclaw setup        Interactive first-time setup wizard
+ *   tinyclaw start        Boot the agent (requires setup first)
+ *   tinyclaw --version    Print version
+ *   tinyclaw --help       Show help
+ */
 
-// Get __dirname equivalent in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { logger } from '@tinyclaw/core';
+import { showBanner, getVersion } from './ui/banner.js';
+import { theme } from './ui/theme.js';
 
-async function main() {
-  logger.log('🐜 TinyClaw - Small agent, mighty friend');
-  
-  // Get data directory
-  const dataDir = process.env.TINYCLAW_DATA_DIR || join(homedir(), '.tinyclaw');
-  
-  logger.info('\ud83d\udcc2 Data directory:', { dataDir });
-  
-  // Initialize database
-  const dbPath = join(dataDir, 'data', 'tinyclaw.db');
-  const db = createDatabase(dbPath);
-  logger.info('✅ Database initialized');
-  
-  // Initialize learning engine
-  const learningPath = join(dataDir, 'learning');
-  const learning = createLearningEngine({ storagePath: learningPath });
-  logger.info('✅ Learning engine initialized');
+// ── Help text ──────────────────────────────────────────────────────────
 
-  // Initialize heartware
-  const heartwareConfig: HeartwareConfig = {
-    baseDir: join(dataDir, 'heartware'),
-    userId: 'default-user', // TODO: Multi-user support
-    auditDir: join(dataDir, 'audit'),
-    backupDir: join(dataDir, 'heartware', '.backups'),
-    maxFileSize: 1_048_576 // 1MB
-  };
+function showHelp(): void {
+  showBanner();
+  console.log('  ' + theme.label('Usage'));
+  console.log(`    ${theme.cmd('tinyclaw')} ${theme.dim('<command>')}`);
+  console.log();
+  console.log('  ' + theme.label('Commands'));
+  console.log(`    ${theme.cmd('setup')}   Interactive setup wizard — configure your provider`);
+  console.log(`    ${theme.cmd('start')}   Start the TinyClaw agent`);
+  console.log();
+  console.log('  ' + theme.label('Options'));
+  console.log(`    ${theme.dim('--version, -v')}   Show version number`);
+  console.log(`    ${theme.dim('--help, -h')}      Show this help message`);
+  console.log();
+}
 
-  const heartwareManager = new HeartwareManager(heartwareConfig);
-  await heartwareManager.initialize();
-  logger.info('✅ Heartware initialized');
+// ── Main router ────────────────────────────────────────────────────────
 
-  // Load heartware context
-  const heartwareContext = await loadHeartwareContext(heartwareManager);
-  logger.info('✅ Heartware context loaded');
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const command = args[0];
 
-  // Initialize secrets manager (encrypted store at ~/.secrets-engine/)
-  const secretsManager = await SecretsManager.create();
-  logger.info('✅ Secrets engine initialized', { storagePath: secretsManager.storagePath });
-
-  // Initialize provider orchestrator (API key resolved from secrets-engine)
-  const defaultProvider = createOllamaProvider({ secrets: secretsManager });
-  const orchestrator = new ProviderOrchestrator({ defaultProvider });
-  
-  // Select and verify active provider
-  const provider = await orchestrator.selectActiveProvider();
-  logger.info('✅ Provider initialized and verified');
-  
-  // Initialize tools with heartware + secrets
-  const tools = [
-    ...createHeartwareTools(heartwareManager),
-    ...createSecretsTools(secretsManager)
-  ];
-  logger.info('✅ Loaded tools', { count: tools.length });
-  
-  // Create context
-  const context = {
-    db,
-    provider,
-    learning,
-    tools,
-    heartwareContext,
-    secrets: secretsManager
-  };
-  
-  // Initialize Web UI
-  const port = parseInt(process.env.PORT || '3000');
-  const webUI = createWebUI({
-    port,
-    onMessage: async (message: string, userId: string) => {
-      return await agentLoop(message, userId, context);
-    },
-    onMessageStream: async (message: string, userId: string, callback) => {
-      await agentLoop(message, userId, context, callback);
-    }
-  });
-  
-  // Start Web UI
-  await webUI.start();
-  
-  const stats = learning.getStats();
-  logger.log(`🧠 Learning: ${stats.totalPatterns} patterns learned`);
-  logger.log('');
-  logger.log('🎉 TinyClaw is ready!');
-  logger.log(`   API server: http://localhost:${port}`);
-  logger.log('   Web UI: Run "bun run dev:ui" then open http://localhost:5173');
-  logger.log('');
-  
-  // Handle graceful shutdown
-  let isShuttingDown = false;
-
-  process.on('SIGINT', async () => {
-    if (isShuttingDown) {
-      logger.info('Shutdown already in progress, ignoring signal');
-      return;
-    }
-    isShuttingDown = true;
-
-    logger.info('👋 Shutting down TinyClaw...');
-
-    // 1. Stop accepting new requests
-    try {
-      if (typeof (webUI as any).stop === 'function') {
-        await (webUI as any).stop();
-      } else if (typeof (webUI as any).close === 'function') {
-        await (webUI as any).close();
-      }
-      logger.info('Web UI stopped');
-    } catch (err) {
-      logger.error('Error stopping Web UI:', err);
+  switch (command) {
+    case 'setup': {
+      const { setupCommand } = await import('./commands/setup.js');
+      await setupCommand();
+      break;
     }
 
-    // 2. Persist learning data before tearing down services
-    try {
-      if (typeof (learning as any).close === 'function') {
-        await (learning as any).close();
-      }
-      logger.info('Learning engine closed');
-    } catch (err) {
-      logger.error('Error closing learning engine:', err);
+    case 'start': {
+      const { startCommand } = await import('./commands/start.js');
+      await startCommand();
+      break;
     }
 
-    // 3. Close heartware manager
-    try {
-      if (typeof (heartwareManager as any).close === 'function') {
-        await (heartwareManager as any).close();
-      }
-      logger.info('Heartware manager closed');
-    } catch (err) {
-      logger.error('Error closing heartware manager:', err);
+    case '--version':
+    case '-v': {
+      console.log(getVersion());
+      break;
     }
 
-    // 4. Close secrets engine
-    try {
-      secretsManager.close();
-      logger.info('Secrets engine closed');
-    } catch (err) {
-      logger.error('Error closing secrets engine:', err);
+    case '--help':
+    case '-h':
+    case undefined: {
+      showHelp();
+      break;
     }
 
-    // 5. Close database last (other services may flush to it)
-    try {
-      db.close();
-      logger.info('Database closed');
-    } catch (err) {
-      logger.error('Error closing database:', err);
+    default: {
+      console.log(
+        theme.error(`  Unknown command: ${command}`)
+      );
+      console.log();
+      showHelp();
+      process.exit(1);
     }
-
-    process.exit(0);
-  });
+  }
 }
 
 main().catch((error) => {
-  logger.error('\u274c Fatal error:', error);
+  logger.error('❌ Fatal error:', error);
   process.exit(1);
 });
