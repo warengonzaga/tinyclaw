@@ -157,6 +157,11 @@ export interface ProviderPlugin extends PluginMeta {
   readonly type: 'provider';
   /** Create and return an initialized Provider instance. */
   createProvider(secrets: SecretsManagerInterface): Promise<Provider>;
+  /** Optional pairing tools for conversational setup (API key, model config). */
+  getPairingTools?(
+    secrets: SecretsManagerInterface,
+    configManager: ConfigManagerInterface,
+  ): Tool[];
 }
 
 /** A tools plugin contributes additional agent tools. */
