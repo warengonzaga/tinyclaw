@@ -59,9 +59,21 @@ export interface AgentContext {
 export interface Database {
   saveMessage(userId: string, role: string, content: string): void;
   getHistory(userId: string, limit?: number): Message[];
+  getMessageCount(userId: string): number;
+  saveCompaction(userId: string, summary: string, replacedBefore: number): void;
+  getLatestCompaction(userId: string): CompactionRecord | null;
+  deleteMessagesBefore(userId: string, beforeTimestamp: number): void;
   saveMemory(userId: string, key: string, value: string): void;
   getMemory(userId: string): Record<string, string>;
   close(): void;
+}
+
+export interface CompactionRecord {
+  id: number;
+  userId: string;
+  summary: string;
+  replacedBefore: number;
+  createdAt: number;
 }
 
 export interface LearningEngine {
@@ -74,6 +86,13 @@ export interface LearnedContext {
   preferences: string;
   patterns: string;
   recentCorrections: string;
+}
+
+export interface CronJob {
+  id: string;
+  schedule: string; // cron expression or interval like '30m', '1h', '24h'
+  handler: () => Promise<void>;
+  lastRun?: number;
 }
 
 export interface TinyClawConfig {
