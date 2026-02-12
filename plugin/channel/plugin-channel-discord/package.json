@@ -1,0 +1,15 @@
+{
+  "name": "@tinyclaw/plugin-channel-discord",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "Discord channel plugin for TinyClaw",
+  "keywords": ["tinyclaw", "plugin", "channel", "discord"],
+  "dependencies": {
+    "@tinyclaw/core": "workspace:*",
+    "discord.js": "^14.0.0"
+  }
+}
