@@ -54,18 +54,105 @@ export interface AgentContext {
   heartwareContext?: string; // Optional heartware configuration context
   secrets?: SecretsManagerInterface; // Optional secrets manager for API key storage
   configManager?: ConfigManagerInterface; // Optional config manager for persistent settings
+  /** Delegation v2 subsystems (lifecycle, templates, background runner). */
+  delegation?: {
+    lifecycle: unknown;
+    templates: unknown;
+    background: {
+      getUndelivered(userId: string): BackgroundTask[];
+      markDelivered(taskId: string): void;
+      cancelAll(): void;
+      cleanupStale(olderThanMs: number): number;
+    };
+  };
 }
 
 export interface Database {
+  // Messages
   saveMessage(userId: string, role: string, content: string): void;
   getHistory(userId: string, limit?: number): Message[];
   getMessageCount(userId: string): number;
+  deleteMessagesBefore(userId: string, beforeTimestamp: number): void;
+  deleteMessagesForUser(userId: string): void;
+
+  // Compactions
   saveCompaction(userId: string, summary: string, replacedBefore: number): void;
   getLatestCompaction(userId: string): CompactionRecord | null;
-  deleteMessagesBefore(userId: string, beforeTimestamp: number): void;
+
+  // Memory (key-value)
   saveMemory(userId: string, key: string, value: string): void;
   getMemory(userId: string): Record<string, string>;
+
+  // Sub-agents
+  saveSubAgent(record: SubAgentRecord): void;
+  getSubAgent(id: string): SubAgentRecord | null;
+  getActiveSubAgents(userId: string): SubAgentRecord[];
+  getAllSubAgents(userId: string, includeDeleted?: boolean): SubAgentRecord[];
+  updateSubAgent(id: string, updates: Partial<SubAgentRecord>): void;
+  deleteExpiredSubAgents(beforeTimestamp: number): number;
+
+  // Role templates
+  saveRoleTemplate(template: RoleTemplate): void;
+  getRoleTemplate(id: string): RoleTemplate | null;
+  getRoleTemplates(userId: string): RoleTemplate[];
+  updateRoleTemplate(id: string, updates: Partial<RoleTemplate>): void;
+  deleteRoleTemplate(id: string): void;
+
+  // Background tasks
+  saveBackgroundTask(record: BackgroundTask): void;
+  updateBackgroundTask(id: string, status: string, result: string | null, completedAt: number | null): void;
+  getUndeliveredTasks(userId: string): BackgroundTask[];
+  getBackgroundTask(id: string): BackgroundTask | null;
+  markTaskDelivered(id: string): void;
+  getStaleBackgroundTasks(olderThanMs: number): BackgroundTask[];
+
   close(): void;
+}
+
+// Sub-agent record (persisted)
+export interface SubAgentRecord {
+  id: string;
+  userId: string;
+  role: string;
+  systemPrompt: string;
+  toolsGranted: string[];
+  tierPreference: string | null;
+  status: 'active' | 'suspended' | 'soft_deleted';
+  performanceScore: number;
+  totalTasks: number;
+  successfulTasks: number;
+  templateId: string | null;
+  createdAt: number;
+  lastActiveAt: number;
+  deletedAt: number | null;
+}
+
+// Role template (persisted)
+export interface RoleTemplate {
+  id: string;
+  userId: string;
+  name: string;
+  roleDescription: string;
+  defaultTools: string[];
+  defaultTier: string | null;
+  timesUsed: number;
+  avgPerformance: number;
+  tags: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Background task (persisted)
+export interface BackgroundTask {
+  id: string;
+  userId: string;
+  agentId: string;
+  taskDescription: string;
+  status: 'running' | 'completed' | 'failed' | 'delivered';
+  result: string | null;
+  startedAt: number;
+  completedAt: number | null;
+  deliveredAt: number | null;
 }
 
 export interface CompactionRecord {

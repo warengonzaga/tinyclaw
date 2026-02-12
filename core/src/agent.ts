@@ -1,5 +1,6 @@
 import { AgentContext, Database, Message, Provider, ToolCall } from './types.js';
 import { logger } from './logger.js';
+import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from './delegation/handbook.js';
 
 const MAX_TOOL_ITERATIONS = 10;
 const MAX_JSON_TOOL_REPLIES = 3;
@@ -177,7 +178,7 @@ To update your identity (like nickname):
 - heartware_read, heartware_write, heartware_list, heartware_search
 - memory_add, memory_daily_log, memory_recall
 - identity_update, soul_update, preferences_set, bootstrap_complete
-- delegate_task — Delegate focused tasks to a sub-agent (research, analysis, summarization)
+- ${DELEGATION_TOOL_NAMES.join(', ')}
 
 ## CRITICAL: When to Use Tools
 
@@ -205,11 +206,7 @@ You: "Oh nice! The Philippines is beautiful. 🌴 Would you like me to save that
 User: "Yes"
 You: {"action": "heartware_write", "filename": "USER.md", "content": "# User Profile\\n\\nLocation: Philippines\\nTimezone: UTC+08:00"}
 
-## When to Delegate
-- Use delegate_task for complex research or analysis that benefits from focused processing
-- Use delegate_task for multi-step tasks where a specialist sub-agent would be more effective
-- Do NOT delegate simple questions, greetings, or casual conversation
-- Provide a clear role (e.g., "Research Specialist") and detailed task description
+${DELEGATION_HANDBOOK}
 
 ## Core Behaviors
 - **Conversation first, tools second** — Have a natural conversation before reaching for tools
@@ -337,6 +334,21 @@ export async function agentLoop(
     });
   }
   history.push(...rawHistory);
+
+  // Inject completed background task results
+  if (context.delegation) {
+    const tasks = context.delegation.background.getUndelivered(userId);
+    for (const task of tasks) {
+      if (task.status === 'completed' || task.status === 'failed') {
+        history.push({
+          role: 'system',
+          content:
+            `[Background task ${task.status}] "${task.taskDescription}"\n\nResult:\n${task.result ?? '(no result)'}`,
+        });
+        context.delegation.background.markDelivered(task.id);
+      }
+    }
+  }
 
   const learnedContext = learning.getContext();
 
