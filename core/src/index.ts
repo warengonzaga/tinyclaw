@@ -5,6 +5,12 @@ export { logger } from './logger.js';
 export { createOllamaProvider } from './provider.js';
 export { ProviderOrchestrator, type OrchestratorConfig } from './router/index.js';
 
+// Queue exports
+export { createSessionQueue, type SessionQueue } from './queue.js';
+
+// Cron exports
+export { createCronScheduler, type CronScheduler } from './cron.js';
+
 // Heartware exports
 export * from './heartware/index.js';
 
