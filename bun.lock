@@ -5,7 +5,7 @@
     "": {
       "name": "tinyclaw-monorepo",
       "dependencies": {
-        "@wgtechlabs/log-engine": "^2.2.0",
+        "@wgtechlabs/log-engine": "^2.3.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -23,7 +23,7 @@
         "@clack/prompts": "^1.0.0",
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/ui": "workspace:*",
-        "@wgtechlabs/log-engine": "^2.2.0",
+        "@wgtechlabs/log-engine": "^2.3.0",
         "picocolors": "^1.1.1",
       },
     },
@@ -47,7 +47,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@wgtechlabs/config-engine": "^0.1.0",
-        "@wgtechlabs/log-engine": "^2.2.0",
+        "@wgtechlabs/log-engine": "^2.3.0",
         "@wgtechlabs/secrets-engine": "^2.0.0",
         "zod": "^3.24.0",
       },
@@ -220,7 +220,7 @@
 
     "@wgtechlabs/config-engine": ["@wgtechlabs/config-engine@0.1.0", "", { "dependencies": { "zod": "^3.24.2" }, "peerDependencies": { "@wgtechlabs/secrets-engine": ">=1.0.0", "better-sqlite3": ">=11.0.0" }, "optionalPeers": ["@wgtechlabs/secrets-engine", "better-sqlite3"] }, "sha512-mwUoiO2DbA9HkAmt0n1ZY/7cjN+dpymu+2zgWkI6TeAO3SRAqIU0GPyGNl3o3wkLm4RpKc662lOdLC3HJrqVaA=="],
 
-    "@wgtechlabs/log-engine": ["@wgtechlabs/log-engine@2.2.0", "", {}, "sha512-TIvzfDPiWUWW7EX+kZ3q7id12inpe6t9n/OIX9ewIHaBeA7q8YY631f2RjHdkB33Wew9A0H1HGzTx98nKan+MQ=="],
+    "@wgtechlabs/log-engine": ["@wgtechlabs/log-engine@2.3.0", "", {}, "sha512-Z2TW6qRguZCw1lDNH9rbsJ94VvjQaWVm8J2BNitAwcngN447Jomq7sS2+qhlNV+lx9U/b460YF6VPY3YTvthOw=="],
 
     "@wgtechlabs/secrets-engine": ["@wgtechlabs/secrets-engine@2.0.0", "", {}, "sha512-Pm38dl7NFO9ryfg/YZd9LBqs6oJCwSNmBMc5UeA54bC/egD48nRLXn6DTKb8AbiaJez4dcKGU2B3vuv9GE7y4w=="],
 
