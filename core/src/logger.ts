@@ -1,9 +1,12 @@
 import { LogEngine, LogMode } from '@wgtechlabs/log-engine';
 
-// Configure based on environment
-const env = process.env.NODE_ENV || 'development';
-LogEngine.configure({
-  mode: env === 'production' ? LogMode.INFO : LogMode.DEBUG
+// Only local time
+LogEngine.configure({ 
+  mode: LogMode.DEBUG,
+  format: {
+    includeIsoTimestamp: false,
+    includeLocalTime: true
+  }
 });
 
 // Re-export configured logger
