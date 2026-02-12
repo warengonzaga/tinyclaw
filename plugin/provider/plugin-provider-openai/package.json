@@ -1,0 +1,14 @@
+{
+  "name": "@tinyclaw/plugin-provider-openai",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "description": "OpenAI provider plugin for TinyClaw",
+  "keywords": ["tinyclaw", "plugin", "provider", "openai"],
+  "dependencies": {
+    "@tinyclaw/core": "workspace:*"
+  }
+}
