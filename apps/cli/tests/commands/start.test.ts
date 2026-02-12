@@ -14,7 +14,7 @@ const mockSecretsCheck = mock(() => Promise.resolve(true));
 const mockSecretsClose = mock(() => {});
 
 const mockConfigGet = mock((key: string) => {
-  if (key === 'providers.starterBrain.model') return 'llama3.2:3b';
+  if (key === 'providers.starterBrain.model') return 'gpt-oss:120b-cloud';
   if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
   return undefined;
 });

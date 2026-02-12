@@ -159,7 +159,7 @@ describe('setupCommand', () => {
   test('persists provider config via config manager', async () => {
     await setupCommand();
     expect(mockConfigSet).toHaveBeenCalledWith('providers.starterBrain', {
-      model: 'ollama',
+      model: 'gpt-oss:120b-cloud',
       baseUrl: 'https://ollama.com',
       apiKeyRef: 'provider.ollama.apiKey',
     });
@@ -178,26 +178,14 @@ describe('setupCommand', () => {
 });
 
 describe('setupCommand — cancellation', () => {
-  test('exits early when provider selection is cancelled', async () => {
-    mockIsCancel.mockImplementation((val) => val === 'ollama');
-    // Return the cancel symbol
-    const cancelSymbol = Symbol.for('cancel');
-    mockSelect.mockImplementation(() => cancelSymbol as any);
-    mockIsCancel.mockImplementation((val) => val === cancelSymbol);
-
-    await setupCommand();
-    expect(mockOutro).toHaveBeenCalled();
-    // Should not attempt to store anything
-    expect(mockSecretsStore).not.toHaveBeenCalled();
-  });
-
-  test('exits early when password entry is cancelled', async () => {
+  test('exits early when API key entry is cancelled', async () => {
     const cancelSymbol = Symbol.for('cancel');
     mockPassword.mockImplementation(() => cancelSymbol as any);
     mockIsCancel.mockImplementation((val) => val === cancelSymbol);
 
     await setupCommand();
     expect(mockOutro).toHaveBeenCalled();
+    // Should not attempt to store anything
     expect(mockSecretsStore).not.toHaveBeenCalled();
   });
 });
