@@ -45,7 +45,7 @@ mock.module('@tinyclaw/core', () => ({
         get: mockConfigGet,
         set: mock(() => {}),
         close: mockConfigClose,
-        path: '/tmp/test-config/config.db',
+        path: '/tmp/test-config/data/config.db',
       }),
     ),
   },
