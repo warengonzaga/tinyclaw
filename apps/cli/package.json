@@ -15,7 +15,7 @@
     "@clack/prompts": "^1.0.0",
     "@tinyclaw/core": "workspace:*",
     "@tinyclaw/ui": "workspace:*",
-    "@wgtechlabs/log-engine": "^2.2.0",
+    "@wgtechlabs/log-engine": "^2.3.0",
     "picocolors": "^1.1.1"
   }
 }
