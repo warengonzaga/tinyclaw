@@ -97,8 +97,8 @@ export type TinyClawConfigData = z.infer<typeof TinyClawConfigSchema>;
 export const CONFIG_DEFAULTS: Partial<TinyClawConfigData> = {
   providers: {
     starterBrain: {
-      model: 'llama3.2:3b',
-      baseUrl: 'http://localhost:11434',
+      model: 'gpt-oss:120b-cloud',
+      baseUrl: 'https://ollama.com',
     },
   },
   channels: {},
