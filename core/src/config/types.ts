@@ -83,6 +83,17 @@ export const TinyClawConfigSchema = z.object({
   plugins: z.object({
     enabled: z.array(z.string()).optional(),
   }).optional(),
+
+  /** Smart routing settings */
+  routing: z.object({
+    /** Maps query complexity tiers to provider IDs */
+    tierMapping: z.object({
+      simple: z.string().optional(),
+      moderate: z.string().optional(),
+      complex: z.string().optional(),
+      reasoning: z.string().optional(),
+    }).optional(),
+  }).optional(),
 }).passthrough();
 
 /**
@@ -125,6 +136,14 @@ export const CONFIG_DEFAULTS: Partial<TinyClawConfigData> = {
   },
   plugins: {
     enabled: [],
+  },
+  routing: {
+    tierMapping: {
+      simple: 'ollama-cloud',
+      moderate: 'ollama-cloud',
+      complex: 'ollama-cloud',
+      reasoning: 'ollama-cloud',
+    },
   },
 };
 
