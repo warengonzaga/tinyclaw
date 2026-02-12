@@ -11,7 +11,7 @@
  * ```typescript
  * import { ConfigManager, createConfigTools } from '@tinyclaw/core';
  *
- * // Initialize config manager (uses ~/.tinyclaw/config.db by default)
+ * // Initialize config manager (uses ~/.tinyclaw/data/config.db by default)
  * const configManager = await ConfigManager.create();
  *
  * // Read agent settings

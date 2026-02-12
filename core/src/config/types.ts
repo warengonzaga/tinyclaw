@@ -128,7 +128,7 @@ export const CONFIG_DEFAULTS: Partial<TinyClawConfigData> = {
  * Configuration for the ConfigManager factory
  */
 export interface ConfigManagerConfig {
-  /** Override the config storage directory (defaults to ~/.tinyclaw/) */
+  /** Override the config storage directory (defaults to ~/.tinyclaw/data/) */
   readonly cwd?: string;
 }
 

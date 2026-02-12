@@ -85,7 +85,7 @@ export interface TinyClawConfig {
     path?: string;
   };
   config?: {
-    /** Override the config storage directory (defaults to ~/.tinyclaw/) */
+    /** Override the config storage directory (defaults to ~/.tinyclaw/data/) */
     cwd?: string;
   };
 }

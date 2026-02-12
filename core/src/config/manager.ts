@@ -3,7 +3,7 @@
  *
  * Wraps @wgtechlabs/config-engine to provide persistent configuration
  * storage for TinyClaw. Configuration is stored as a SQLite database
- * at ~/.tinyclaw/config.db by default.
+ * at ~/.tinyclaw/data/config.db by default.
  *
  * Non-sensitive settings only — API keys and tokens belong in
  * secrets-engine via the SecretsManager.
@@ -43,7 +43,7 @@ export class ConfigManager implements ConfigManagerInterface {
    * @returns Initialized ConfigManager
    */
   static async create(config?: ConfigManagerConfig): Promise<ConfigManager> {
-    const cwd = config?.cwd ?? join(homedir(), '.tinyclaw');
+    const cwd = config?.cwd ?? join(homedir(), '.tinyclaw', 'data');
 
     const engine = await ConfigEngine.open<TinyClawConfigData>({
       projectName: 'tinyclaw',
