@@ -1,5 +1,5 @@
 import { Database as BunDatabase } from 'bun:sqlite';
-import { Database, Message } from './types.js';
+import { Database, Message, CompactionRecord } from './types.js';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 
@@ -34,6 +34,16 @@ export function createDatabase(path: string): Database {
       updated_at INTEGER NOT NULL,
       UNIQUE(user_id, key)
     );
+
+    CREATE TABLE IF NOT EXISTS compactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      replaced_before INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_compactions_user ON compactions(user_id, created_at);
   `);
   
   const saveMessageStmt = db.prepare(`
@@ -61,6 +71,29 @@ export function createDatabase(path: string): Database {
     WHERE user_id = ?
   `);
 
+  const getMessageCountStmt = db.prepare(`
+    SELECT COUNT(*) as count FROM messages
+    WHERE user_id = ?
+  `);
+
+  const saveCompactionStmt = db.prepare(`
+    INSERT INTO compactions (user_id, summary, replaced_before, created_at)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  const getLatestCompactionStmt = db.prepare(`
+    SELECT id, user_id, summary, replaced_before, created_at
+    FROM compactions
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+
+  const deleteMessagesBeforeStmt = db.prepare(`
+    DELETE FROM messages
+    WHERE user_id = ? AND created_at < ?
+  `);
+
   return {
     saveMessage(userId: string, role: string, content: string): void {
       saveMessageStmt.run(userId, role, content, Date.now());
@@ -73,7 +106,40 @@ export function createDatabase(path: string): Database {
         content: row.content
       }));
     },
-    
+
+    getMessageCount(userId: string): number {
+      const row = getMessageCountStmt.get(userId) as { count: number } | null;
+      return row?.count ?? 0;
+    },
+
+    saveCompaction(userId: string, summary: string, replacedBefore: number): void {
+      saveCompactionStmt.run(userId, summary, replacedBefore, Date.now());
+    },
+
+    getLatestCompaction(userId: string): CompactionRecord | null {
+      const row = getLatestCompactionStmt.get(userId) as {
+        id: number;
+        user_id: string;
+        summary: string;
+        replaced_before: number;
+        created_at: number;
+      } | null;
+
+      if (!row) return null;
+
+      return {
+        id: row.id,
+        userId: row.user_id,
+        summary: row.summary,
+        replacedBefore: row.replaced_before,
+        createdAt: row.created_at,
+      };
+    },
+
+    deleteMessagesBefore(userId: string, beforeTimestamp: number): void {
+      deleteMessagesBeforeStmt.run(userId, beforeTimestamp);
+    },
+
     saveMemory(userId: string, key: string, value: string): void {
       const now = Date.now();
       saveMemoryStmt.run(userId, key, value, now, now);
