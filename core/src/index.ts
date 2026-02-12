@@ -3,7 +3,19 @@ export { createDatabase } from './db.js';
 export { agentLoop } from './agent.js';
 export { logger } from './logger.js';
 export { createOllamaProvider } from './provider.js';
-export { ProviderOrchestrator, type OrchestratorConfig } from './router/index.js';
+// Router exports
+export {
+  ProviderOrchestrator,
+  type OrchestratorConfig,
+  type RouteResult,
+  type HealthRouteResult,
+  classifyQuery,
+  type ClassificationResult,
+  type QueryTier,
+  createProviderRegistry,
+  type ProviderRegistry,
+  type ProviderTierConfig,
+} from './router/index.js';
 
 // Queue exports
 export { createSessionQueue, type SessionQueue } from './queue.js';
