@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@wgtechlabs/config-engine": "^0.1.0",
-    "@wgtechlabs/log-engine": "^2.2.0",
+    "@wgtechlabs/log-engine": "^2.3.0",
     "@wgtechlabs/secrets-engine": "^2.0.0",
     "zod": "^3.24.0"
   }
