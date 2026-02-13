@@ -178,6 +178,7 @@ To update your identity (like nickname):
 - heartware_read, heartware_write, heartware_list, heartware_search
 - memory_add, memory_daily_log, memory_recall
 - identity_update, soul_update, preferences_set, bootstrap_complete
+- execute_code (sandboxed JavaScript/TypeScript execution)
 - ${DELEGATION_TOOL_NAMES.join(', ')}
 
 ## CRITICAL: When to Use Tools
@@ -319,6 +320,20 @@ export async function agentLoop(
 ): Promise<string> {
   const { db, provider, learning, tools, heartwareContext } = context;
 
+  // v3: Helper to record episodic memory event (fire-and-forget)
+  function recordEpisodic(response: string): void {
+    if (!context.memory) return;
+    try {
+      context.memory.recordEvent(userId, {
+        type: 'task_completed',
+        content: `User: ${message.slice(0, 200)}`,
+        outcome: response.slice(0, 200),
+      });
+    } catch {
+      // Non-fatal — don't let memory recording break the agent loop
+    }
+  }
+
   // Compact history if it has grown too large
   await compactIfNeeded(userId, db, provider);
 
@@ -353,11 +368,18 @@ export async function agentLoop(
   const learnedContext = learning.getContext();
 
   // Build system prompt with heartware and learnings
-  const systemPrompt = learning.injectIntoPrompt(
-    getBaseSystemPrompt(heartwareContext),
-    learnedContext
-  );
-  
+  let basePrompt = getBaseSystemPrompt(heartwareContext);
+
+  // v3: Inject relevant memories from adaptive memory engine
+  if (context.memory) {
+    const memoryContext = context.memory.getContextForAgent(userId, message);
+    if (memoryContext) {
+      basePrompt += `\n\n## Relevant Memories\n${memoryContext}`;
+    }
+  }
+
+  const systemPrompt = learning.injectIntoPrompt(basePrompt, learnedContext);
+
   // Build messages
   const messages: Message[] = [
     { role: 'system', content: systemPrompt },
@@ -387,6 +409,7 @@ export async function agentLoop(
           }
           db.saveMessage(userId, 'user', message);
           db.saveMessage(userId, 'assistant', fallback);
+          recordEpisodic(fallback);
           return fallback;
         }
 
@@ -456,6 +479,7 @@ export async function agentLoop(
 
         db.saveMessage(userId, 'user', message);
         db.saveMessage(userId, 'assistant', responseText);
+        recordEpisodic(responseText);
 
         setTimeout(() => {
           learning.analyze(message, responseText, history);
@@ -469,16 +493,17 @@ export async function agentLoop(
         onStream({ type: 'text', content: response.content || '' });
         onStream({ type: 'done' });
       }
-      
+
       // Save and return
       db.saveMessage(userId, 'user', message);
       db.saveMessage(userId, 'assistant', response.content || '');
-      
+      recordEpisodic(response.content || '');
+
       // Schedule learning analysis (async)
       setTimeout(() => {
         learning.analyze(message, response.content || '', history);
       }, 100);
-      
+
       return response.content || '';
     }
     
@@ -555,6 +580,7 @@ export async function agentLoop(
 
       db.saveMessage(userId, 'user', message);
       db.saveMessage(userId, 'assistant', responseText);
+      recordEpisodic(responseText);
 
       setTimeout(() => {
         learning.analyze(message, responseText, history);
