@@ -42,6 +42,82 @@ function getWorkingMessage(toolName: string): string {
   return '🤔 Working on that…\n\n';
 }
 
+// ---------------------------------------------------------------------------
+// Delegation stream event helpers
+// ---------------------------------------------------------------------------
+
+const DELEGATION_TOOLS = new Set([
+  'delegate_task',
+  'delegate_background',
+  'delegate_to_existing',
+]);
+
+function isDelegationTool(toolName: string): boolean {
+  return DELEGATION_TOOLS.has(toolName);
+}
+
+function emitDelegationStart(
+  onStream: ((event: import('@tinyclaw/types').StreamEvent) => void) | undefined,
+  toolCall: ToolCall,
+): void {
+  if (!onStream || !isDelegationTool(toolCall.name)) return;
+  const args = toolCall.arguments || {};
+  onStream({
+    type: 'delegation_start',
+    tool: toolCall.name,
+    delegation: {
+      role: String(args.role || args.agent_id || 'Sub-agent'),
+      task: String(args.task || ''),
+      tier: String(args.tier || 'auto'),
+    },
+  });
+}
+
+function emitDelegationComplete(
+  onStream: ((event: import('@tinyclaw/types').StreamEvent) => void) | undefined,
+  toolCall: ToolCall,
+  result: string,
+): void {
+  if (!onStream || !isDelegationTool(toolCall.name)) return;
+  const success = !result.startsWith('Error');
+  const args = toolCall.arguments || {};
+
+  // All delegation tools now run in background — emit a delegation_dispatched event
+  // that contains the agentId and taskId for sidebar tracking.
+  // Extract UUIDs from result string. The formats vary by tool:
+  //   delegate_task:        "... [new, agent: <uuid>, task: <uuid>] ..."
+  //   delegate_background:  "... [id: <uuid>]\nSub-agent: Role (uuid) ..."
+  //   delegate_to_existing: "... (<uuid>) [task: <uuid>] ..."
+  const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+  const allUUIDs = result.match(UUID_RE) || [];
+
+  // For delegate_task:   "agent: <uuid>, task: <uuid>"   → agentId is matched first, taskId second
+  // For delegate_background: "[id: <taskId>]\nSub-agent: Role (<agentId>)" → taskId first, agentId second
+  // For delegate_to_existing: "(<agentId>) [task: <taskId>]" → agentId first, taskId second
+  // Heuristic: look for labelled UUIDs first, then fall back to positional
+  const agentIdMatch = result.match(/\bagent:\s*([0-9a-f-]{36})/i)
+                    || result.match(/\(([0-9a-f-]{36})\)/);
+  const taskIdMatch = result.match(/\btask:\s*([0-9a-f-]{36})/i)
+                   || result.match(/\bid:\s*([0-9a-f-]{36})/i);
+  const agentId = agentIdMatch?.[1]?.trim();
+  const taskId = taskIdMatch?.[1]?.trim();
+
+  onStream({
+    type: 'delegation_complete',
+    tool: toolCall.name,
+    delegation: {
+      role: String(args.role || args.agent_id || ''),
+      task: String(args.task || ''),
+      success,
+      isReuse: result.includes('reused'),
+      agentId: agentId || undefined,
+      taskId: taskId || undefined,
+      status: 'running', // Sub-agent is now working in background
+      background: true,
+    },
+  });
+}
+
 function extractToolCallFromText(text: string): ToolCall | null {
   if (!text) return null;
 
@@ -417,10 +493,15 @@ export async function agentLoop(
 
         if (onStream) {
           onStream({ type: 'tool_start', tool: toolCall.name });
+          emitDelegationStart(onStream, toolCall);
           if (!sentToolProgress) {
             // Show a friendly working message based on tool type
-            const workingMsg = getWorkingMessage(toolCall.name);
-            onStream({ type: 'text', content: workingMsg });
+            const workingMsg = isDelegationTool(toolCall.name)
+              ? '' // Delegation cards handle their own progress display
+              : getWorkingMessage(toolCall.name);
+            if (workingMsg) {
+              onStream({ type: 'text', content: workingMsg });
+            }
             sentToolProgress = true;
           }
         }
@@ -434,14 +515,18 @@ export async function agentLoop(
           }
         } else {
           try {
-            const result = await tool.execute(toolCall.arguments);
+            // Inject user_id so delegation tools always receive the correct userId
+            const toolArgs = { ...toolCall.arguments, user_id: userId };
+            const result = await tool.execute(toolArgs);
             toolResults.push({ id: toolCall.id, result });
+            emitDelegationComplete(onStream, toolCall, result);
             if (onStream) {
               onStream({ type: 'tool_result', tool: toolCall.name, result });
             }
           } catch (error) {
             const errorMsg = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
             toolResults.push({ id: toolCall.id, result: errorMsg });
+            emitDelegationComplete(onStream, toolCall, errorMsg);
             if (onStream) {
               onStream({ type: 'tool_result', tool: toolCall.name, result: errorMsg });
             }
@@ -454,15 +539,24 @@ export async function agentLoop(
                                 toolCall.name.includes('recall') ||
                                 toolCall.name.includes('list');
         
-        if (isReadOperation && toolResults[0] && !toolResults[0].result.startsWith('Error')) {
+        // Delegation tools now run in background — feed the quick status message
+        // back so the LLM can tell the user in a natural way.
+        const isDelegation = isDelegationTool(toolCall.name);
+
+        if ((isReadOperation || isDelegation) && toolResults[0] && !toolResults[0].result.startsWith('Error')) {
           // Add tool result to conversation and let LLM respond naturally
+          const preamble = isDelegation
+            ? `I delegated the task to a sub-agent. Status:\n${toolResults[0].result}\n\nTell the user the sub-agent is now working on it in the background and they can keep chatting.`
+            : `I used ${toolCall.name} and got this result:\n${toolResults[0].result}`;
           messages.push({ 
             role: 'assistant', 
-            content: `I used ${toolCall.name} and got this result:\n${toolResults[0].result}` 
+            content: preamble, 
           });
           messages.push({ 
             role: 'user', 
-            content: 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.' 
+            content: isDelegation
+              ? 'Acknowledge the delegation briefly. Let me know the sub-agent is working on it and I can keep chatting.'
+              : 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.'
           });
           
           // Continue the loop to get LLM's natural response
@@ -515,9 +609,14 @@ export async function agentLoop(
         // Notify about tool execution
         if (onStream) {
           onStream({ type: 'tool_start', tool: toolCall.name });
+          emitDelegationStart(onStream, toolCall);
           if (!sentToolProgress) {
-            const workingMsg = getWorkingMessage(toolCall.name);
-            onStream({ type: 'text', content: workingMsg });
+            const workingMsg = isDelegationTool(toolCall.name)
+              ? ''
+              : getWorkingMessage(toolCall.name);
+            if (workingMsg) {
+              onStream({ type: 'text', content: workingMsg });
+            }
             sentToolProgress = true;
           }
         }
@@ -533,38 +632,48 @@ export async function agentLoop(
         }
         
         try {
-          const result = await tool.execute(toolCall.arguments);
+          // Inject user_id so delegation tools always receive the correct userId
+          const toolArgs = { ...toolCall.arguments, user_id: userId };
+          const result = await tool.execute(toolArgs);
           toolResults.push({ id: toolCall.id, result });
+          emitDelegationComplete(onStream, toolCall, result);
           if (onStream) {
             onStream({ type: 'tool_result', tool: toolCall.name, result });
           }
         } catch (error) {
           const errorMsg = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
           toolResults.push({ id: toolCall.id, result: errorMsg });
+          emitDelegationComplete(onStream, toolCall, errorMsg);
           if (onStream) {
             onStream({ type: 'tool_result', tool: toolCall.name, result: errorMsg });
           }
         }
       }
       
-      // Check if any tool was a read operation
+      // Check if any tool was a read or delegation operation
       const hasReadOperation = response.toolCalls.some(tc => 
         tc.name.includes('read') || 
         tc.name.includes('search') || 
         tc.name.includes('recall') ||
         tc.name.includes('list')
       );
+      const hasDelegation = response.toolCalls.some(tc => isDelegationTool(tc.name));
       
-      if (hasReadOperation && toolResults.some(r => !r.result.startsWith('Error'))) {
+      if ((hasReadOperation || hasDelegation) && toolResults.some(r => !r.result.startsWith('Error'))) {
         // Add tool results to conversation and let LLM respond naturally
         const resultsText = toolResults.map(r => r.result).join('\n\n');
+        const preamble = hasDelegation
+          ? `I delegated the task(s) to sub-agent(s). Status:\n${resultsText}\n\nTell the user the sub-agent(s) are working in the background and they can keep chatting.`
+          : `I retrieved this information:\n${resultsText}`;
         messages.push({ 
           role: 'assistant', 
-          content: `I retrieved this information:\n${resultsText}` 
+          content: preamble,
         });
         messages.push({ 
           role: 'user', 
-          content: 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.' 
+          content: hasDelegation
+            ? 'Acknowledge the delegation briefly. Let me know the sub-agent is working on it and I can keep chatting.'
+            : 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.'
         });
         
         // Continue the loop to get LLM's natural response

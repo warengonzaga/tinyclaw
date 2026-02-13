@@ -290,6 +290,12 @@ export function createDatabase(path: string): Database {
     WHERE status = 'running' AND started_at < ?
   `);
 
+  const getUserBackgroundTasksStmt = db.prepare(`
+    SELECT * FROM background_tasks
+    WHERE user_id = ? AND status IN ('running', 'completed', 'failed')
+    ORDER BY started_at DESC
+  `);
+
   // --- Episodic memory prepared statements ---
 
   const saveEpisodicEventStmt = db.prepare(`
@@ -645,6 +651,11 @@ export function createDatabase(path: string): Database {
     getBackgroundTask(id: string): BackgroundTask | null {
       const row = getBackgroundTaskStmt.get(id) as Record<string, unknown> | null;
       return row ? parseBackgroundTaskRow(row) : null;
+    },
+
+    getUserBackgroundTasks(userId: string): BackgroundTask[] {
+      const rows = getUserBackgroundTasksStmt.all(userId) as Record<string, unknown>[];
+      return rows.map(parseBackgroundTaskRow);
     },
 
     markTaskDelivered(id: string): void {

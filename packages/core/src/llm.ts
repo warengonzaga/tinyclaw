@@ -1,5 +1,5 @@
 import { logger } from '@tinyclaw/logger';
-import type { Provider, Message, LLMResponse } from '@tinyclaw/types';
+import type { Provider, Message, LLMResponse, Tool, ToolCall } from '@tinyclaw/types';
 import type { SecretsManager } from '@tinyclaw/secrets';
 
 export interface OllamaConfig {
@@ -7,6 +7,83 @@ export interface OllamaConfig {
   secrets?: SecretsManager;
   model?: string;
   baseUrl?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Tool format conversion helpers
+// ---------------------------------------------------------------------------
+
+/** Convert internal Tool[] to the Ollama API tools format. */
+function toOllamaTools(
+  tools: Tool[],
+): { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } }[] {
+  return tools.map((t) => ({
+    type: 'function' as const,
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.parameters,
+    },
+  }));
+}
+
+/**
+ * Parse tool_calls from Ollama API response.
+ *
+ * Ollama returns tool call arguments as an **object** (not a JSON string
+ * like OpenAI), and does not include an `id` field — we generate one.
+ */
+function parseOllamaToolCalls(
+  raw: { function: { name: string; arguments: Record<string, unknown> | string } }[],
+): ToolCall[] {
+  return raw.map((tc) => ({
+    id: crypto.randomUUID(),
+    name: tc.function.name,
+    arguments:
+      typeof tc.function.arguments === 'string'
+        ? (JSON.parse(tc.function.arguments) as Record<string, unknown>)
+        : tc.function.arguments,
+  }));
+}
+
+/**
+ * Attempt to extract a JSON tool-call object from freeform text.
+ *
+ * Used as a last-resort fallback when the model puts tool-call intent
+ * in its `thinking` field or in content text instead of using native
+ * tool calling.
+ */
+const TOOL_ACTION_KEYS = ['action', 'tool', 'name'];
+
+function extractToolCallFromText(text: string): ToolCall | null {
+  if (!text) return null;
+
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  const raw = text.slice(start, end + 1).trim();
+  let parsed: Record<string, unknown>;
+
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  const actionKey = TOOL_ACTION_KEYS.find((key) => key in parsed);
+  const toolName = actionKey ? String(parsed[actionKey]) : '';
+  if (!toolName) return null;
+
+  const { action, tool, name, ...rest } = parsed as Record<string, unknown>;
+
+  return {
+    id: crypto.randomUUID(),
+    name: toolName,
+    arguments: rest,
+  };
 }
 
 /**
@@ -23,7 +100,7 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
     id: 'ollama-cloud',
     name: 'Ollama Cloud (gpt-oss:120b)',
     
-    async chat(messages: Message[]): Promise<LLMResponse> {
+    async chat(messages: Message[], tools?: Tool[]): Promise<LLMResponse> {
       try {
         // Resolve API key: explicit value or secrets-engine lookup
         const apiKey = config.apiKey ?? (await config.secrets?.resolveProviderKey('ollama'));
@@ -34,17 +111,24 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
           );
         }
 
+        const body: Record<string, unknown> = {
+          model,
+          messages,
+          stream: false,
+        };
+
+        // Pass tools to the Ollama API so it can return native tool calls
+        if (tools?.length) {
+          body.tools = toOllamaTools(tools);
+        }
+
         const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model,
-            messages,
-            stream: false,
-          }),
+          body: JSON.stringify(body),
         });
         
         if (!response.ok) {
@@ -59,20 +143,49 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         
         // Debug: log raw API response to understand its structure
         logger.debug('Raw API response:', JSON.stringify(data).slice(0, 500));
-        
-        // Try multiple response formats (different APIs structure responses differently)
-        const content = 
-          data.message?.content ||      // Ollama format
-          data.choices?.[0]?.message?.content ||  // OpenAI format
+
+        // Resolve the message object (Ollama vs OpenAI vs direct format)
+        const msg = data.message || data.choices?.[0]?.message;
+
+        // 1. Native tool calls — highest priority
+        if (msg?.tool_calls?.length) {
+          logger.debug('Ollama tool_calls detected', { count: msg.tool_calls.length });
+          return {
+            type: 'tool_calls',
+            content: msg.content ?? undefined,
+            toolCalls: parseOllamaToolCalls(msg.tool_calls),
+          };
+        }
+
+        // 2. Text content
+        const content =
+          msg?.content ||
           data.response ||              // Simple format
           data.content ||               // Direct content
           data.text ||                  // Text format
           '';
-        
-        return {
-          type: 'text',
-          content,
-        };
+
+        if (content) {
+          return { type: 'text', content };
+        }
+
+        // 3. Fallback — content is empty; try to extract a tool call from
+        //    the model's `thinking` field (reasoning models put intent there)
+        const thinking: string = msg?.thinking || '';
+        if (thinking) {
+          logger.debug('Content empty, checking thinking field for tool calls');
+          const toolCall = extractToolCallFromText(thinking);
+          if (toolCall) {
+            logger.info('Extracted tool call from thinking field', { tool: toolCall.name });
+            return {
+              type: 'tool_calls',
+              toolCalls: [toolCall],
+            };
+          }
+        }
+
+        // 4. Nothing useful — return empty text
+        return { type: 'text', content: '' };
       } catch (error) {
         logger.error('Ollama provider error:', (error as Error).message);
         throw error;
