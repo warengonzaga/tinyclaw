@@ -3,20 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "core",
-    "apps/*",
-    "plugin/channel/*",
-    "plugin/provider/*",
-    "plugin/tools/*"
+    "packages/*",
+    "src/*",
+    "plugins/channel/*",
+    "plugins/provider/*",
+    "plugins/tool/*"
   ],
   "scripts": {
-    "dev": "bun run --cwd apps/cli dev",
-    "dev:ui": "bun run --cwd apps/web dev",
+    "dev": "bun run --cwd src/cli dev",
+    "dev:ui": "bun run --cwd src/web dev",
     "build": "bun run build:core && bun run build:apps",
-    "build:core": "bun run --cwd core build",
-    "build:apps": "bun run --cwd apps/web build && bun run --cwd apps/cli build",
-    "build:ui": "bun run --cwd apps/web build",
-    "start": "bun run --cwd apps/cli start",
+    "build:core": "bun run --cwd packages/core build",
+    "build:apps": "bun run --cwd src/web build && bun run --cwd src/cli build",
+    "build:ui": "bun run --cwd src/web build",
+    "start": "bun run --cwd src/cli start",
     "test": "bun test"
   },
   "devDependencies": {
@@ -24,7 +24,5 @@
     "@types/node": "^22.10.0",
     "typescript": "^5.7.0"
   },
-  "dependencies": {
-    "@wgtechlabs/log-engine": "^2.3.0"
-  }
+  "dependencies": {}
 }

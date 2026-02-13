@@ -1,0 +1,10 @@
+{
+  "name": "@tinyclaw/memory",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@tinyclaw/types": "workspace:*"
+  }
+}
