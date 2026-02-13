@@ -62,7 +62,7 @@ mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
     isAvailable: mock(() => Promise.resolve(true)),
   })),
-  createCronScheduler: mock(() => ({
+  createPulseScheduler: mock(() => ({
     register: mock(() => {}),
     start: mock(() => {}),
     stop: mock(() => {}),

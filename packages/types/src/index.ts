@@ -304,12 +304,12 @@ export interface LearnedContext {
 }
 
 // ---------------------------------------------------------------------------
-// Cron
+// Pulse (TinyClaw's version of OpenClaw's Heartbeat — cron-like task scheduler)
 // ---------------------------------------------------------------------------
 
-export interface CronJob {
+export interface PulseJob {
   id: string;
-  schedule: string; // cron expression or interval like '30m', '1h', '24h'
+  schedule: string; // interval like '30m', '1h', '24h'
   handler: () => Promise<void>;
   lastRun?: number;
 }

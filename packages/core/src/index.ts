@@ -8,7 +8,7 @@ export { agentLoop } from './agent.js';
 export { createOllamaProvider } from './provider.js';
 
 // Pulse scheduler
-export { createCronScheduler, type CronScheduler } from './cron.js';
+export { createPulseScheduler, type PulseScheduler } from './pulse.js';
 
 // Plugin loader
 export { loadPlugins, type LoadedPlugins } from './plugins.js';

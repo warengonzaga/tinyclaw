@@ -1,19 +1,20 @@
 /**
- * Cron Scheduler
+ * Pulse Scheduler — TinyClaw's cron-like recurring task system.
  *
- * Lightweight interval-based scheduler for pulse tasks.
- * Supports simple interval strings ('30m', '1h', '24h') and
- * runs handlers through the session queue to prevent conflicts.
+ * "Pulse" is TinyClaw's version of OpenClaw's "Heartbeat" scheduler.
+ * Lightweight interval-based scheduler that supports simple
+ * interval strings ('30m', '1h', '24h') and runs handlers
+ * through the session queue to prevent conflicts.
  */
 
-import type { CronJob } from '@tinyclaw/types';
+import type { PulseJob } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
 
-export interface CronScheduler {
-  register(job: CronJob): void;
+export interface PulseScheduler {
+  register(job: PulseJob): void;
   start(): void;
   stop(): void;
-  jobs(): CronJob[];
+  jobs(): PulseJob[];
 }
 
 /** Parse an interval string like '30m', '1h', '24h' into milliseconds. */
@@ -40,13 +41,13 @@ function parseInterval(schedule: string): number {
   }
 }
 
-export function createCronScheduler(): CronScheduler {
-  const registered: CronJob[] = [];
+export function createPulseScheduler(): PulseScheduler {
+  const registered: PulseJob[] = [];
   const timers: Map<string, ReturnType<typeof setInterval>> = new Map();
   let running = false;
 
   return {
-    register(job: CronJob): void {
+    register(job: PulseJob): void {
       // Validate the schedule string on registration
       parseInterval(job.schedule);
       registered.push(job);
@@ -65,7 +66,7 @@ export function createCronScheduler(): CronScheduler {
         startJob(job);
       }
 
-      logger.info('Cron scheduler started', {
+      logger.info('Pulse scheduler started', {
         jobs: registered.map((j) => `${j.id} (${j.schedule})`),
       });
     },
@@ -76,15 +77,15 @@ export function createCronScheduler(): CronScheduler {
         clearInterval(timer);
         timers.delete(id);
       }
-      logger.info('Cron scheduler stopped');
+      logger.info('Pulse scheduler stopped');
     },
 
-    jobs(): CronJob[] {
+    jobs(): PulseJob[] {
       return [...registered];
     },
   };
 
-  function startJob(job: CronJob): void {
+  function startJob(job: PulseJob): void {
     const intervalMs = parseInterval(job.schedule);
 
     const timer = setInterval(async () => {

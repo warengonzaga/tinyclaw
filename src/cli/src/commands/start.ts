@@ -15,7 +15,7 @@ import {
   createDatabase,
   agentLoop,
   createOllamaProvider,
-  createCronScheduler,
+  createPulseScheduler,
   loadPlugins,
 } from '@tinyclaw/core';
 import { createIntercom } from '@tinyclaw/intercom';
@@ -327,11 +327,11 @@ export async function startCommand(): Promise<void> {
     memory: memoryEngine,
   };
 
-  // --- Initialize cron scheduler -----------------------------------------
+  // --- Initialize pulse scheduler -----------------------------------------
 
-  const cron = createCronScheduler();
+  const pulse = createPulseScheduler();
 
-  cron.register({
+  pulse.register({
     id: 'memory-consolidation',
     schedule: '24h',
     handler: async () => {
@@ -345,7 +345,7 @@ export async function startCommand(): Promise<void> {
     },
   });
 
-  cron.register({
+  pulse.register({
     id: 'delegation-cleanup',
     schedule: '24h',
     handler: async () => {
@@ -358,7 +358,7 @@ export async function startCommand(): Promise<void> {
   });
 
   // v3: Memory consolidation — merge duplicates, prune low-importance, decay old memories
-  cron.register({
+  pulse.register({
     id: 'memory-consolidation-v3',
     schedule: '6h',
     handler: async () => {
@@ -370,7 +370,7 @@ export async function startCommand(): Promise<void> {
   });
 
   // v3: Blackboard cleanup — remove resolved problems older than 7 days
-  cron.register({
+  pulse.register({
     id: 'blackboard-cleanup',
     schedule: '24h',
     handler: async () => {
@@ -381,8 +381,8 @@ export async function startCommand(): Promise<void> {
     },
   });
 
-  cron.start();
-  logger.info('✅ Cron scheduler initialized');
+  pulse.start();
+  logger.info('✅ Pulse scheduler initialized');
 
   // --- Start Web UI / API server ----------------------------------------
 
@@ -464,13 +464,13 @@ export async function startCommand(): Promise<void> {
     isShuttingDown = true;
     logger.info('👋 Shutting down TinyClaw...');
 
-    // 0. Cron scheduler + session queue
+    // 0. Pulse scheduler + session queue
     try {
-      cron.stop();
+      pulse.stop();
       queue.stop();
-      logger.info('Cron scheduler and session queue stopped');
+      logger.info('Pulse scheduler and session queue stopped');
     } catch (err) {
-      logger.error('Error stopping cron/queue:', err);
+      logger.error('Error stopping pulse/queue:', err);
     }
 
     // 0.5. Cancel background delegation tasks
