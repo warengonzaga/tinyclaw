@@ -48,7 +48,11 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         });
         
         if (!response.ok) {
-          throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+          const errorBody = await response.text().catch(() => '');
+          throw new Error(
+            `Ollama API error: ${response.status} ${response.statusText}` +
+            (errorBody ? ` — ${errorBody}` : '')
+          );
         }
         
         const data = await response.json();
@@ -70,7 +74,7 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
           content,
         };
       } catch (error) {
-        logger.error('Ollama provider error:', error);
+        logger.error('Ollama provider error:', (error as Error).message);
         throw error;
       }
     },
@@ -80,13 +84,37 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         const apiKey = config.apiKey ?? (await config.secrets?.resolveProviderKey('ollama'));
         if (!apiKey) return false;
 
-        const response = await fetch(`${baseUrl}/api/tags`, {
+        // Use the chat endpoint with a minimal ping message so we validate
+        // the same auth path the real requests will take.
+        // /api/tags may not enforce auth the same way /api/chat does.
+        const response = await fetch(`${baseUrl}/api/chat`, {
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: 'ping' }],
+            stream: false,
+          }),
         });
+
+        // Surface auth errors explicitly so callers can distinguish
+        // "provider is down" from "bad API key"
+        if (response.status === 401 || response.status === 403) {
+          const body = await response.text().catch(() => '');
+          throw new Error(
+            `Authentication failed (${response.status}): ${body || response.statusText}`,
+          );
+        }
+
         return response.ok;
-      } catch {
+      } catch (err) {
+        // Re-throw auth errors so they propagate to the caller
+        if (err instanceof Error && err.message.startsWith('Authentication failed')) {
+          throw err;
+        }
         return false;
       }
     }
