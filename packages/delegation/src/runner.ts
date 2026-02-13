@@ -29,7 +29,7 @@ const TOOL_ACTION_KEYS = ['action', 'tool', 'name'];
 
 // ---------------------------------------------------------------------------
 // Tool call parsing helpers
-// (Duplicated from agent.ts — pure functions, candidates for future
+// (Duplicated from loop.ts — pure functions, candidates for future
 //  extraction into core/src/tool-utils.ts)
 // ---------------------------------------------------------------------------
 

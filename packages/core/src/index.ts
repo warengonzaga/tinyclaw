@@ -1,11 +1,8 @@
 // Database
-export { createDatabase } from './db.js';
+export { createDatabase } from './database.js';
 
 // Agent loop
-export { agentLoop } from './agent.js';
+export { agentLoop } from './loop.js';
 
-// Built-in Ollama provider
-export { createOllamaProvider } from './provider.js';
-
-// Plugin loader
-export { loadPlugins, type LoadedPlugins } from './plugins.js';
+// Built-in Ollama provider (default LLM)
+export { createOllamaProvider } from './llm.js';

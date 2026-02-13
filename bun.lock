@@ -84,6 +84,14 @@
         "@tinyclaw/core": "workspace:*",
       },
     },
+    "packages/plugins": {
+      "name": "@tinyclaw/plugins",
+      "version": "0.0.1",
+      "dependencies": {
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
+      },
+    },
     "packages/pulse": {
       "name": "@tinyclaw/pulse",
       "version": "0.0.1",
@@ -155,6 +163,7 @@
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/matcher": "workspace:*",
         "@tinyclaw/memory": "workspace:*",
+        "@tinyclaw/plugins": "workspace:*",
         "@tinyclaw/pulse": "workspace:*",
         "@tinyclaw/queue": "workspace:*",
         "@tinyclaw/router": "workspace:*",
@@ -374,6 +383,8 @@
     "@tinyclaw/plugin-channel-discord": ["@tinyclaw/plugin-channel-discord@workspace:plugins/channel/plugin-channel-discord"],
 
     "@tinyclaw/plugin-provider-openai": ["@tinyclaw/plugin-provider-openai@workspace:plugins/provider/plugin-provider-openai"],
+
+    "@tinyclaw/plugins": ["@tinyclaw/plugins@workspace:packages/plugins"],
 
     "@tinyclaw/pulse": ["@tinyclaw/pulse@workspace:packages/pulse"],
 

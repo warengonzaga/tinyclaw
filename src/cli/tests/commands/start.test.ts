@@ -62,6 +62,9 @@ mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
     isAvailable: mock(() => Promise.resolve(true)),
   })),
+}));
+
+mock.module('@tinyclaw/plugins', () => ({
   loadPlugins: mock(() => Promise.resolve({ channels: [], providers: [], tools: [] })),
 }));
 

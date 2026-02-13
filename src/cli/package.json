@@ -22,6 +22,7 @@
     "@tinyclaw/logger": "workspace:*",
     "@tinyclaw/matcher": "workspace:*",
     "@tinyclaw/memory": "workspace:*",
+    "@tinyclaw/plugins": "workspace:*",
     "@tinyclaw/pulse": "workspace:*",
     "@tinyclaw/queue": "workspace:*",
     "@tinyclaw/router": "workspace:*",
