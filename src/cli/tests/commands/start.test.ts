@@ -62,9 +62,6 @@ mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
     isAvailable: mock(() => Promise.resolve(true)),
   })),
-  createSessionQueue: mock(() => ({
-    enqueue: mock(() => Promise.resolve('queued response')),
-  })),
   createCronScheduler: mock(() => ({
     register: mock(() => {}),
     start: mock(() => {}),
@@ -78,6 +75,14 @@ mock.module('@tinyclaw/core', () => ({
   createEventBus: mock(() => ({
     publish: mock(() => {}),
     subscribe: mock(() => mock(() => {})),
+  })),
+}));
+
+// ── Mock @tinyclaw/queue ────────────────────────────────────────────
+
+mock.module('@tinyclaw/queue', () => ({
+  createSessionQueue: mock(() => ({
+    enqueue: mock(() => Promise.resolve('queued response')),
   })),
 }));
 

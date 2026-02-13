@@ -7,9 +7,6 @@ export { agentLoop } from './agent.js';
 // Built-in Ollama provider
 export { createOllamaProvider } from './provider.js';
 
-// Session queue
-export { createSessionQueue, type SessionQueue } from './queue.js';
-
 // Pulse scheduler
 export { createCronScheduler, type CronScheduler } from './cron.js';
 

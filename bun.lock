@@ -40,6 +40,7 @@
       },
       "devDependencies": {
         "@tinyclaw/core": "workspace:*",
+        "@tinyclaw/queue": "workspace:*",
       },
     },
     "packages/heartware": {
@@ -73,6 +74,10 @@
       "devDependencies": {
         "@tinyclaw/core": "workspace:*",
       },
+    },
+    "packages/queue": {
+      "name": "@tinyclaw/queue",
+      "version": "0.0.1",
     },
     "packages/router": {
       "name": "@tinyclaw/router",
@@ -131,6 +136,7 @@
         "@tinyclaw/learning": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/memory": "workspace:*",
+        "@tinyclaw/queue": "workspace:*",
         "@tinyclaw/router": "workspace:*",
         "@tinyclaw/sandbox": "workspace:*",
         "@tinyclaw/secrets": "workspace:*",
@@ -344,6 +350,8 @@
     "@tinyclaw/plugin-channel-discord": ["@tinyclaw/plugin-channel-discord@workspace:plugins/channel/plugin-channel-discord"],
 
     "@tinyclaw/plugin-provider-openai": ["@tinyclaw/plugin-provider-openai@workspace:plugins/provider/plugin-provider-openai"],
+
+    "@tinyclaw/queue": ["@tinyclaw/queue@workspace:packages/queue"],
 
     "@tinyclaw/router": ["@tinyclaw/router@workspace:packages/router"],
 

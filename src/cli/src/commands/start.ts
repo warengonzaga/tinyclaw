@@ -15,12 +15,12 @@ import {
   createDatabase,
   agentLoop,
   createOllamaProvider,
-  createSessionQueue,
   createCronScheduler,
   loadPlugins,
   createHybridMatcher,
   createEventBus,
 } from '@tinyclaw/core';
+import { createSessionQueue } from '@tinyclaw/queue';
 import { logger } from '@tinyclaw/logger';
 import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';
 import { HeartwareManager, createHeartwareTools, loadHeartwareContext, type HeartwareConfig } from '@tinyclaw/heartware';

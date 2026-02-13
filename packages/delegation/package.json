@@ -9,6 +9,7 @@
     "@tinyclaw/router": "workspace:*"
   },
   "devDependencies": {
-    "@tinyclaw/core": "workspace:*"
+    "@tinyclaw/core": "workspace:*",
+    "@tinyclaw/queue": "workspace:*"
   }
 }

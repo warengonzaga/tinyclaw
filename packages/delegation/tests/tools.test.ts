@@ -3,7 +3,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { createDatabase, createSessionQueue } from '@tinyclaw/core';
+import { createDatabase } from '@tinyclaw/core';
+import { createSessionQueue } from '@tinyclaw/queue';
 import { createDelegationTools } from '../src/index.js';
 import type { Provider, Tool, Message, LLMResponse, LearningEngine, LearnedContext } from '@tinyclaw/types';
 import type { ProviderOrchestrator } from '@tinyclaw/router';
