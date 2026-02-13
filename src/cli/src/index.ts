@@ -9,6 +9,7 @@
  *   tinyclaw              Show banner + help
  *   tinyclaw setup        Interactive first-time setup wizard
  *   tinyclaw start        Boot the agent (requires setup first)
+ *   tinyclaw purge        Wipe all data for a fresh install
  *   tinyclaw --version    Print version
  *   tinyclaw --help       Show help
  */
@@ -27,6 +28,7 @@ function showHelp(): void {
   console.log('  ' + theme.label('Commands'));
   console.log(`    ${theme.cmd('setup')}   Interactive setup wizard — configure your provider`);
   console.log(`    ${theme.cmd('start')}   Start the TinyClaw agent`);
+  console.log(`    ${theme.cmd('purge')}   Wipe all data for a fresh install (--force to include secrets)`);
   console.log();
   console.log('  ' + theme.label('Options'));
   console.log(`    ${theme.dim('--version, -v')}   Show version number`);
@@ -50,6 +52,12 @@ async function main(): Promise<void> {
     case 'start': {
       const { startCommand } = await import('./commands/start.js');
       await startCommand();
+      break;
+    }
+
+    case 'purge': {
+      const { purgeCommand } = await import('./commands/purge.js');
+      await purgeCommand(args.slice(1));
       break;
     }
 
