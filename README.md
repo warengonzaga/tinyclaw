@@ -17,6 +17,7 @@ An ultra-minimal, self-improving AI companion that learns from your conversation
 🧠 Multi-provider support (Anthropic, OpenAI, Ollama)  
 🛠️ Extensible tool system  
 🔄 Automatic provider fallback  
+📱 Multi-channel support (Discord, **Telnyx SMS/Voice**)  
 
 ## Quick Start
 
