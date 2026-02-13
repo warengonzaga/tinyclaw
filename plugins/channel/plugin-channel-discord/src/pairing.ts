@@ -29,7 +29,7 @@ export function createDiscordPairingTools(
       description:
         'Pair TinyClaw with a Discord bot. ' +
         'Stores the bot token securely and enables the Discord channel plugin. ' +
-        'After pairing, TinyClaw must be restarted for the bot to connect. ' +
+        'After pairing, call tinyclaw_restart to connect the bot. ' +
         'To get a token: go to https://discord.com/developers/applications, ' +
         'create an application, add a Bot, copy the token, and enable ' +
         '"Message Content Intent" under Privileged Gateway Intents.',
@@ -66,7 +66,7 @@ export function createDiscordPairingTools(
           return (
             'Discord bot paired successfully! ' +
             'Token stored securely and plugin enabled. ' +
-            'Please restart TinyClaw for the bot to connect. ' +
+            'Use the tinyclaw_restart tool now to connect the bot. ' +
             'Make sure "Message Content Intent" is enabled in the Discord Developer Portal.'
           );
         } catch (err) {
@@ -79,7 +79,7 @@ export function createDiscordPairingTools(
       name: 'discord_unpair',
       description:
         'Disconnect the Discord bot and disable the Discord channel plugin. ' +
-        'The bot token is kept in secrets for safety. Requires a restart.',
+        'The bot token is kept in secrets for safety. Call tinyclaw_restart after.',
       parameters: {
         type: 'object',
         properties: {},
@@ -99,7 +99,7 @@ export function createDiscordPairingTools(
 
           return (
             'Discord plugin disabled. ' +
-            'Restart TinyClaw for the change to take effect. ' +
+            'Use the tinyclaw_restart tool now to apply the changes. ' +
             'The bot token is still stored in secrets — use list_secrets to manage it.'
           );
         } catch (err) {

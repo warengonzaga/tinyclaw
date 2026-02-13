@@ -9,7 +9,7 @@
  *   2. Enable: Message Content Intent (under Privileged Gateway Intents)
  *   3. Run TinyClaw and ask it to pair the Discord channel
  *   4. Provide the bot token when prompted
- *   5. Restart TinyClaw — the bot will connect automatically
+ *   5. Agent auto-restarts — the bot will connect automatically
  *
  * userId format: "discord:<discord-user-id>"
  *   Prefixed to prevent collisions with web UI user IDs.
