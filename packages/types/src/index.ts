@@ -24,11 +24,23 @@ export interface LLMResponse {
 }
 
 export interface StreamEvent {
-  type: 'text' | 'tool_start' | 'tool_result' | 'done' | 'error';
+  type: 'text' | 'tool_start' | 'tool_result' | 'done' | 'error'
+    | 'delegation_start' | 'delegation_complete' | 'background_start' | 'background_update';
   content?: string;
   tool?: string;
   result?: string;
   error?: string;
+  /** Delegation metadata (present on delegation_* events) */
+  delegation?: {
+    agentId?: string;
+    role?: string;
+    task?: string;
+    taskId?: string;
+    tier?: string;
+    isReuse?: boolean;
+    success?: boolean;
+    status?: string;
+  };
 }
 
 export type StreamCallback = (event: StreamEvent) => void;
@@ -113,6 +125,7 @@ export interface Database {
   saveBackgroundTask(record: BackgroundTask): void;
   updateBackgroundTask(id: string, status: string, result: string | null, completedAt: number | null): void;
   getUndeliveredTasks(userId: string): BackgroundTask[];
+  getUserBackgroundTasks(userId: string): BackgroundTask[];
   getBackgroundTask(id: string): BackgroundTask | null;
   markTaskDelivered(id: string): void;
   getStaleBackgroundTasks(olderThanMs: number): BackgroundTask[];
