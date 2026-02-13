@@ -54,6 +54,8 @@ export interface AgentContext {
   heartwareContext?: string; // Optional heartware configuration context
   secrets?: SecretsManagerInterface; // Optional secrets manager for API key storage
   configManager?: ConfigManagerInterface; // Optional config manager for persistent settings
+  /** Adaptive memory engine (v3) — episodic memory + FTS5 + temporal decay. */
+  memory?: MemoryEngine;
   /** Delegation v2 subsystems (lifecycle, templates, background runner). */
   delegation?: {
     lifecycle: unknown;
@@ -105,6 +107,28 @@ export interface Database {
   getBackgroundTask(id: string): BackgroundTask | null;
   markTaskDelivered(id: string): void;
   getStaleBackgroundTasks(olderThanMs: number): BackgroundTask[];
+
+  // Episodic memory (v3)
+  saveEpisodicEvent(record: EpisodicRecord): void;
+  getEpisodicEvent(id: string): EpisodicRecord | null;
+  getEpisodicEvents(userId: string, limit?: number): EpisodicRecord[];
+  updateEpisodicEvent(id: string, updates: Partial<EpisodicRecord>): void;
+  deleteEpisodicEvents(ids: string[]): void;
+  searchEpisodicFTS(query: string, userId: string, limit?: number): Array<{ id: string; rank: number }>;
+  decayEpisodicImportance(userId: string, olderThanDays: number, decayFactor: number): number;
+  pruneEpisodicEvents(userId: string, maxImportance: number, maxAccessCount: number, olderThanMs: number): number;
+
+  // Task metrics (v3)
+  saveTaskMetric(record: TaskMetricRecord): void;
+  getTaskMetrics(taskType: string, tier: string, limit?: number): TaskMetricRecord[];
+
+  // Blackboard (v3)
+  saveBlackboardEntry(entry: BlackboardEntry): void;
+  getBlackboardEntry(id: string): BlackboardEntry | null;
+  getBlackboardProposals(problemId: string): BlackboardEntry[];
+  getActiveProblems(userId: string): BlackboardEntry[];
+  resolveBlackboardProblem(problemId: string, synthesis: string): void;
+  cleanupBlackboard(olderThanMs: number): number;
 
   close(): void;
 }
@@ -160,6 +184,93 @@ export interface CompactionRecord {
   userId: string;
   summary: string;
   replacedBefore: number;
+  createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Episodic Memory (v3)
+// ---------------------------------------------------------------------------
+
+export type EpisodicEventType =
+  | 'task_completed'
+  | 'preference_learned'
+  | 'correction'
+  | 'delegation_result'
+  | 'fact_stored';
+
+export interface EpisodicRecord {
+  id: string;
+  userId: string;
+  eventType: EpisodicEventType;
+  content: string;
+  outcome: string | null;
+  importance: number;
+  accessCount: number;
+  createdAt: number;
+  lastAccessedAt: number;
+}
+
+export interface MemorySearchResult {
+  id: string;
+  content: string;
+  relevanceScore: number; // Combined: FTS5 rank + temporal decay + importance
+  source: 'episodic' | 'key_value';
+}
+
+export interface MemoryEngine {
+  /** Store an episodic event. */
+  recordEvent(userId: string, event: {
+    type: EpisodicEventType;
+    content: string;
+    outcome?: string;
+    importance?: number;
+  }): string; // returns event id
+
+  /** Search memory using hybrid scoring: FTS5 BM25 + temporal decay + importance. */
+  search(userId: string, query: string, limit?: number): MemorySearchResult[];
+
+  /** Consolidate: merge duplicates, prune contradictions, decay old memories. */
+  consolidate(userId: string): { merged: number; pruned: number; decayed: number };
+
+  /** Get context string for injection into agent system prompt. */
+  getContextForAgent(userId: string, query?: string): string;
+
+  /** Strengthen a memory (bump access_count + last_accessed_at). */
+  reinforce(memoryId: string): void;
+
+  /** Get a single episodic record by ID. */
+  getEvent(id: string): EpisodicRecord | null;
+
+  /** Get all episodic records for a user. */
+  getEvents(userId: string, limit?: number): EpisodicRecord[];
+}
+
+export interface TaskMetricRecord {
+  id: string;
+  userId: string;
+  taskType: string;
+  tier: string;
+  durationMs: number;
+  iterations: number;
+  success: boolean;
+  createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Blackboard (v3)
+// ---------------------------------------------------------------------------
+
+export interface BlackboardEntry {
+  id: string;
+  userId: string;
+  problemId: string;
+  problemText: string | null;
+  agentId: string | null;
+  agentRole: string | null;
+  proposal: string | null;
+  confidence: number;
+  synthesis: string | null;
+  status: 'open' | 'resolved';
   createdAt: number;
 }
 
