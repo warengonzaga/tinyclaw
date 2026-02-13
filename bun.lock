@@ -65,6 +65,10 @@
         "@wgtechlabs/log-engine": "^2.3.0",
       },
     },
+    "packages/matcher": {
+      "name": "@tinyclaw/matcher",
+      "version": "0.0.1",
+    },
     "packages/memory": {
       "name": "@tinyclaw/memory",
       "version": "1.0.0",
@@ -135,6 +139,7 @@
         "@tinyclaw/heartware": "workspace:*",
         "@tinyclaw/learning": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/matcher": "workspace:*",
         "@tinyclaw/memory": "workspace:*",
         "@tinyclaw/queue": "workspace:*",
         "@tinyclaw/router": "workspace:*",
@@ -344,6 +349,8 @@
     "@tinyclaw/learning": ["@tinyclaw/learning@workspace:packages/learning"],
 
     "@tinyclaw/logger": ["@tinyclaw/logger@workspace:packages/logger"],
+
+    "@tinyclaw/matcher": ["@tinyclaw/matcher@workspace:packages/matcher"],
 
     "@tinyclaw/memory": ["@tinyclaw/memory@workspace:packages/memory"],
 

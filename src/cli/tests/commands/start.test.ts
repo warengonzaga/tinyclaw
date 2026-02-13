@@ -69,12 +69,17 @@ mock.module('@tinyclaw/core', () => ({
     jobs: mock(() => []),
   })),
   loadPlugins: mock(() => Promise.resolve({ channels: [], providers: [], tools: [] })),
-  createHybridMatcher: mock(() => ({
-    match: mock(() => ({ score: 0, matches: [] })),
-  })),
   createEventBus: mock(() => ({
     publish: mock(() => {}),
     subscribe: mock(() => mock(() => {})),
+  })),
+}));
+
+// ── Mock @tinyclaw/matcher ──────────────────────────────────────────
+
+mock.module('@tinyclaw/matcher', () => ({
+  createHybridMatcher: mock(() => ({
+    match: mock(() => ({ score: 0, matches: [] })),
   })),
 }));
 

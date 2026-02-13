@@ -17,9 +17,9 @@ import {
   createOllamaProvider,
   createCronScheduler,
   loadPlugins,
-  createHybridMatcher,
   createEventBus,
 } from '@tinyclaw/core';
+import { createHybridMatcher } from '@tinyclaw/matcher';
 import { createSessionQueue } from '@tinyclaw/queue';
 import { logger } from '@tinyclaw/logger';
 import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';

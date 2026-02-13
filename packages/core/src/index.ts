@@ -13,8 +13,5 @@ export { createCronScheduler, type CronScheduler } from './cron.js';
 // Plugin loader
 export { loadPlugins, type LoadedPlugins } from './plugins.js';
 
-// Hybrid matcher
-export { createHybridMatcher, type HybridMatcher, type HybridMatcherConfig, type MatchResult } from './matcher.js';
-
 // Event bus
 export { createEventBus, type EventBus, type EventTopic, type EventPayload } from './event-bus.js';

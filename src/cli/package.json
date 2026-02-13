@@ -19,6 +19,7 @@
     "@tinyclaw/heartware": "workspace:*",
     "@tinyclaw/learning": "workspace:*",
     "@tinyclaw/logger": "workspace:*",
+    "@tinyclaw/matcher": "workspace:*",
     "@tinyclaw/memory": "workspace:*",
     "@tinyclaw/queue": "workspace:*",
     "@tinyclaw/router": "workspace:*",

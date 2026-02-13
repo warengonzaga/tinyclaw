@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { createHybridMatcher } from '../src/matcher.js';
+import { createHybridMatcher } from '../src/index.js';
 
 describe('HybridMatcher', () => {
   // -----------------------------------------------------------------------
