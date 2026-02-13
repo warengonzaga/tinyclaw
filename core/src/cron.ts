@@ -1,7 +1,7 @@
 /**
  * Cron Scheduler
  *
- * Lightweight interval-based scheduler for heartbeat tasks.
+ * Lightweight interval-based scheduler for pulse tasks.
  * Supports simple interval strings ('30m', '1h', '24h') and
  * runs handlers through the session queue to prevent conflicts.
  */
@@ -88,12 +88,12 @@ export function createCronScheduler(): CronScheduler {
     const intervalMs = parseInterval(job.schedule);
 
     const timer = setInterval(async () => {
-      logger.info(`Heartbeat: ${job.id}`);
+      logger.info(`Pulse: ${job.id}`);
       job.lastRun = Date.now();
       try {
         await job.handler();
       } catch (err) {
-        logger.error(`Heartbeat ${job.id} failed`, err);
+        logger.error(`Pulse ${job.id} failed`, err);
       }
     }, intervalMs);
 
