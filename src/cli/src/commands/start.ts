@@ -394,6 +394,7 @@ export async function startCommand(): Promise<void> {
     heartwareContext,
     learning,
     queue,
+    timeoutEstimator,
   });
 
   const allToolsWithDelegation = [...allTools, ...delegationResult.tools];
@@ -526,6 +527,13 @@ export async function startCommand(): Promise<void> {
       return await queue.enqueue(userId, () =>
         agentLoop(message, userId, routedContext),
       );
+    },
+    getBackgroundTasks: (userId: string) => {
+      return delegationResult.background.getAll(userId);
+    },
+    getSubAgents: (userId: string) => {
+      // Include soft_deleted agents so the sidebar can show history
+      return db.getAllSubAgents(userId, true);
     },
     onMessageStream: async (message: string, userId: string, callback) => {
       const { provider, classification, failedOver } =
