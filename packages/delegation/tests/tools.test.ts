@@ -161,16 +161,24 @@ describe('delegate_task', () => {
       user_id: 'user-1',
     });
 
-    expect(output).toContain('Sub-agent (Research Analyst) completed');
-    expect(output).toContain('found 3 results');
+    // Non-blocking: returns immediately with dispatch confirmation
+    expect(output).toContain('Task delegated to sub-agent');
+    expect(output).toContain('Research Analyst');
     expect(output).toContain('new');
+    expect(output).toContain('working in the background');
 
-    // Sub-agent should be persisted
+    // Sub-agent should be persisted immediately
     const agents = result.lifecycle.listActive('user-1');
     expect(agents.length).toBe(1);
     expect(agents[0].role).toBe('Research Analyst');
-    expect(agents[0].totalTasks).toBe(1);
-    expect(agents[0].successfulTasks).toBe(1);
+
+    // Wait for background task to complete
+    await Bun.sleep(200);
+
+    // Task stats updated by background runner
+    const updated = result.lifecycle.get(agents[0].id);
+    expect(updated!.totalTasks).toBe(1);
+    expect(updated!.successfulTasks).toBe(1);
 
     db.close();
   });
@@ -190,6 +198,9 @@ describe('delegate_task', () => {
       user_id: 'user-1',
     });
 
+    // Wait for first background task to complete (serialized per agent)
+    await Bun.sleep(200);
+
     // Second delegation with similar role should reuse
     const output = await tool.execute({
       task: 'Research topic B',
@@ -202,7 +213,12 @@ describe('delegate_task', () => {
     // Should still be just 1 agent
     const agents = result.lifecycle.listActive('user-1');
     expect(agents.length).toBe(1);
-    expect(agents[0].totalTasks).toBe(2);
+
+    // Wait for second background task to complete
+    await Bun.sleep(200);
+
+    const updated = result.lifecycle.get(agents[0].id);
+    expect(updated!.totalTasks).toBe(2);
 
     db.close();
   });
@@ -219,6 +235,9 @@ describe('delegate_task', () => {
       role: 'Market Data Analyst',
       user_id: 'user-1',
     });
+
+    // Wait for background task to complete (template auto-created on success)
+    await Bun.sleep(200);
 
     const templates = result.templates.list('user-1');
     expect(templates.length).toBe(1);
@@ -341,9 +360,12 @@ describe('manage_template', () => {
       { type: 'text', content: 'Done.' },
     ]);
 
-    // Create a template via delegation (auto-create)
+    // Create a template via delegation (auto-create on background success)
     const delegateTool = findTool(result.tools, 'delegate_task');
     await delegateTool.execute({ task: 'Research AI', role: 'AI Researcher', user_id: 'u1' });
+
+    // Wait for background task to complete (template auto-created on success)
+    await Bun.sleep(200);
 
     const tool = findTool(result.tools, 'manage_template');
     const output = await tool.execute({ action: 'list', user_id: 'u1' });
@@ -360,6 +382,9 @@ describe('manage_template', () => {
 
     const delegateTool = findTool(result.tools, 'delegate_task');
     await delegateTool.execute({ task: 'Research AI', role: 'Researcher', user_id: 'u1' });
+
+    // Wait for background task to complete (template auto-created on success)
+    await Bun.sleep(200);
 
     const templates = result.templates.list('u1');
     expect(templates.length).toBe(1);
@@ -395,10 +420,13 @@ describe('delegate_to_existing', () => {
     const delegateTool = findTool(result.tools, 'delegate_task');
     await delegateTool.execute({ task: 'Initial task', role: 'Worker', user_id: 'u1' });
 
+    // Wait for first background task to complete
+    await Bun.sleep(200);
+
     const agents = result.lifecycle.listActive('u1');
     const agentId = agents[0].id;
 
-    // Send follow-up
+    // Send follow-up (non-blocking)
     const followupTool = findTool(result.tools, 'delegate_to_existing');
     const output = await followupTool.execute({
       agent_id: agentId,
@@ -406,8 +434,11 @@ describe('delegate_to_existing', () => {
       user_id: 'u1',
     });
 
-    expect(output).toContain('completed follow-up');
-    expect(output).toContain('Follow-up done');
+    expect(output).toContain('Follow-up delegated');
+    expect(output).toContain('working in the background');
+
+    // Wait for follow-up background task to complete
+    await Bun.sleep(200);
 
     // Agent should have 2 completed tasks
     const updated = result.lifecycle.get(agentId);

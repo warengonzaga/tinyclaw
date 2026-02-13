@@ -9,6 +9,7 @@ import type { QueryTier } from '@tinyclaw/router';
 import type { Provider, Tool, Message, LearningEngine } from '@tinyclaw/types';
 import type { ProviderOrchestrator } from '@tinyclaw/router';
 import type { DelegationStore, DelegationQueue } from './store.js';
+import type { TimeoutEstimator } from './timeout-estimator.js';
 
 // ---------------------------------------------------------------------------
 // Sub-Agent State
@@ -90,6 +91,8 @@ export interface DelegationV2Config {
   heartwareContext: string;
   learning: LearningEngine;
   defaultSubAgentTools?: string[];
+  /** Adaptive timeout estimator (v3). When provided, replaces fixed timeouts. */
+  timeoutEstimator?: TimeoutEstimator;
 }
 
 // ---------------------------------------------------------------------------
@@ -104,6 +107,10 @@ export interface SubAgentRunConfig {
   orientation?: OrientationContext;
   existingMessages?: Message[];
   timeout?: number;
+  /** Max iterations for the agent loop. */
+  maxIterations?: number;
+  /** Adaptive timeout estimator — enables live extension during execution. */
+  timeoutEstimator?: TimeoutEstimator;
 }
 
 export interface SubAgentRunResult {
@@ -183,9 +190,19 @@ export interface BackgroundRunner {
     tools: Tool[];
     orientation: OrientationContext;
     existingMessages?: Message[];
+    /** If a template was matched, pass its ID for usage tracking on completion. */
+    templateId?: string;
+    /** Extra info for auto-creating a template on success (role, tools, tier). */
+    templateAutoCreate?: {
+      role: string;
+      defaultTools: string[];
+      defaultTier?: string;
+    };
   }): string;
 
   getUndelivered(userId: string): BackgroundTaskRecord[];
+  /** Get all tasks for a user (running + completed + failed, not delivered). */
+  getAll(userId: string): BackgroundTaskRecord[];
   markDelivered(taskId: string): void;
   getStatus(taskId: string): BackgroundTaskRecord | null;
   cancel(taskId: string): boolean;

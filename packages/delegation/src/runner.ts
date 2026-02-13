@@ -17,6 +17,7 @@ import type {
   SubAgentRunResult,
   OrientationContext,
 } from './types.js';
+import type { TimeoutEstimator } from './timeout-estimator.js';
 import { formatOrientation } from './orientation.js';
 
 // ---------------------------------------------------------------------------
@@ -125,64 +126,207 @@ function buildSubAgentPrompt(
 
 // ---------------------------------------------------------------------------
 // Core runner loop (shared between v1 and v2)
+//
+// Now supports adaptive timeout: when a TimeoutEstimator is provided the
+// loop checks `shouldExtend()` at each iteration boundary and can bump
+// both the iteration cap and the time budget dynamically.
+//
+// Cancellation: the caller provides an AbortSignal.  When the agent
+// finishes (text reply with no tool call) or the timeout fires, the
+// signal is aborted so the *other* side stops immediately — no dangling
+// timers, no wasted LLM calls after completion.
 // ---------------------------------------------------------------------------
+
+interface AdaptiveLoopConfig {
+  provider: Provider;
+  tools: Tool[];
+  messages: Message[];
+  maxIterations: number;
+  timeoutMs: number;
+  estimator?: TimeoutEstimator;
+}
 
 async function runAgentLoop(
   provider: Provider,
   tools: Tool[],
   messages: Message[],
 ): Promise<{ success: boolean; response: string; iterations: number }> {
+  return runAdaptiveAgentLoop({
+    provider,
+    tools,
+    messages,
+    maxIterations: SUB_AGENT_MAX_ITERATIONS,
+    timeoutMs: SUB_AGENT_TIMEOUT_MS,
+  });
+}
+
+async function runAdaptiveAgentLoop(
+  config: AdaptiveLoopConfig,
+): Promise<{ success: boolean; response: string; iterations: number }> {
+  const { provider, tools, messages, estimator } = config;
+
+  let maxIterations = config.maxIterations;
+  let timeoutMs = config.timeoutMs;
+  let extensionsGranted = 0;
+  const startTime = Date.now();
+
+  // --- Cancellable timeout -----------------------------------------------
+  // We use AbortController so the agent loop and the timer can stop each
+  // other cleanly.  When the agent finishes first it aborts → timer clears.
+  // When the timer fires first it aborts → the next iteration check bails.
+
+  const ac = new AbortController();
+  const { signal } = ac;
+
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  let timedOut = false;
+
+  function startTimer(ms: number): void {
+    clearTimer();
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      ac.abort();
+    }, ms);
+  }
+
+  function clearTimer(): void {
+    if (timeoutHandle !== null) {
+      clearTimeout(timeoutHandle);
+      timeoutHandle = null;
+    }
+  }
+
+  // Start the initial timer
+  startTimer(timeoutMs);
+
+  /** Race a promise against the abort signal so a never-resolving LLM call
+   *  doesn't prevent the timeout from taking effect. */
+  function raceAbort<T>(promise: Promise<T>): Promise<T> {
+    if (signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+    return new Promise<T>((resolve, reject) => {
+      const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
+      signal.addEventListener('abort', onAbort, { once: true });
+      promise.then(
+        (v) => { signal.removeEventListener('abort', onAbort); resolve(v); },
+        (e) => { signal.removeEventListener('abort', onAbort); reject(e); },
+      );
+    });
+  }
+
   let iterations = 0;
 
-  for (let i = 0; i < SUB_AGENT_MAX_ITERATIONS; i++) {
-    iterations = i + 1;
+  try {
+    for (let i = 0; i < maxIterations; i++) {
+      // --- Check cancellation before each LLM call -------------------------
+      if (signal.aborted) break;
 
-    const response = await provider.chat(messages, tools);
+      iterations = i + 1;
 
-    // --- Text response ---------------------------------------------------
-    if (response.type === 'text') {
-      const toolCall = extractToolCallFromText(response.content || '');
-
-      if (toolCall) {
-        const result = await executeToolCall(toolCall, tools);
-        messages.push({
-          role: 'assistant',
-          content: response.content || '',
-        });
-        messages.push({
-          role: 'tool',
-          content: result,
-          toolCallId: toolCall.id,
-        });
-        continue;
+      let response;
+      try {
+        response = await raceAbort(provider.chat(messages, tools));
+      } catch (err: any) {
+        if (err?.name === 'AbortError') break;
+        throw err;
       }
 
-      return {
-        success: true,
-        response: response.content || '',
-        iterations,
-      };
-    }
+      // If timer fired while we were waiting for the LLM, bail out
+      if (signal.aborted) break;
 
-    // --- Native tool calls ------------------------------------------------
-    if (response.type === 'tool_calls' && response.toolCalls?.length) {
-      const assistantContent = response.content ?? '';
+      // --- Text response ---------------------------------------------------
+      if (response.type === 'text') {
+        const toolCall = extractToolCallFromText(response.content || '');
 
-      for (const tc of response.toolCalls) {
-        const result = await executeToolCall(tc, tools);
-        messages.push({
-          role: 'assistant',
-          content: assistantContent,
-          toolCalls: [tc],
-        });
-        messages.push({
-          role: 'tool',
-          content: result,
-          toolCallId: tc.id,
-        });
+        if (toolCall) {
+          const result = await executeToolCall(toolCall, tools);
+          messages.push({
+            role: 'assistant',
+            content: response.content || '',
+          });
+          messages.push({
+            role: 'tool',
+            content: result,
+            toolCallId: toolCall.id,
+          });
+          // fall through to extension check
+        } else {
+          // Agent is done — signal the timer to stop immediately
+          clearTimer();
+          ac.abort();       // harmless if already aborted
+          return {
+            success: true,
+            response: response.content || '',
+            iterations,
+          };
+        }
       }
-      continue;
+
+      // --- Native tool calls ------------------------------------------------
+      else if (response.type === 'tool_calls' && response.toolCalls?.length) {
+        const assistantContent = response.content ?? '';
+
+        for (const tc of response.toolCalls) {
+          const result = await executeToolCall(tc, tools);
+          messages.push({
+            role: 'assistant',
+            content: assistantContent,
+            toolCalls: [tc],
+          });
+          messages.push({
+            role: 'tool',
+            content: result,
+            toolCallId: tc.id,
+          });
+        }
+        // fall through to extension check
+      }
+
+      // --- Adaptive extension check -----------------------------------------
+      if (estimator) {
+        const elapsed = Date.now() - startTime;
+        const decision = estimator.shouldExtend(
+          iterations,
+          maxIterations,
+          elapsed,
+          timeoutMs,
+          extensionsGranted,
+        );
+
+        if (decision.extend) {
+          extensionsGranted++;
+          if (decision.extraIterations > 0) {
+            maxIterations += decision.extraIterations;
+            logger.info('Adaptive extension: +iterations', {
+              extra: decision.extraIterations,
+              newMax: maxIterations,
+              extensionsGranted,
+            });
+          }
+          if (decision.extraMs > 0) {
+            timeoutMs += decision.extraMs;
+            // Restart timer with the remaining + extra time
+            const remaining = timeoutMs - elapsed;
+            startTimer(Math.max(remaining, decision.extraMs));
+            logger.info('Adaptive extension: +time', {
+              extraMs: decision.extraMs,
+              newTimeoutMs: timeoutMs,
+              extensionsGranted,
+            });
+          }
+        }
+      }
     }
+  } finally {
+    // Always clean up — no dangling timers
+    clearTimer();
+  }
+
+  if (timedOut) {
+    return {
+      success: false,
+      response: 'Sub-agent timed out.',
+      iterations,
+    };
   }
 
   return {
@@ -219,19 +363,14 @@ export async function runSubAgent(
     { role: 'user', content: task },
   ];
 
-  let iterations = 0;
-
   try {
-    const result = await Promise.race([
-      (async () => {
-        const r = await runAgentLoop(provider, tools, messages);
-        iterations = r.iterations;
-        return r;
-      })(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Sub-agent timed out')), timeout),
-      ),
-    ]);
+    const result = await runAdaptiveAgentLoop({
+      provider,
+      tools,
+      messages,
+      maxIterations: SUB_AGENT_MAX_ITERATIONS,
+      timeoutMs: timeout,
+    });
 
     return {
       success: result.success,
@@ -244,7 +383,7 @@ export async function runSubAgent(
     return {
       success: false,
       response: `Sub-agent error: ${(err as Error).message}`,
-      iterations,
+      iterations: 0,
       providerId: provider.id,
     };
   }
@@ -255,16 +394,31 @@ export async function runSubAgent(
 // ---------------------------------------------------------------------------
 
 /**
- * Run a sub-agent with v2 features: orientation context and message continuity.
+ * Run a sub-agent with v2 features: orientation context, message
+ * continuity, and adaptive timeouts.
  *
  * If `existingMessages` is provided, they're included for context continuity.
+ * If `timeoutEstimator` is provided, the runner uses adaptive timeouts with
+ * live extension — the sub-agent signals completion and the timer stops
+ * immediately.  No dangling timers, no wasted LLM calls.
+ *
  * Returns the full message array for persistence by the caller.
  */
 export async function runSubAgentV2(
   config: SubAgentRunConfig,
 ): Promise<SubAgentRunResult> {
-  const { task, role, provider, tools, orientation, existingMessages } = config;
+  const {
+    task,
+    role,
+    provider,
+    tools,
+    orientation,
+    existingMessages,
+    timeoutEstimator,
+  } = config;
+
   const timeout = config.timeout ?? SUB_AGENT_TIMEOUT_MS;
+  const maxIter = config.maxIterations ?? SUB_AGENT_MAX_ITERATIONS;
 
   const systemPrompt = buildSubAgentPrompt(role, orientation);
 
@@ -280,19 +434,15 @@ export async function runSubAgentV2(
   // Add the new task
   messages.push({ role: 'user', content: task });
 
-  let iterations = 0;
-
   try {
-    const result = await Promise.race([
-      (async () => {
-        const r = await runAgentLoop(provider, tools, messages);
-        iterations = r.iterations;
-        return r;
-      })(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Sub-agent timed out')), timeout),
-      ),
-    ]);
+    const result = await runAdaptiveAgentLoop({
+      provider,
+      tools,
+      messages,
+      maxIterations: maxIter,
+      timeoutMs: timeout,
+      estimator: timeoutEstimator,
+    });
 
     return {
       success: result.success,
@@ -306,7 +456,7 @@ export async function runSubAgentV2(
     return {
       success: false,
       response: `Sub-agent error: ${(err as Error).message}`,
-      iterations,
+      iterations: 0,
       providerId: provider.id,
       messages: messages.filter((m) => m.role !== 'system'),
     };

@@ -10,11 +10,12 @@ export const DELEGATION_HANDBOOK = `
 
 You can delegate tasks to sub-agents — think of them as focused freelancers you hire.
 Sub-agents inherit your knowledge and personality, so they already know the user.
+**All delegation is non-blocking** — the user can keep chatting while sub-agents work.
 
 ### When to Delegate
 - Complex research/analysis that benefits from focused processing
 - Multi-step tasks where a specialist would be more effective
-- Tasks to run in the background while continuing conversation
+- Any task that would take time — it runs in the background automatically
 - Do NOT delegate greetings, simple questions, or casual chat
 
 ### Writing Effective Role Descriptions
@@ -34,14 +35,15 @@ Sub-agents inherit your knowledge and personality, so they already know the user
 - Sub-agents retain conversation history — send follow-ups, don't recreate
 - If the user is unsatisfied, improve the existing sub-agent rather than starting over
 
-### Background Delegation
-- Use delegate_background for tasks that take time
-- Continue chatting — you'll see the result when it's ready
-- Tell the user you've started a background task
+### How Delegation Works
+- Use delegate_task or delegate_to_existing — tasks always run in the background
+- Tell the user you've started the task and they can keep chatting
+- Results arrive automatically on the next conversation turn
+- The user can see progress in their side panel
 
 ### Sub-Agent Lifecycle
 - Sub-agents stay alive until you dismiss them or the user confirms task done
-- Dismissed sub-agents can be revived within 14 days if needed
+- Dismissed sub-agents appear as archived in the side panel (14-day retention)
 - Use manage_sub_agent to dismiss, revive, or permanently kill sub-agents
 
 ### Templates (Job Postings)

@@ -39,6 +39,7 @@ export interface DelegationStore {
   saveBackgroundTask(record: BackgroundTask): void;
   updateBackgroundTask(id: string, status: string, result: string | null, completedAt: number | null): void;
   getUndeliveredTasks(userId: string): BackgroundTask[];
+  getUserBackgroundTasks(userId: string): BackgroundTask[];
   getBackgroundTask(id: string): BackgroundTask | null;
   markTaskDelivered(id: string): void;
   getStaleBackgroundTasks(olderThanMs: number): BackgroundTask[];

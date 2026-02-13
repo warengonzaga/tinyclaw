@@ -20,6 +20,7 @@ import type {
   BackgroundRunner,
   OrientationContext,
 } from './types.js';
+import type { TimeoutEstimator } from './timeout-estimator.js';
 import { buildOrientationContext } from './orientation.js';
 import { runSubAgentV2 } from './runner.js';
 import { createLifecycleManager } from './lifecycle.js';
@@ -40,8 +41,8 @@ const DEFAULT_SAFE_TOOLS = new Set([
   'execute_code',
 ]);
 
-/** Foreground sub-agent timeout. */
-const FOREGROUND_TIMEOUT_MS = 60_000;
+/** Fallback background sub-agent timeout (used when no estimator). */
+const BACKGROUND_TIMEOUT_MS_FALLBACK = 60_000;
 
 // ---------------------------------------------------------------------------
 // Helper: filter tools for sub-agents
@@ -84,6 +85,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
     learning,
     queue,
     defaultSubAgentTools,
+    timeoutEstimator,
   } = config;
 
   const safeToolSet = defaultSubAgentTools
@@ -92,7 +94,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
 
   const lifecycle = createLifecycleManager(db);
   const templates = createTemplateManager(db);
-  const background = createBackgroundRunner(db, lifecycle, queue);
+  const background = createBackgroundRunner(db, lifecycle, queue, timeoutEstimator, templates);
 
   // Helper: build orientation for the current user
   function getOrientation(userId: string): OrientationContext {
@@ -122,7 +124,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
     name: 'delegate_task',
     description:
       'Delegate a focused task to a sub-agent. Reuses existing agents when possible. ' +
-      'Sub-agents persist and can be sent follow-up tasks.',
+      'Runs in the background so the user can keep chatting. Results are delivered when ready.',
     parameters: {
       type: 'object',
       properties: {
@@ -187,53 +189,29 @@ export function createDelegationTools(config: DelegationToolsConfig): {
         // Load existing messages for continuity
         const existingMessages = isReuse ? lifecycle.getMessages(agent.id) : [];
 
-        const result = await runSubAgentV2({
+        // Non-blocking: start the sub-agent in the background
+        const taskId = background.start({
+          userId,
+          agentId: agent.id,
           task,
-          role,
           provider,
           tools: subTools,
           orientation,
           existingMessages,
-          timeout: FOREGROUND_TIMEOUT_MS,
+          templateId: usedTemplateId,
+          templateAutoCreate: usedTemplateId
+            ? undefined
+            : {
+                role,
+                defaultTools: [...safeToolSet, ...additionalTools],
+                defaultTier: tier !== 'auto' ? tier : undefined,
+              },
         });
 
-        // Persist sub-agent messages
-        for (const msg of result.messages) {
-          lifecycle.saveMessage(agent.id, msg.role, msg.content);
-        }
-
-        // Record performance
-        lifecycle.recordTaskResult(agent.id, result.success);
-
-        // Auto-create/update template
-        if (result.success && usedTemplateId) {
-          const score = result.success ? 1.0 : 0.0;
-          templates.recordUsage(usedTemplateId, score);
-        } else if (result.success && !usedTemplateId) {
-          // Auto-create template from successful delegation
-          try {
-            const tags = extractTags(role, task);
-            templates.create({
-              userId,
-              name: role,
-              roleDescription: `${role}: ${task}`,
-              defaultTools: [...safeToolSet, ...additionalTools],
-              defaultTier: tier !== 'auto' ? (tier as any) : undefined,
-              tags,
-            });
-            logger.info('Auto-created role template', { role });
-          } catch {
-            // Template limit reached — non-fatal
-          }
-        }
-
-        if (result.success) {
-          return (
-            `Sub-agent (${role}) completed [${isReuse ? 'reused' : 'new'}, provider: ${result.providerId}]:\n\n` +
-            result.response
-          );
-        }
-        return `Sub-agent (${role}) failed [provider: ${result.providerId}]: ${result.response}`;
+        return (
+          `Task delegated to sub-agent "${role}" [${isReuse ? 'reused' : 'new'}, agent: ${agent.id}, task: ${taskId}]\n` +
+          `The sub-agent is working in the background. Results will be delivered when ready.`
+        );
       } catch (err) {
         return `Error delegating task: ${err instanceof Error ? err.message : 'Unknown error'}`;
       }
@@ -322,13 +300,13 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   const delegateToExisting: Tool = {
     name: 'delegate_to_existing',
     description:
-      'Send a follow-up task to an already-alive sub-agent. The sub-agent retains its conversation history.',
+      'Send a follow-up task to an already-alive sub-agent. The sub-agent retains its conversation history. ' +
+      'Runs in the background so the user can keep chatting.',
     parameters: {
       type: 'object',
       properties: {
         agent_id: { type: 'string', description: 'The sub-agent ID' },
         task: { type: 'string', description: 'The follow-up task' },
-        background: { type: 'boolean', description: 'Run in background (default: false)' },
         user_id: { type: 'string', description: 'User ID (injected by system)' },
       },
       required: ['agent_id', 'task'],
@@ -336,7 +314,6 @@ export function createDelegationTools(config: DelegationToolsConfig): {
     async execute(args) {
       const agentId = String(args.agent_id || '');
       const task = String(args.task || '');
-      const runInBackground = Boolean(args.background);
       const userId = String(args.user_id || 'default-user');
 
       if (!agentId) return 'Error: agent_id is required.';
@@ -352,40 +329,20 @@ export function createDelegationTools(config: DelegationToolsConfig): {
         const subTools = filterToolsForSubAgent(allTools, agent.toolsGranted, safeToolSet);
         const existingMessages = lifecycle.getMessages(agentId);
 
-        if (runInBackground) {
-          const taskId = background.start({
-            userId,
-            agentId,
-            task,
-            provider,
-            tools: subTools,
-            orientation,
-            existingMessages,
-          });
-          return `Background follow-up started [task: ${taskId}] for sub-agent ${agent.role} (${agentId})`;
-        }
-
-        const result = await runSubAgentV2({
+        // Always run as background (non-blocking)
+        const taskId = background.start({
+          userId,
+          agentId,
           task,
-          role: agent.role,
           provider,
           tools: subTools,
           orientation,
           existingMessages,
-          timeout: FOREGROUND_TIMEOUT_MS,
         });
-
-        // Persist messages
-        for (const msg of result.messages) {
-          lifecycle.saveMessage(agentId, msg.role, msg.content);
-        }
-
-        lifecycle.recordTaskResult(agentId, result.success);
-
-        if (result.success) {
-          return `Sub-agent (${agent.role}) completed follow-up:\n\n${result.response}`;
-        }
-        return `Sub-agent (${agent.role}) failed follow-up: ${result.response}`;
+        return (
+          `Follow-up delegated to sub-agent "${agent.role}" (${agentId}) [task: ${taskId}]\n` +
+          `The sub-agent is working in the background. Results will be delivered when ready.`
+        );
       } catch (err) {
         return `Error: ${err instanceof Error ? err.message : 'Unknown error'}`;
       }

@@ -13,15 +13,17 @@ import type {
   BackgroundRunner,
   BackgroundTaskRecord,
   LifecycleManager,
+  TemplateManager,
   OrientationContext,
 } from './types.js';
+import type { TimeoutEstimator } from './timeout-estimator.js';
 import { runSubAgentV2 } from './runner.js';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Background task timeout: 120s (relaxed from 60s foreground). */
+/** Fallback background task timeout (used when no estimator). */
 const BACKGROUND_TIMEOUT_MS = 120_000;
 
 /** Max concurrent background tasks per user. */
@@ -35,6 +37,8 @@ export function createBackgroundRunner(
   db: DelegationStore,
   lifecycle: LifecycleManager,
   queue: DelegationQueue,
+  timeoutEstimator?: TimeoutEstimator,
+  templates?: TemplateManager,
 ): BackgroundRunner {
   /** In-flight AbortControllers keyed by taskId. */
   const controllers = new Map<string, AbortController>();
@@ -49,6 +53,8 @@ export function createBackgroundRunner(
         tools,
         orientation,
         existingMessages,
+        templateId,
+        templateAutoCreate,
       } = config;
 
       // Enforce concurrency limit
@@ -95,6 +101,13 @@ export function createBackgroundRunner(
           }
 
           try {
+            // Adaptive timeout
+            const estimate = timeoutEstimator?.estimate(task, agent?.tierPreference ?? 'auto');
+            const timeoutMs = estimate?.timeoutMs ?? BACKGROUND_TIMEOUT_MS;
+            const maxIterations = estimate?.estimatedIterations;
+
+            const startTime = Date.now();
+
             const result = await runSubAgentV2({
               task,
               role: agent?.role ?? 'Background Agent',
@@ -102,7 +115,9 @@ export function createBackgroundRunner(
               tools,
               orientation,
               existingMessages,
-              timeout: BACKGROUND_TIMEOUT_MS,
+              timeout: timeoutMs,
+              maxIterations,
+              timeoutEstimator,
             });
 
             // Save sub-agent messages for continuity
@@ -110,10 +125,39 @@ export function createBackgroundRunner(
               lifecycle.saveMessage(agentId, msg.role, msg.content);
             }
 
+            // Record metrics for the adaptive timeout estimator
+            if (timeoutEstimator) {
+              const durationMs = Date.now() - startTime;
+              const taskType = timeoutEstimator.classifyTask(task);
+              timeoutEstimator.record(userId, taskType, agent?.tierPreference ?? 'auto', durationMs, result.iterations, result.success);
+            }
+
             // Update task record
             if (result.success) {
               db.updateBackgroundTask(taskId, 'completed', result.response, Date.now());
               lifecycle.recordTaskResult(agentId, true);
+
+              // Auto-create/update template on success
+              if (templates) {
+                try {
+                  if (templateId) {
+                    templates.recordUsage(templateId, 1.0);
+                  } else if (templateAutoCreate) {
+                    const tags = extractTagsFromText(templateAutoCreate.role, task);
+                    templates.create({
+                      userId,
+                      name: templateAutoCreate.role,
+                      roleDescription: `${templateAutoCreate.role}: ${task}`,
+                      defaultTools: templateAutoCreate.defaultTools,
+                      defaultTier: templateAutoCreate.defaultTier as any,
+                      tags,
+                    });
+                    logger.info('Auto-created role template', { role: templateAutoCreate.role });
+                  }
+                } catch {
+                  // Template limit reached — non-fatal
+                }
+              }
             } else {
               db.updateBackgroundTask(taskId, 'failed', result.response, Date.now());
               lifecycle.recordTaskResult(agentId, false);
@@ -138,6 +182,10 @@ export function createBackgroundRunner(
 
     getUndelivered(userId) {
       return db.getUndeliveredTasks(userId);
+    },
+
+    getAll(userId) {
+      return db.getUserBackgroundTasks(userId);
     },
 
     markDelivered(taskId) {
@@ -176,4 +224,20 @@ export function createBackgroundRunner(
       return stale.length;
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Extract keyword tags from role + task text. */
+function extractTagsFromText(role: string, task: string): string[] {
+  const text = `${role} ${task}`.toLowerCase();
+  const words = text
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 3);
+
+  const unique = [...new Set(words)];
+  return unique.slice(0, 10);
 }
