@@ -62,13 +62,16 @@ mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
     isAvailable: mock(() => Promise.resolve(true)),
   })),
+  loadPlugins: mock(() => Promise.resolve({ channels: [], providers: [], tools: [] })),
+}));
+
+mock.module('@tinyclaw/pulse', () => ({
   createPulseScheduler: mock(() => ({
     register: mock(() => {}),
     start: mock(() => {}),
     stop: mock(() => {}),
     jobs: mock(() => []),
   })),
-  loadPlugins: mock(() => Promise.resolve({ channels: [], providers: [], tools: [] })),
 }));
 
 // ── Mock @tinyclaw/intercom ─────────────────────────────────────────

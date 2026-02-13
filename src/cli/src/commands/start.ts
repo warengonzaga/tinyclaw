@@ -15,9 +15,9 @@ import {
   createDatabase,
   agentLoop,
   createOllamaProvider,
-  createPulseScheduler,
   loadPlugins,
 } from '@tinyclaw/core';
+import { createPulseScheduler } from '@tinyclaw/pulse';
 import { createIntercom } from '@tinyclaw/intercom';
 import { createHybridMatcher } from '@tinyclaw/matcher';
 import { createSessionQueue } from '@tinyclaw/queue';
