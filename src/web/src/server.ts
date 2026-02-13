@@ -92,7 +92,9 @@ export function createWebUI(config) {
     port = 3000,
     host = '0.0.0.0',
     onMessage,
-    onMessageStream
+    onMessageStream,
+    getBackgroundTasks,
+    getSubAgents
   } = config
 
   let server = null
@@ -104,12 +106,33 @@ export function createWebUI(config) {
       server = Bun.serve({
         port,
         hostname: host,
+        idleTimeout: 255, // seconds — MAX_TIMEOUT_MS (300s) + 2 extensions (60s) = 360s is worst-case agent time; Bun caps at 255
         fetch: async (request) => {
           const url = new URL(request.url)
           const pathname = url.pathname
 
           if (pathname === '/api/health' && request.method === 'GET') {
             return jsonResponse({ ok: true })
+          }
+
+          if (pathname === '/api/background-tasks' && request.method === 'GET') {
+            const userId = url.searchParams.get('userId') || 'default-user'
+            const tasks = getBackgroundTasks ? getBackgroundTasks(userId) : []
+            return jsonResponse({ tasks })
+          }
+
+          if (pathname === '/api/sub-agents' && request.method === 'GET') {
+            const userId = url.searchParams.get('userId') || 'default-user'
+            try {
+              const agents = getSubAgents ? getSubAgents(userId) : []
+              if (agents.length > 0) {
+                console.log(`[/api/sub-agents] Returning ${agents.length} agents for userId="${userId}":`, agents.map(a => `${a.role}(${a.status})`))
+              }
+              return jsonResponse({ agents })
+            } catch (err) {
+              console.error('[/api/sub-agents] Error fetching sub-agents:', err)
+              return jsonResponse({ agents: [], error: String(err) }, 500)
+            }
           }
 
           if (pathname === '/api/chat' && request.method === 'POST') {
@@ -133,6 +156,17 @@ export function createWebUI(config) {
               const stream = new ReadableStream({
                 start(controller) {
                   let isClosed = false
+
+                  // SSE heartbeat: send a comment every 8 s to keep the
+                  // connection alive while sub-agents are working.
+                  const heartbeat = setInterval(() => {
+                    if (isClosed) { clearInterval(heartbeat); return }
+                    try {
+                      controller.enqueue(textEncoder.encode(': heartbeat\n\n'))
+                    } catch {
+                      clearInterval(heartbeat)
+                    }
+                  }, 8_000)
                   
                   const send = (payload) => {
                     if (isClosed) return
@@ -144,11 +178,13 @@ export function createWebUI(config) {
                       // Close on done event
                       if (typeof payload === 'object' && payload?.type === 'done') {
                         isClosed = true
+                        clearInterval(heartbeat)
                         controller.close()
                       }
                     } catch (error) {
                       // Controller already closed, ignore
                       isClosed = true
+                      clearInterval(heartbeat)
                     }
                   }
 
@@ -157,6 +193,7 @@ export function createWebUI(config) {
                       if (!isClosed) {
                         send({ type: 'error', error: error?.message || 'Streaming error.' })
                         isClosed = true
+                        clearInterval(heartbeat)
                         try {
                           controller.close()
                         } catch {
