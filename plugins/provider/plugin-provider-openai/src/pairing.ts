@@ -34,8 +34,8 @@ export function createOpenAIPairingTools(
         'Pair TinyClaw with OpenAI as a provider. ' +
         'Stores the API key securely, configures the model, enables the plugin, ' +
         'and routes complex/reasoning queries to OpenAI. ' +
-        'After pairing, TinyClaw must be restarted for changes to take effect. ' +
-        'To get an API key: go to https://platform.openai.com/api-keys and create one.',
+        'After pairing, call tinyclaw_restart to apply the changes. ' +
+        'To get an API key: go to https://platform.openai.com/api-keys and create one.',,
       parameters: {
         type: 'object',
         properties: {
@@ -81,7 +81,7 @@ export function createOpenAIPairingTools(
             `OpenAI provider paired successfully! ` +
             `Model: ${model}. API key stored securely. ` +
             `Complex and reasoning queries will be routed to OpenAI. ` +
-            `Please restart TinyClaw for the changes to take effect.`
+            `Use the tinyclaw_restart tool now to apply the changes.`
           );
         } catch (err) {
           return `Error pairing OpenAI: ${(err as Error).message}`;
@@ -94,7 +94,7 @@ export function createOpenAIPairingTools(
       description:
         'Disconnect OpenAI provider and disable the plugin. ' +
         'Resets routing so all queries go back to the default provider. ' +
-        'The API key is kept in secrets for safety. Requires a restart.',
+        'The API key is kept in secrets for safety. Call tinyclaw_restart after.',
       parameters: {
         type: 'object',
         properties: {},
@@ -122,7 +122,7 @@ export function createOpenAIPairingTools(
           return (
             'OpenAI provider disabled. ' +
             'All queries will route to the default provider. ' +
-            'Restart TinyClaw for the change to take effect. ' +
+            'Use the tinyclaw_restart tool now to apply the changes. ' +
             'The API key is still stored in secrets — use list_secrets to manage it.'
           );
         } catch (err) {

@@ -9,7 +9,7 @@
  *   1. Plugin is added to `plugins.enabled` (manually or via set_config)
  *   2. On next boot, pairing tools (`openai_pair`, `openai_unpair`) appear
  *   3. User provides API key via `openai_pair` → stored securely, tier mapping updated
- *   4. On next restart, OpenAI provider initializes and handles routed queries
+ *   4. Agent calls `tinyclaw_restart` → supervisor respawns with new configuration
  */
 
 import type {
