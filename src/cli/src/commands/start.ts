@@ -33,6 +33,7 @@ import { createSandbox } from '@tinyclaw/sandbox';
 import type { ChannelPlugin, Provider, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/ui';
 import { theme } from '../ui/theme.js';
+import { RESTART_EXIT_CODE } from '../supervisor.js';
 
 /**
  * Run the agent start flow
@@ -294,6 +295,42 @@ export async function startCommand(): Promise<void> {
 
   // Add execute_code to allTools before delegation
   allTools.push(executeCodeTool);
+
+  // tinyclaw_restart tool — allows the agent to trigger a graceful restart
+  const restartTool: Tool = {
+    name: 'tinyclaw_restart',
+    description:
+      'Gracefully restart TinyClaw. Use this after configuration changes that ' +
+      'require a restart (e.g., pairing a new provider or channel plugin). ' +
+      'The process supervisor will automatically respawn the agent with the ' +
+      'updated configuration. Tell the user a restart is happening before calling this.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description: 'Human-readable reason for the restart (logged for diagnostics)',
+        },
+      },
+      required: [],
+    },
+    async execute(args) {
+      const reason = (args.reason as string) || 'Agent-initiated restart';
+      logger.info(`🔄 Restart requested: ${reason}`);
+
+      // Give a short delay so the response can be sent to the user
+      setTimeout(() => {
+        process.exit(RESTART_EXIT_CODE);
+      }, 500);
+
+      return (
+        'Restart initiated. TinyClaw will shut down and automatically respawn ' +
+        'with the updated configuration in a few seconds.'
+      );
+    },
+  };
+
+  allTools.push(restartTool);
 
   // --- Create delegation v2 subsystems -----------------------------------
 

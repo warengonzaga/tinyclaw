@@ -50,6 +50,12 @@ async function main(): Promise<void> {
     }
 
     case 'start': {
+      const { supervisedStart } = await import('./supervisor.js');
+      await supervisedStart();
+      break;
+    }
+
+    case '--supervised-start': {
       const { startCommand } = await import('./commands/start.js');
       await startCommand();
       break;
