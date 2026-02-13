@@ -71,7 +71,7 @@ export interface DelegationQueue {
   enqueue<T>(sessionKey: string, task: () => Promise<T>): Promise<T>;
 }
 
-/** Subset of EventBus needed by delegation (blackboard only). */
-export interface DelegationEventBus {
+/** Subset of Intercom needed by delegation (blackboard only). */
+export interface DelegationIntercom {
   emit(topic: string, userId: string, data?: Record<string, unknown>): void;
 }

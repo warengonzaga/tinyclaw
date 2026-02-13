@@ -12,6 +12,3 @@ export { createCronScheduler, type CronScheduler } from './cron.js';
 
 // Plugin loader
 export { loadPlugins, type LoadedPlugins } from './plugins.js';
-
-// Event bus
-export { createEventBus, type EventBus, type EventTopic, type EventPayload } from './event-bus.js';

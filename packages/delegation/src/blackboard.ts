@@ -17,7 +17,7 @@
  */
 
 import type { BlackboardEntry } from '@tinyclaw/types';
-import type { DelegationStore, DelegationEventBus } from './store.js';
+import type { DelegationStore, DelegationIntercom } from './store.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,7 +63,7 @@ export interface Blackboard {
 // Factory
 // ---------------------------------------------------------------------------
 
-export function createBlackboard(db: DelegationStore, eventBus?: DelegationEventBus): Blackboard {
+export function createBlackboard(db: DelegationStore, intercom?: DelegationIntercom): Blackboard {
   return {
     postProblem(userId: string, problem: string): string {
       const problemId = crypto.randomUUID();
@@ -119,8 +119,8 @@ export function createBlackboard(db: DelegationStore, eventBus?: DelegationEvent
       db.saveBlackboardEntry(entry);
 
       // Emit event
-      if (eventBus) {
-        eventBus.emit('blackboard:proposal', userId, {
+      if (intercom) {
+        intercom.emit('blackboard:proposal', userId, {
           problemId,
           agentId,
           agentRole,
@@ -137,10 +137,10 @@ export function createBlackboard(db: DelegationStore, eventBus?: DelegationEvent
       db.resolveBlackboardProblem(problemId, synthesis);
 
       // Emit event — look up userId from root entry
-      if (eventBus) {
+      if (intercom) {
         const rootEntry = db.getBlackboardEntry(problemId);
         const userId = rootEntry?.userId ?? 'system';
-        eventBus.emit('blackboard:resolved', userId, {
+        intercom.emit('blackboard:resolved', userId, {
           problemId,
           synthesis: synthesis.slice(0, 200), // Truncate for event payload
         });

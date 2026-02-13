@@ -40,6 +40,7 @@
       },
       "devDependencies": {
         "@tinyclaw/core": "workspace:*",
+        "@tinyclaw/intercom": "workspace:*",
         "@tinyclaw/queue": "workspace:*",
       },
     },
@@ -50,6 +51,10 @@
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
       },
+    },
+    "packages/intercom": {
+      "name": "@tinyclaw/intercom",
+      "version": "0.0.1",
     },
     "packages/learning": {
       "name": "@tinyclaw/learning",
@@ -137,6 +142,7 @@
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/delegation": "workspace:*",
         "@tinyclaw/heartware": "workspace:*",
+        "@tinyclaw/intercom": "workspace:*",
         "@tinyclaw/learning": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/matcher": "workspace:*",
@@ -345,6 +351,8 @@
     "@tinyclaw/delegation": ["@tinyclaw/delegation@workspace:packages/delegation"],
 
     "@tinyclaw/heartware": ["@tinyclaw/heartware@workspace:packages/heartware"],
+
+    "@tinyclaw/intercom": ["@tinyclaw/intercom@workspace:packages/intercom"],
 
     "@tinyclaw/learning": ["@tinyclaw/learning@workspace:packages/learning"],
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { createDatabase, createEventBus, type EventBus, type EventPayload } from '@tinyclaw/core';
+import { createDatabase } from '@tinyclaw/core';
+import { createIntercom, type Intercom, type IntercomMessage } from '@tinyclaw/intercom';
 import { createBlackboard, type Blackboard } from '../src/index.js';
 import type { Database } from '@tinyclaw/types';
 import { unlinkSync, existsSync } from 'fs';
@@ -28,19 +29,19 @@ function cleanupDb(db: Database, path: string): void {
 describe('Blackboard', () => {
   let db: Database;
   let dbPath: string;
-  let eventBus: EventBus;
+  let intercom: Intercom;
   let blackboard: Blackboard;
 
   beforeEach(() => {
     const result = createTestDb();
     db = result.db;
     dbPath = result.path;
-    eventBus = createEventBus();
-    blackboard = createBlackboard(db, eventBus);
+    intercom = createIntercom();
+    blackboard = createBlackboard(db, intercom);
   });
 
   afterEach(() => {
-    eventBus.clear();
+    intercom.clear();
     cleanupDb(db, dbPath);
   });
 
@@ -142,8 +143,8 @@ describe('Blackboard', () => {
     });
 
     it('emits blackboard:proposal event', () => {
-      const received: EventPayload[] = [];
-      eventBus.on('blackboard:proposal', (e) => received.push(e));
+      const received: IntercomMessage[] = [];
+      intercom.on('blackboard:proposal', (e) => received.push(e));
 
       const problemId = blackboard.postProblem('user1', 'Test');
       blackboard.addProposal(problemId, 'agent1', 'Expert', 'My proposal', 0.7);
@@ -185,8 +186,8 @@ describe('Blackboard', () => {
     });
 
     it('emits blackboard:resolved event', () => {
-      const received: EventPayload[] = [];
-      eventBus.on('blackboard:resolved', (e) => received.push(e));
+      const received: IntercomMessage[] = [];
+      intercom.on('blackboard:resolved', (e) => received.push(e));
 
       const problemId = blackboard.postProblem('user1', 'Test');
       blackboard.resolve(problemId, 'Resolved!');

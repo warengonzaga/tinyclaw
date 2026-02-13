@@ -69,9 +69,18 @@ mock.module('@tinyclaw/core', () => ({
     jobs: mock(() => []),
   })),
   loadPlugins: mock(() => Promise.resolve({ channels: [], providers: [], tools: [] })),
-  createEventBus: mock(() => ({
-    publish: mock(() => {}),
-    subscribe: mock(() => mock(() => {})),
+}));
+
+// ── Mock @tinyclaw/intercom ─────────────────────────────────────────
+
+mock.module('@tinyclaw/intercom', () => ({
+  createIntercom: mock(() => ({
+    on: mock(() => mock(() => {})),
+    onAny: mock(() => mock(() => {})),
+    emit: mock(() => {}),
+    recent: mock(() => []),
+    recentAll: mock(() => []),
+    clear: mock(() => {}),
   })),
 }));
 

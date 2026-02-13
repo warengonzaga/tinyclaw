@@ -17,6 +17,7 @@
     "@tinyclaw/config": "workspace:*",
     "@tinyclaw/delegation": "workspace:*",
     "@tinyclaw/heartware": "workspace:*",
+    "@tinyclaw/intercom": "workspace:*",
     "@tinyclaw/learning": "workspace:*",
     "@tinyclaw/logger": "workspace:*",
     "@tinyclaw/matcher": "workspace:*",

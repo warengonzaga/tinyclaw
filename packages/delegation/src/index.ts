@@ -4,8 +4,8 @@
  * Re-exports all delegation functionality. Backward compatible with v1 imports.
  */
 
-// Store interfaces (DelegationStore, DelegationQueue, DelegationEventBus)
-export type { DelegationStore, DelegationQueue, DelegationEventBus } from './store.js';
+// Store interfaces (DelegationStore, DelegationQueue, DelegationIntercom)
+export type { DelegationStore, DelegationQueue, DelegationIntercom } from './store.js';
 
 // V1 compatible exports (runner + types)
 export { runSubAgent } from './runner.js';

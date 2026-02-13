@@ -17,8 +17,8 @@ import {
   createOllamaProvider,
   createCronScheduler,
   loadPlugins,
-  createEventBus,
 } from '@tinyclaw/core';
+import { createIntercom } from '@tinyclaw/intercom';
 import { createHybridMatcher } from '@tinyclaw/matcher';
 import { createSessionQueue } from '@tinyclaw/queue';
 import { logger } from '@tinyclaw/logger';
@@ -234,9 +234,9 @@ export async function startCommand(): Promise<void> {
 
   // --- Initialize v3 subsystems ------------------------------------------
 
-  // Event bus (before delegation — delegation emits events)
-  const eventBus = createEventBus();
-  logger.info('✅ Event bus initialized');
+  // Intercom (before delegation — delegation emits events)
+  const intercom = createIntercom();
+  logger.info('✅ Intercom initialized');
 
   // Memory engine (after db — uses episodic_memory + memory_fts tables)
   const memoryEngine = createMemoryEngine(db);
@@ -254,8 +254,8 @@ export async function startCommand(): Promise<void> {
   const sandbox = createSandbox();
   logger.info('✅ Sandbox initialized');
 
-  // Blackboard (after db + eventBus)
-  const blackboard = createBlackboard(db, eventBus);
+  // Blackboard (after db + intercom)
+  const blackboard = createBlackboard(db, intercom);
   logger.info('✅ Blackboard initialized');
 
   // execute_code tool — sandboxed code execution for agents
@@ -489,12 +489,12 @@ export async function startCommand(): Promise<void> {
       logger.error('Error shutting down sandbox:', err);
     }
 
-    // 0.56. Event bus cleanup — clear all subscriptions
+    // 0.56. Intercom cleanup — clear all subscriptions
     try {
-      eventBus.clear();
-      logger.info('Event bus cleared');
+      intercom.clear();
+      logger.info('Intercom cleared');
     } catch (err) {
-      logger.error('Error clearing event bus:', err);
+      logger.error('Error clearing intercom:', err);
     }
 
     // 0.6. Channel plugins

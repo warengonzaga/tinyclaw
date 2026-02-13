@@ -1,5 +1,5 @@
 /**
- * Event Bus — Lightweight Pub/Sub for Inter-Agent Communication
+ * Intercom — Lightweight Pub/Sub for Inter-Agent Communication
  *
  * Provides system-wide event notifications for:
  *   - Task lifecycle (queued, completed, failed)
@@ -18,7 +18,7 @@
 // Types
 // ---------------------------------------------------------------------------
 
-export type EventTopic =
+export type IntercomTopic =
   | 'task:queued'
   | 'task:completed'
   | 'task:failed'
@@ -30,24 +30,24 @@ export type EventTopic =
   | 'blackboard:proposal'
   | 'blackboard:resolved';
 
-export interface EventPayload {
-  topic: EventTopic;
+export interface IntercomMessage {
+  topic: IntercomTopic;
   timestamp: number;
   userId: string;
   data: Record<string, unknown>;
 }
 
-export interface EventBus {
+export interface Intercom {
   /** Subscribe to a topic. Returns unsubscribe function. */
-  on(topic: EventTopic, handler: (event: EventPayload) => void): () => void;
+  on(topic: IntercomTopic, handler: (event: IntercomMessage) => void): () => void;
   /** Subscribe to all events (wildcard). Returns unsubscribe function. */
-  onAny(handler: (event: EventPayload) => void): () => void;
+  onAny(handler: (event: IntercomMessage) => void): () => void;
   /** Emit an event to all subscribers. */
-  emit(topic: EventTopic, userId: string, data?: Record<string, unknown>): void;
+  emit(topic: IntercomTopic, userId: string, data?: Record<string, unknown>): void;
   /** Get recent events for a topic (last N). */
-  recent(topic: EventTopic, limit?: number): EventPayload[];
+  recent(topic: IntercomTopic, limit?: number): IntercomMessage[];
   /** Get all recent events across all topics. */
-  recentAll(limit?: number): EventPayload[];
+  recentAll(limit?: number): IntercomMessage[];
   /** Clear all subscriptions and history. */
   clear(): void;
 }
@@ -62,19 +62,19 @@ const DEFAULT_HISTORY_LIMIT = 100;
 // Factory
 // ---------------------------------------------------------------------------
 
-export function createEventBus(historyLimit = DEFAULT_HISTORY_LIMIT): EventBus {
+export function createIntercom(historyLimit = DEFAULT_HISTORY_LIMIT): Intercom {
   /** Topic → handlers map */
-  const handlers = new Map<EventTopic, Set<(event: EventPayload) => void>>();
+  const handlers = new Map<IntercomTopic, Set<(event: IntercomMessage) => void>>();
   /** Wildcard handlers */
-  const wildcardHandlers = new Set<(event: EventPayload) => void>();
+  const wildcardHandlers = new Set<(event: IntercomMessage) => void>();
   /** Topic → recent events (bounded ring buffer) */
-  const history = new Map<EventTopic, EventPayload[]>();
+  const history = new Map<IntercomTopic, IntercomMessage[]>();
   /** Global event history (all topics, in emission order) */
-  const globalHistory: EventPayload[] = [];
+  const globalHistory: IntercomMessage[] = [];
   /** Monotonic sequence counter for stable ordering when timestamps collide */
   let sequence = 0;
 
-  function getOrCreateHandlers(topic: EventTopic): Set<(event: EventPayload) => void> {
+  function getOrCreateHandlers(topic: IntercomTopic): Set<(event: IntercomMessage) => void> {
     let set = handlers.get(topic);
     if (!set) {
       set = new Set();
@@ -83,7 +83,7 @@ export function createEventBus(historyLimit = DEFAULT_HISTORY_LIMIT): EventBus {
     return set;
   }
 
-  function getOrCreateHistory(topic: EventTopic): EventPayload[] {
+  function getOrCreateHistory(topic: IntercomTopic): IntercomMessage[] {
     let list = history.get(topic);
     if (!list) {
       list = [];
@@ -93,7 +93,7 @@ export function createEventBus(historyLimit = DEFAULT_HISTORY_LIMIT): EventBus {
   }
 
   return {
-    on(topic: EventTopic, handler: (event: EventPayload) => void): () => void {
+    on(topic: IntercomTopic, handler: (event: IntercomMessage) => void): () => void {
       const set = getOrCreateHandlers(topic);
       set.add(handler);
       return () => {
@@ -101,15 +101,15 @@ export function createEventBus(historyLimit = DEFAULT_HISTORY_LIMIT): EventBus {
       };
     },
 
-    onAny(handler: (event: EventPayload) => void): () => void {
+    onAny(handler: (event: IntercomMessage) => void): () => void {
       wildcardHandlers.add(handler);
       return () => {
         wildcardHandlers.delete(handler);
       };
     },
 
-    emit(topic: EventTopic, userId: string, data: Record<string, unknown> = {}): void {
-      const event: EventPayload = {
+    emit(topic: IntercomTopic, userId: string, data: Record<string, unknown> = {}): void {
+      const event: IntercomMessage = {
         topic,
         timestamp: Date.now(),
         userId,
@@ -152,13 +152,13 @@ export function createEventBus(historyLimit = DEFAULT_HISTORY_LIMIT): EventBus {
       }
     },
 
-    recent(topic: EventTopic, limit = 10): EventPayload[] {
+    recent(topic: IntercomTopic, limit = 10): IntercomMessage[] {
       const list = history.get(topic);
       if (!list || list.length === 0) return [];
       return list.slice(-limit);
     },
 
-    recentAll(limit = 10): EventPayload[] {
+    recentAll(limit = 10): IntercomMessage[] {
       // Return most recent events first (globalHistory is in emission order)
       const start = Math.max(0, globalHistory.length - limit);
       return globalHistory.slice(start).reverse();
