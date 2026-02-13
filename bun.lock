@@ -24,18 +24,22 @@
       "name": "@tinyclaw/core",
       "version": "1.0.0",
       "dependencies": {
-        "@tinyclaw/config": "workspace:*",
-        "@tinyclaw/heartware": "workspace:*",
-        "@tinyclaw/learning": "workspace:*",
+        "@tinyclaw/delegation": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
-        "@tinyclaw/memory": "workspace:*",
-        "@tinyclaw/router": "workspace:*",
-        "@tinyclaw/sandbox": "workspace:*",
         "@tinyclaw/secrets": "workspace:*",
         "@tinyclaw/types": "workspace:*",
-        "@wgtechlabs/config-engine": "^0.1.0",
-        "@wgtechlabs/secrets-engine": "^2.0.0",
-        "zod": "^3.24.0",
+      },
+    },
+    "packages/delegation": {
+      "name": "@tinyclaw/delegation",
+      "version": "0.0.1",
+      "dependencies": {
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/router": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
+      },
+      "devDependencies": {
+        "@tinyclaw/core": "workspace:*",
       },
     },
     "packages/heartware": {
@@ -65,6 +69,9 @@
       "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/types": "workspace:*",
+      },
+      "devDependencies": {
+        "@tinyclaw/core": "workspace:*",
       },
     },
     "packages/router": {
@@ -96,7 +103,8 @@
       "name": "@tinyclaw/plugin-channel-discord",
       "version": "0.1.0",
       "dependencies": {
-        "@tinyclaw/core": "workspace:*",
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
         "discord.js": "^14.0.0",
       },
     },
@@ -104,7 +112,8 @@
       "name": "@tinyclaw/plugin-provider-openai",
       "version": "0.1.0",
       "dependencies": {
-        "@tinyclaw/core": "workspace:*",
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
       },
     },
     "src/cli": {
@@ -115,7 +124,17 @@
       },
       "dependencies": {
         "@clack/prompts": "^1.0.0",
+        "@tinyclaw/config": "workspace:*",
         "@tinyclaw/core": "workspace:*",
+        "@tinyclaw/delegation": "workspace:*",
+        "@tinyclaw/heartware": "workspace:*",
+        "@tinyclaw/learning": "workspace:*",
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/memory": "workspace:*",
+        "@tinyclaw/router": "workspace:*",
+        "@tinyclaw/sandbox": "workspace:*",
+        "@tinyclaw/secrets": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
         "@tinyclaw/ui": "workspace:*",
         "@wgtechlabs/log-engine": "^2.3.0",
         "picocolors": "^1.1.1",
@@ -311,6 +330,8 @@
     "@tinyclaw/config": ["@tinyclaw/config@workspace:packages/config"],
 
     "@tinyclaw/core": ["@tinyclaw/core@workspace:packages/core"],
+
+    "@tinyclaw/delegation": ["@tinyclaw/delegation@workspace:packages/delegation"],
 
     "@tinyclaw/heartware": ["@tinyclaw/heartware@workspace:packages/heartware"],
 

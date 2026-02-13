@@ -10,7 +10,7 @@
  * can invoke them conversationally when a user asks to connect Discord.
  */
 
-import type { Tool, SecretsManagerInterface, ConfigManagerInterface } from '@tinyclaw/core';
+import type { Tool, SecretsManagerInterface, ConfigManagerInterface } from '@tinyclaw/types';
 
 /** Secret key for the Discord bot token. */
 export const DISCORD_TOKEN_SECRET_KEY = 'channel.discord.token';

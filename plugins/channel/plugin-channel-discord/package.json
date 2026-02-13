@@ -9,7 +9,8 @@
   "description": "Discord channel plugin for TinyClaw",
   "keywords": ["tinyclaw", "plugin", "channel", "discord"],
   "dependencies": {
-    "@tinyclaw/core": "workspace:*",
+    "@tinyclaw/logger": "workspace:*",
+    "@tinyclaw/types": "workspace:*",
     "discord.js": "^14.0.0"
   }
 }

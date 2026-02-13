@@ -15,34 +15,22 @@ import {
   createDatabase,
   agentLoop,
   createOllamaProvider,
-  ProviderOrchestrator,
-  logger,
-  HeartwareManager,
-  createHeartwareTools,
-  loadHeartwareContext,
-  createLearningEngine,
-  SecretsManager,
-  ConfigManager,
-  createSecretsTools,
-  createConfigTools,
   createSessionQueue,
   createCronScheduler,
   loadPlugins,
-  createDelegationTools,
-  buildProviderKeyName,
-  // v3 subsystems
-  createEventBus,
-  createMemoryEngine,
   createHybridMatcher,
-  createSandbox,
-  createBlackboard,
-  createTimeoutEstimator,
-  type HeartwareConfig,
-  type ChannelPlugin,
-  type ProviderTierConfig,
-  type Provider,
-  type Tool,
+  createEventBus,
 } from '@tinyclaw/core';
+import { logger } from '@tinyclaw/logger';
+import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';
+import { HeartwareManager, createHeartwareTools, loadHeartwareContext, type HeartwareConfig } from '@tinyclaw/heartware';
+import { createLearningEngine } from '@tinyclaw/learning';
+import { SecretsManager, createSecretsTools, buildProviderKeyName } from '@tinyclaw/secrets';
+import { ConfigManager, createConfigTools } from '@tinyclaw/config';
+import { createDelegationTools, createBlackboard, createTimeoutEstimator } from '@tinyclaw/delegation';
+import { createMemoryEngine } from '@tinyclaw/memory';
+import { createSandbox } from '@tinyclaw/sandbox';
+import type { ChannelPlugin, Provider, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/ui';
 import { theme } from '../ui/theme.js';
 

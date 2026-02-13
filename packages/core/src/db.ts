@@ -1,5 +1,5 @@
 import { Database as BunDatabase } from 'bun:sqlite';
-import { Database, Message, CompactionRecord, SubAgentRecord, RoleTemplate, BackgroundTask, EpisodicRecord, TaskMetricRecord, BlackboardEntry } from './types.js';
+import type { Database, Message, CompactionRecord, SubAgentRecord, RoleTemplate, BackgroundTask, EpisodicRecord, TaskMetricRecord, BlackboardEntry } from '@tinyclaw/types';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 

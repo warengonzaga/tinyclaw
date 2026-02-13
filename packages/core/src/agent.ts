@@ -1,6 +1,6 @@
-import { AgentContext, Database, Message, Provider, ToolCall } from './types.js';
-import { logger } from './logger.js';
-import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from './delegation/handbook.js';
+import type { AgentContext, Database, Message, Provider, ToolCall } from '@tinyclaw/types';
+import { logger } from '@tinyclaw/logger';
+import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from '@tinyclaw/delegation';
 
 const MAX_TOOL_ITERATIONS = 10;
 const MAX_JSON_TOOL_REPLIES = 3;
@@ -316,7 +316,7 @@ export async function agentLoop(
   message: string,
   userId: string,
   context: AgentContext,
-  onStream?: (event: import('./types.js').StreamEvent) => void
+  onStream?: (event: import('@tinyclaw/types').StreamEvent) => void
 ): Promise<string> {
   const { db, provider, learning, tools, heartwareContext } = context;
 

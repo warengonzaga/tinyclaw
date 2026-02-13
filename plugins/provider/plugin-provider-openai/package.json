@@ -9,6 +9,7 @@
   "description": "OpenAI provider plugin for TinyClaw",
   "keywords": ["tinyclaw", "plugin", "provider", "openai"],
   "dependencies": {
-    "@tinyclaw/core": "workspace:*"
+    "@tinyclaw/logger": "workspace:*",
+    "@tinyclaw/types": "workspace:*"
   }
 }

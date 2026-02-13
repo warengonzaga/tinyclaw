@@ -6,5 +6,8 @@
   "types": "src/index.ts",
   "dependencies": {
     "@tinyclaw/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@tinyclaw/core": "workspace:*"
   }
 }

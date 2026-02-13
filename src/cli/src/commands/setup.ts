@@ -15,12 +15,9 @@
  */
 
 import * as p from '@clack/prompts';
-import {
-  SecretsManager,
-  ConfigManager,
-  createOllamaProvider,
-  buildProviderKeyName,
-} from '@tinyclaw/core';
+import { createOllamaProvider } from '@tinyclaw/core';
+import { SecretsManager, buildProviderKeyName } from '@tinyclaw/secrets';
+import { ConfigManager } from '@tinyclaw/config';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
 

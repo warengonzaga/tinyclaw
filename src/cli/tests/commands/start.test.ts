@@ -2,34 +2,18 @@
  * Tests for the start command.
  *
  * Since startCommand boots the entire agent stack (DB, providers,
- * heartware, web server), we mock all @tinyclaw/core and @tinyclaw/ui
- * dependencies to test control-flow logic in isolation.
+ * heartware, web server), we mock all @tinyclaw/* package dependencies
+ * to test control-flow logic in isolation.
  */
 
 import { afterEach, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
 
-// ── Mock @tinyclaw/core ──────────────────────────────────────────────
+// ── Mock @tinyclaw/secrets ───────────────────────────────────────────
 
 const mockSecretsCheck = mock(() => Promise.resolve(true));
 const mockSecretsClose = mock(() => {});
 
-const mockConfigGet = mock((key: string) => {
-  if (key === 'providers.starterBrain.model') return 'gpt-oss:120b-cloud';
-  if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
-  return undefined;
-});
-const mockConfigClose = mock(() => {});
-
-const mockDbClose = mock(() => {});
-const mockSelectActiveProvider = mock(() => Promise.resolve({ chat: mock(() => {}) }));
-const mockHeartwareInitialize = mock(() => Promise.resolve());
-
-const mockWebUIStart = mock(() => Promise.resolve());
-const mockWebUIStop = mock(() => Promise.resolve());
-
-const mockGetStats = mock(() => ({ totalPatterns: 5 }));
-
-mock.module('@tinyclaw/core', () => ({
+mock.module('@tinyclaw/secrets', () => ({
   SecretsManager: {
     create: mock(() =>
       Promise.resolve({
@@ -39,6 +23,20 @@ mock.module('@tinyclaw/core', () => ({
       }),
     ),
   },
+  createSecretsTools: mock(() => []),
+  buildProviderKeyName: mock((p: string) => `provider.${p}.apiKey`),
+}));
+
+// ── Mock @tinyclaw/config ───────────────────────────────────────────
+
+const mockConfigGet = mock((key: string) => {
+  if (key === 'providers.starterBrain.model') return 'gpt-oss:120b-cloud';
+  if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
+  return undefined;
+});
+const mockConfigClose = mock(() => {});
+
+mock.module('@tinyclaw/config', () => ({
   ConfigManager: {
     create: mock(() =>
       Promise.resolve({
@@ -49,6 +47,14 @@ mock.module('@tinyclaw/core', () => ({
       }),
     ),
   },
+  createConfigTools: mock(() => []),
+}));
+
+// ── Mock @tinyclaw/core ─────────────────────────────────────────────
+
+const mockDbClose = mock(() => {});
+
+mock.module('@tinyclaw/core', () => ({
   createDatabase: mock(() => ({
     close: mockDbClose,
   })),
@@ -56,29 +62,115 @@ mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
     isAvailable: mock(() => Promise.resolve(true)),
   })),
-  ProviderOrchestrator: mock().mockImplementation(() => ({
-    selectActiveProvider: mockSelectActiveProvider,
+  createSessionQueue: mock(() => ({
+    enqueue: mock(() => Promise.resolve('queued response')),
   })),
+  createCronScheduler: mock(() => ({
+    register: mock(() => {}),
+    start: mock(() => {}),
+    stop: mock(() => {}),
+    jobs: mock(() => []),
+  })),
+  loadPlugins: mock(() => Promise.resolve({ channels: [], providers: [], tools: [] })),
+  createHybridMatcher: mock(() => ({
+    match: mock(() => ({ score: 0, matches: [] })),
+  })),
+  createEventBus: mock(() => ({
+    publish: mock(() => {}),
+    subscribe: mock(() => mock(() => {})),
+  })),
+}));
+
+// ── Mock @tinyclaw/logger ───────────────────────────────────────────
+
+mock.module('@tinyclaw/logger', () => ({
   logger: {
     log: mock(() => {}),
     info: mock(() => {}),
     warn: mock(() => {}),
     error: mock(() => {}),
   },
+}));
+
+// ── Mock @tinyclaw/router ───────────────────────────────────────────
+
+const mockSelectActiveProvider = mock(() => Promise.resolve({ chat: mock(() => {}) }));
+
+mock.module('@tinyclaw/router', () => ({
+  ProviderOrchestrator: mock().mockImplementation(() => ({
+    selectActiveProvider: mockSelectActiveProvider,
+    getRegistry: mock(() => ({
+      ids: mock(() => ['ollama-cloud']),
+    })),
+  })),
+}));
+
+// ── Mock @tinyclaw/heartware ────────────────────────────────────────
+
+const mockHeartwareInitialize = mock(() => Promise.resolve());
+
+mock.module('@tinyclaw/heartware', () => ({
   HeartwareManager: mock().mockImplementation(() => ({
     initialize: mockHeartwareInitialize,
     close: mock(() => {}),
   })),
   createHeartwareTools: mock(() => []),
   loadHeartwareContext: mock(() => Promise.resolve({})),
+}));
+
+// ── Mock @tinyclaw/learning ─────────────────────────────────────────
+
+const mockGetStats = mock(() => ({ totalPatterns: 5 }));
+
+mock.module('@tinyclaw/learning', () => ({
   createLearningEngine: mock(() => ({
     getStats: mockGetStats,
     close: mock(() => {}),
   })),
-  createSecretsTools: mock(() => []),
-  createConfigTools: mock(() => []),
-  buildProviderKeyName: mock((p: string) => `provider.${p}.apiKey`),
 }));
+
+// ── Mock @tinyclaw/delegation ───────────────────────────────────────
+
+mock.module('@tinyclaw/delegation', () => ({
+  createDelegationTools: mock(() => ({
+    tools: [],
+    blackboard: { read: mock(() => null), write: mock(() => {}), list: mock(() => []) },
+    estimator: { estimate: mock(() => 30000) },
+  })),
+  createBlackboard: mock(() => ({
+    read: mock(() => null),
+    write: mock(() => {}),
+    list: mock(() => []),
+  })),
+  createTimeoutEstimator: mock(() => ({
+    estimate: mock(() => 30000),
+  })),
+}));
+
+// ── Mock @tinyclaw/memory ───────────────────────────────────────────
+
+mock.module('@tinyclaw/memory', () => ({
+  createMemoryEngine: mock(() => ({
+    close: mock(() => {}),
+  })),
+}));
+
+// ── Mock @tinyclaw/sandbox ──────────────────────────────────────────
+
+mock.module('@tinyclaw/sandbox', () => ({
+  createSandbox: mock(() => ({
+    execute: mock(() => Promise.resolve({ stdout: '', stderr: '', exitCode: 0 })),
+  })),
+}));
+
+// ── Mock @tinyclaw/types ────────────────────────────────────────────
+
+mock.module('@tinyclaw/types', () => ({}));
+
+// ── Mock @tinyclaw/ui ───────────────────────────────────────────────
+
+const mockWebUIStart = mock(() => Promise.resolve());
+const mockWebUIStop = mock(() => Promise.resolve());
 
 // ── Mock @tinyclaw/ui ────────────────────────────────────────────────
 

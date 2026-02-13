@@ -14,6 +14,16 @@
   "dependencies": {
     "@clack/prompts": "^1.0.0",
     "@tinyclaw/core": "workspace:*",
+    "@tinyclaw/config": "workspace:*",
+    "@tinyclaw/delegation": "workspace:*",
+    "@tinyclaw/heartware": "workspace:*",
+    "@tinyclaw/learning": "workspace:*",
+    "@tinyclaw/logger": "workspace:*",
+    "@tinyclaw/memory": "workspace:*",
+    "@tinyclaw/router": "workspace:*",
+    "@tinyclaw/sandbox": "workspace:*",
+    "@tinyclaw/secrets": "workspace:*",
+    "@tinyclaw/types": "workspace:*",
     "@tinyclaw/ui": "workspace:*",
     "@wgtechlabs/log-engine": "^2.3.0",
     "picocolors": "^1.1.1"

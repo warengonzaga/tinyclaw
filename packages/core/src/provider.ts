@@ -1,6 +1,6 @@
-import { logger } from './logger.js';
-import type { Provider, Message, LLMResponse } from './types.js';
-import type { SecretsManager } from './secrets/manager.js';
+import { logger } from '@tinyclaw/logger';
+import type { Provider, Message, LLMResponse } from '@tinyclaw/types';
+import type { SecretsManager } from '@tinyclaw/secrets';
 
 export interface OllamaConfig {
   apiKey?: string;

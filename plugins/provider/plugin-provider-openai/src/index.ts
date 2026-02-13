@@ -17,7 +17,7 @@ import type {
   SecretsManagerInterface,
   ConfigManagerInterface,
   Tool,
-} from '@tinyclaw/core';
+} from '@tinyclaw/types';
 import { createOpenAIProvider } from './provider.js';
 import { createOpenAIPairingTools } from './pairing.js';
 

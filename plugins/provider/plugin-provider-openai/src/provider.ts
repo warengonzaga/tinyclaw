@@ -11,7 +11,7 @@
  * - API key resolution from secrets-engine
  */
 
-import { logger } from '@tinyclaw/core';
+import { logger } from '@tinyclaw/logger';
 import type {
   Provider,
   Message,
@@ -19,7 +19,7 @@ import type {
   Tool,
   ToolCall,
   SecretsManagerInterface,
-} from '@tinyclaw/core';
+} from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
 // Types

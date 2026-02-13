@@ -22,14 +22,14 @@ import {
   Events,
   type Message as DiscordMessage,
 } from 'discord.js';
-import { logger } from '@tinyclaw/core';
+import { logger } from '@tinyclaw/logger';
 import type {
   ChannelPlugin,
   PluginRuntimeContext,
   Tool,
   SecretsManagerInterface,
   ConfigManagerInterface,
-} from '@tinyclaw/core';
+} from '@tinyclaw/types';
 import {
   createDiscordPairingTools,
   DISCORD_TOKEN_SECRET_KEY,

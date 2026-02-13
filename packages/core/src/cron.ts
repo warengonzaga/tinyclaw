@@ -6,8 +6,8 @@
  * runs handlers through the session queue to prevent conflicts.
  */
 
-import { CronJob } from './types.js';
-import { logger } from './logger.js';
+import type { CronJob } from '@tinyclaw/types';
+import { logger } from '@tinyclaw/logger';
 
 export interface CronScheduler {
   register(job: CronJob): void;

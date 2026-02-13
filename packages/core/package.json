@@ -11,15 +11,7 @@
   "dependencies": {
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/logger": "workspace:*",
-    "@tinyclaw/sandbox": "workspace:*",
-    "@tinyclaw/learning": "workspace:*",
-    "@tinyclaw/router": "workspace:*",
-    "@tinyclaw/config": "workspace:*",
-    "@tinyclaw/secrets": "workspace:*",
-    "@tinyclaw/heartware": "workspace:*",
-    "@tinyclaw/memory": "workspace:*",
-    "@wgtechlabs/config-engine": "^0.1.0",
-    "@wgtechlabs/secrets-engine": "^2.0.0",
-    "zod": "^3.24.0"
+    "@tinyclaw/delegation": "workspace:*",
+    "@tinyclaw/secrets": "workspace:*"
   }
 }

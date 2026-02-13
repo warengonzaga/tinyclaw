@@ -13,7 +13,7 @@
  *   tinyclaw --help       Show help
  */
 
-import { logger } from '@tinyclaw/core';
+import { logger } from '@tinyclaw/logger';
 import { showBanner, getVersion } from './ui/banner.js';
 import { theme } from './ui/theme.js';
 

@@ -10,14 +10,14 @@
  * skipped so the rest of the system boots normally.
  */
 
-import { logger } from './logger.js';
+import { logger } from '@tinyclaw/logger';
 import type {
   TinyClawPlugin,
   ChannelPlugin,
   ProviderPlugin,
   ToolsPlugin,
-} from './types.js';
-import type { ConfigManagerInterface } from './config/types.js';
+  ConfigManagerInterface,
+} from '@tinyclaw/types';
 
 export interface LoadedPlugins {
   channels: ChannelPlugin[];

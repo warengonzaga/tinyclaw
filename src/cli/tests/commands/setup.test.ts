@@ -1,8 +1,9 @@
 /**
  * Tests for the setup command.
  *
- * Mocks @clack/prompts and @tinyclaw/core to test the setup wizard
- * logic without user interaction or real filesystem side-effects.
+ * Mocks @clack/prompts, @tinyclaw/secrets, @tinyclaw/config, and
+ * @tinyclaw/core to test the setup wizard logic without user
+ * interaction or real filesystem side-effects.
  */
 
 import { afterEach, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
@@ -44,17 +45,13 @@ mock.module('@clack/prompts', () => ({
   },
 }));
 
-// ── Mock @tinyclaw/core ──────────────────────────────────────────────
+// ── Mock @tinyclaw/secrets ───────────────────────────────────────────
 
 const mockSecretsStore = mock(() => Promise.resolve());
 const mockSecretsCheck = mock(() => Promise.resolve(false));
 const mockSecretsClose = mock(() => {});
-const mockConfigGet = mock(() => undefined);
-const mockConfigSet = mock(() => {});
-const mockConfigClose = mock(() => {});
-const mockIsAvailable = mock(() => Promise.resolve(true));
 
-mock.module('@tinyclaw/core', () => ({
+mock.module('@tinyclaw/secrets', () => ({
   SecretsManager: {
     create: mock(() =>
       Promise.resolve({
@@ -64,6 +61,16 @@ mock.module('@tinyclaw/core', () => ({
       }),
     ),
   },
+  buildProviderKeyName: mock((provider: string) => `provider.${provider}.apiKey`),
+}));
+
+// ── Mock @tinyclaw/config ───────────────────────────────────────────
+
+const mockConfigGet = mock(() => undefined);
+const mockConfigSet = mock(() => {});
+const mockConfigClose = mock(() => {});
+
+mock.module('@tinyclaw/config', () => ({
   ConfigManager: {
     create: mock(() =>
       Promise.resolve({
@@ -73,10 +80,16 @@ mock.module('@tinyclaw/core', () => ({
       }),
     ),
   },
+}));
+
+// ── Mock @tinyclaw/core ─────────────────────────────────────────────
+
+const mockIsAvailable = mock(() => Promise.resolve(true));
+
+mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
     isAvailable: mockIsAvailable,
   })),
-  buildProviderKeyName: mock((provider: string) => `provider.${provider}.apiKey`),
 }));
 
 // ── Import after mocks are set up ────────────────────────────────────
