@@ -9,7 +9,8 @@
  * `tinyclaw setup`.
  */
 
-import { join } from 'path';
+import { join, resolve } from 'path';
+import { existsSync } from 'fs';
 import { homedir } from 'os';
 import {
   createDatabase,
@@ -151,9 +152,61 @@ export async function startCommand(): Promise<void> {
     baseUrl: providerBaseUrl,
   });
 
-  // Verify default provider is reachable
-  await new ProviderOrchestrator({ defaultProvider }).selectActiveProvider();
-  logger.info('✅ Default provider initialized and verified');
+  // --- Pre-flight: verify provider connectivity -------------------------
+
+  try {
+    const reachable = await defaultProvider.isAvailable();
+    if (!reachable) {
+      console.log();
+      console.log(theme.error('  ✖ Cannot reach the default provider.'));
+      console.log();
+      console.log(`    Provider : ${theme.label(defaultProvider.name)}`);
+      console.log(`    Base URL : ${theme.dim(providerBaseUrl)}`);
+      console.log();
+      console.log('    Possible causes:');
+      console.log('      • The provider service may be temporarily down');
+      console.log('      • The base URL may be incorrect');
+      console.log('      • A firewall or proxy may be blocking the connection');
+      console.log();
+      console.log(
+        `    Run ${theme.cmd('tinyclaw setup')} to reconfigure your provider.`,
+      );
+      console.log();
+      await secretsManager.close();
+      process.exit(1);
+    }
+  } catch (err) {
+    const msg = (err as Error).message ?? '';
+    const isAuthError = msg.startsWith('Authentication failed');
+
+    console.log();
+    if (isAuthError) {
+      console.log(theme.error('  ✖ Provider authentication failed (401).'));
+      console.log();
+      console.log(`    Provider : ${theme.label(defaultProvider.name)}`);
+      console.log(`    Base URL : ${theme.dim(providerBaseUrl)}`);
+      console.log();
+      console.log('    Your API key may be invalid, expired, or revoked.');
+      console.log(
+        `    Run ${theme.cmd('tinyclaw setup')} to enter a new API key.`,
+      );
+    } else {
+      console.log(theme.error('  ✖ Provider connectivity check failed.'));
+      console.log();
+      console.log(`    Provider : ${theme.label(defaultProvider.name)}`);
+      console.log(`    Base URL : ${theme.dim(providerBaseUrl)}`);
+      console.log(`    Error    : ${theme.dim(msg)}`);
+      console.log();
+      console.log(
+        `    Run ${theme.cmd('tinyclaw setup')} to reconfigure your provider.`,
+      );
+    }
+    console.log();
+    await secretsManager.close();
+    process.exit(1);
+  }
+
+  logger.info('✅ Default provider connected and verified');
 
   // --- Load plugins ------------------------------------------------------
 
@@ -420,6 +473,40 @@ export async function startCommand(): Promise<void> {
 
   pulse.start();
   logger.info('✅ Pulse scheduler initialized');
+
+  // --- Auto-build Web UI if needed --------------------------------------
+
+  // Resolve web package root by finding @tinyclaw/ui's entry point
+  // @tinyclaw/ui exports src/server.ts → its parent dir is src/web/
+  let webRoot: string;
+  try {
+    const uiEntry = require.resolve('@tinyclaw/ui');
+    webRoot = resolve(uiEntry, '..', '..');
+  } catch {
+    // Fallback: resolve relative to this file (src/cli/src/commands/ → src/web/)
+    webRoot = resolve(import.meta.dir, '..', '..', '..', 'web');
+  }
+  const webDistIndex = join(webRoot, 'dist', 'index.html');
+
+  if (!existsSync(webDistIndex)) {
+    logger.info('🔨 Web UI not built — building now...');
+    try {
+      const buildResult = Bun.spawnSync(['bun', 'run', 'build'], {
+        cwd: webRoot,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      if (buildResult.exitCode === 0) {
+        logger.info('✅ Web UI built successfully');
+      } else {
+        const stderr = buildResult.stderr?.toString().trim();
+        logger.warn('⚠️ Web UI build failed — dashboard will show setup instructions');
+        if (stderr) logger.warn(stderr);
+      }
+    } catch (err) {
+      logger.warn('⚠️ Could not build Web UI:', err);
+    }
+  }
 
   // --- Start Web UI / API server ----------------------------------------
 
