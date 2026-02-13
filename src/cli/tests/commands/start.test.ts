@@ -258,9 +258,11 @@ describe('startCommand', () => {
     expect(mockHeartwareInitialize).toHaveBeenCalled();
   });
 
-  test('selects active provider', async () => {
+  test('initializes provider orchestrator', async () => {
     await startCommand();
-    expect(mockSelectActiveProvider).toHaveBeenCalled();
+    // The orchestrator's registry is queried during boot to log available providers
+    const orchestratorMock = (await import('@tinyclaw/router')).ProviderOrchestrator as any;
+    expect(orchestratorMock).toHaveBeenCalled();
   });
 
   test('reads learning stats', async () => {
