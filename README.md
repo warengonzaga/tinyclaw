@@ -6,7 +6,7 @@
 **Your autonomous AI companion.**
 
 > [!WARNING]
-> **🚧 Under Active Development** - This project is currently in early development. Features and APIs may change without notice. Not recommended for production use yet.
+> **🚧 Under Active Development** - This project is in heavy development and things will break. Running it now may spoil the experience we're building for you. Please wait for the first official release before trying it out. Follow [@TinyClawAI](https://x.com/TinyClawAI) and [@warengonzaga](https://x.com/warengonzaga) on X for launch updates.
 
 AI agents today are powerful but complex, expensive to run, and heavy to set up. TinyClaw believes AI should be **simple, affordable, and truly personal**, like having your own Codsworth or AYLA as a helpful friend. It achieves this by being a **native framework built from scratch** with a tiny core, plugin architecture, self-improving memory, and smart routing that tiers queries to cut costs. The result is an **autonomous, self-improving, self-learning, and self-configuring personal AI companion** that grows with you over time.
 
