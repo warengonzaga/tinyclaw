@@ -30,7 +30,7 @@ mock.module('@tinyclaw/secrets', () => ({
 // ── Mock @tinyclaw/config ───────────────────────────────────────────
 
 const mockConfigGet = mock((key: string) => {
-  if (key === 'providers.starterBrain.model') return 'gpt-oss:120b-cloud';
+  if (key === 'providers.starterBrain.model') return 'kimi-k2.5:cloud';
   if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
   return undefined;
 });
@@ -62,6 +62,9 @@ mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
     isAvailable: mock(() => Promise.resolve(true)),
   })),
+  DEFAULT_MODEL: 'kimi-k2.5:cloud',
+  DEFAULT_BASE_URL: 'https://ollama.com',
+  BUILTIN_MODEL_TAGS: ['kimi-k2.5:cloud', 'gpt-oss:120b-cloud'],
 }));
 
 mock.module('@tinyclaw/plugins', () => ({
