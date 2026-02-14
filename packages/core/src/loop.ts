@@ -524,6 +524,7 @@ export async function agentLoop(
       // UNCLEAR — re-ask: push the entry back to the front of the queue
       logger.info('Shield: approval response unclear, re-asking', { tool: pending.toolCall.name, userId });
       const queue = pendingApprovals.get(userId) ?? [];
+      pending.createdAt = Date.now();
       queue.unshift(pending);
       pendingApprovals.set(userId, queue);
       const responseText =
