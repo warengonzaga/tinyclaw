@@ -22,6 +22,7 @@
       },
       "devDependencies": {
         "@tinyclaw/core": "workspace:*",
+        "typescript": "^5.0.0",
       },
     },
     "packages/config": {
@@ -177,6 +178,7 @@
       },
       "dependencies": {
         "@clack/prompts": "^1.0.0",
+        "@tinyclaw/compactor": "workspace:*",
         "@tinyclaw/config": "workspace:*",
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/delegation": "workspace:*",
