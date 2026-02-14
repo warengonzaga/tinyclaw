@@ -167,7 +167,7 @@ export class AuditLogger {
         flag: 'a',
       });
     } catch (err) {
-      console.error('[AUDIT ERROR] Failed to write shield audit log:', err);
+      console.error('[AUDIT ERROR] Failed to write shield audit log:', err, { decision });
     }
   }
 }
