@@ -71,6 +71,10 @@ export interface AgentContext {
   heartwareContext?: string; // Optional heartware configuration context
   secrets?: SecretsManagerInterface; // Optional secrets manager for API key storage
   configManager?: ConfigManagerInterface; // Optional config manager for persistent settings
+  /** The model tag currently in use (e.g. 'kimi-k2.5:cloud'). */
+  modelName?: string;
+  /** Human-readable provider name (e.g. 'Ollama Cloud'). */
+  providerName?: string;
   /** Adaptive memory engine (v3) — episodic memory + FTS5 + temporal decay. */
   memory?: MemoryEngine;
   /** Runtime SHIELD.md enforcement engine. */
