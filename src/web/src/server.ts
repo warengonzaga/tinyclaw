@@ -106,7 +106,13 @@ export function createWebUI(config) {
       server = Bun.serve({
         port,
         hostname: host,
-        idleTimeout: 255, // seconds — MAX_TIMEOUT_MS (300s) + 2 extensions (60s) = 360s is worst-case agent time; Bun caps at 255
+        // NOTE: Bun caps idleTimeout at 255s, but worst-case agent time is
+        // ~360s (MAX_TIMEOUT_MS 300s + 2 extensions at 60s). The SSE heartbeat
+        // (8s interval) keeps the connection alive beyond the idle timeout so
+        // long-running requests are not prematurely closed. If heartbeats are
+        // not flowing (e.g. non-streaming requests), responses exceeding 255s
+        // may be terminated by the runtime.
+        idleTimeout: 255,
         fetch: async (request) => {
           const url = new URL(request.url)
           const pathname = url.pathname
@@ -186,6 +192,19 @@ export function createWebUI(config) {
                   }
 
                   onMessageStream(message, userId, send)
+                    .then(() => {
+                      // Ensure the stream is closed if onMessageStream resolves
+                      // without emitting a {type: 'done'} event.
+                      if (!isClosed) {
+                        isClosed = true
+                        clearInterval(heartbeat)
+                        try {
+                          controller.close()
+                        } catch {
+                          // Already closed
+                        }
+                      }
+                    })
                     .catch((error) => {
                       if (!isClosed) {
                         send({ type: 'error', error: error?.message || 'Streaming error.' })
