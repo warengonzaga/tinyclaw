@@ -23,6 +23,9 @@ Most AI agent frameworks are powerful but heavy. They require expensive subscrip
 | **Core size** | Tiny by design, everything else is a plugin | Large monolith that grows over time |
 | **Personality** | Has its own, you can't override it | Fully configurable system prompts |
 | **Memory** | Self-improving with temporal decay | Flat conversation history |
+| **Context** | 4-layer compaction keeps context small and cheap | Unbounded context windows burn tokens |
+| **Security** | Built-in SHIELD.md anti-malware enforcement | No native threat model |
+| **UI** | Discord-like web experience out of the box | Terminal-only or separate UI dependency |
 | **Setup** | Self-configuring, zero hassle | Complex onboarding with multiple dependencies |
 | **Runtime** | Bun-native, single binary | Node.js 22+, pnpm, multiple processes |
 | **Built-in Provider** | Ollama Cloud (free sign-up, generous free tier) | Requires Claude Pro/Max ($20-200/mo) or API keys |
@@ -50,13 +53,17 @@ TinyClaw is inspired by personal AI companions from science fiction like **Codsw
 
 | | Feature | Description |
 |---|---|---|
+| 💬 | **Discord-Like UI** | Dark-themed web interface inspired by Discord with real-time SSE streaming, typing indicators, inline delegation event cards, and an active agents sidebar |
 | 🧠 | **Adaptive Memory** | 3-layer memory system (episodic, semantic FTS5, temporal decay) that learns what to remember and forget |
 | 🤖 | **Self-Improving** | Behavioral pattern detection that makes the agent better with every interaction |
 | 🔌 | **Plugin Architecture** | Channels, providers, and tools are all plugins. Core stays tiny |
 | 🎭 | **Heartware Personality** | Built-in personality engine with SOUL.md and IDENTITY.md. It has its own character |
 | 🧩 | **Smart Routing** | 8-dimension query classifier that adapts to your installed provider plugins, routing simple queries to cheap models and complex ones to powerful ones, cutting LLM costs |
-| 🛡️ | **5-Layer Security** | Path sandbox, content validation, audit log, auto-backup, rate limiting |
-| 🏗️ | **Delegation System** | Autonomous sub-agent orchestration with self-improving role templates |
+| 📐 | **Context Compactor** | 4-layer context compaction pipeline with rule-based pre-compression, shingle deduplication, LLM summarization, and tiered summaries (L0/L1/L2) |
+| 🛡️ | **SHIELD.md Anti-Malware** | Runtime SHIELD.md enforcement engine with threat parsing, pattern matching, and re-enforce action for built-in anti-malware protection |
+| 🔒 | **5-Layer Security** | Path sandbox, content validation, audit log, auto-backup, rate limiting |
+| 🏗️ | **Delegation System** | Autonomous sub-agent orchestration with self-improving role templates, blackboard collaboration, and adaptive timeout estimation |
+| 📡 | **Inter-Agent Comms** | Lightweight pub/sub event bus for real-time inter-agent communication with wildcard subscriptions and bounded history |
 | 💾 | **Easy Setup** | SQLite persistence with Ollama Cloud built-in. Free to sign up and start using immediately |
 | ⚡ | **Bun-Native** | Built on Bun for maximum performance, minimal footprint |
 | 🔄 | **Provider Fallback** | Multi-provider support (Ollama, OpenAI, Anthropic) with automatic failover |
@@ -99,22 +106,28 @@ tinyclaw/
     core/            Agent loop, database, built-in Ollama provider
     types/           Shared interfaces (leaf dependency)
     config/          Zod-validated configuration engine
+    compactor/       Context compaction engine (4-layer pipeline)
     heartware/       Personality engine + safety layers
     memory/          Adaptive memory with episodic + FTS5
     delegation/      Sub-agent orchestration + blackboard
     router/          Smart provider routing (8-dim classifier)
     learning/        Behavioral pattern detection
     sandbox/         Bun Worker code execution
+    shield/          Runtime SHIELD.md enforcement + anti-malware
     pulse/           Cron-like proactive scheduler
+    queue/           Per-session message locking queue
+    intercom/        Pub/sub inter-agent communication
+    matcher/         Hybrid semantic matcher (TF-IDF + fuzzy + synonyms)
+    logger/          Singleton logger with emoji mappings
+    secrets/         Encrypted secrets management (AES-256-GCM)
     plugins/         Plugin discovery and loading
-    ...
   plugins/           Plugin packages (keep the core tiny)
     channel/         Messaging integrations (Discord, etc.)
     provider/        LLM providers (OpenAI, etc.)
     tool/            Additional agent tools
   src/
     cli/             CLI entry point
-    web/             Web UI (Svelte)
+    web/             Web UI (Svelte 5, Discord-like experience)
 ```
 
 ## 🐛 Issues
@@ -143,6 +156,7 @@ This project is licensed under [MIT License](https://opensource.org/license/MIT)
 
 - [OpenClaw](https://github.com/openclaw/openclaw) — project inspiration
 - [ClawRouter](https://github.com/BlockRunAI/ClawRouter) — smart routing inspiration
+- [Claw Compactor](https://github.com/aeromomo/claw-compactor) — compactor inspiration
 - [Nader Dabit](https://x.com/dabit3) — learnings from [You Could've Invented OpenClaw](https://x.com/dabit3/status/2021387483364151451)
 - [SHIELD.md](https://nova-hunting.github.io/shield.md/) by [Thomas Roccia](https://x.com/fr0gger_) — security policy inspiration
 - [Bun](https://bun.sh) by [Oven](https://github.com/oven-sh) — all-in-one JavaScript runtime
