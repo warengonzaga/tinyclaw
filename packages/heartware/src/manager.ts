@@ -61,17 +61,17 @@ export class HeartwareManager {
       // Create memory directory
       await mkdir(join(this.config.baseDir, 'memory'), { recursive: true });
 
-      logger.info('✅ Heartware initialized', { baseDir: this.config.baseDir });
+      logger.info('Heartware initialized', { baseDir: this.config.baseDir }, { emoji: '✅' });
 
       // Check if first run (no IDENTITY.md)
       const identityPath = join(this.config.baseDir, 'IDENTITY.md');
       if (!existsSync(identityPath)) {
         // Create template files for first run
         await this.createTemplateFiles();
-        logger.info('📝 First run detected - created template files');
+        logger.info('First run detected - created template files', undefined, { emoji: '📝' });
       }
     } catch (err) {
-      logger.error('❌ Failed to initialize heartware:', err);
+      logger.error('Failed to initialize heartware:', err, { emoji: '❌' });
       throw err;
     }
   }
@@ -170,11 +170,11 @@ export class HeartwareManager {
         previousHash
       );
 
-      logger.info('✅ Heartware file written', {
+      logger.info('Heartware file written', {
         file: validation.relativePath,
         size: content.length,
         backup: backup ? 'created' : 'none'
-      });
+      }, { emoji: '✅' });
     } catch (err) {
       // Layer 3: Audit logging (failure)
       this.auditLogger.logFailure(
