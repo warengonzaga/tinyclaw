@@ -577,7 +577,9 @@ export async function agentLoop(
         history.push({
           role: 'system',
           content:
-            `[Background task ${task.status}] "${task.taskDescription}"\n\nResult:\n${task.result ?? '(no result)'}`,
+            `[Background task ${task.status}] "${task.taskDescription}"\n\nResult:\n${task.result ?? '(no result)'}\n\n` +
+            `The sub-agent has been auto-suspended. Use confirm_task to acknowledge this result and share it with the user. ` +
+            `If the user needs follow-up on this topic, you can revive the sub-agent with manage_sub_agent.`,
         });
         context.delegation.background.markDelivered(task.id);
       }
