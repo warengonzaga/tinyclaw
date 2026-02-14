@@ -501,6 +501,60 @@ export function createDelegationTools(config: DelegationToolsConfig): {
     },
   };
 
+  // =========================================================================
+  // 7. confirm_task
+  // =========================================================================
+
+  const confirmTask: Tool = {
+    name: 'confirm_task',
+    description:
+      'Confirm/acknowledge a completed background task result. Call this after receiving ' +
+      'a background task result to mark it as reviewed. Optionally keep the sub-agent alive ' +
+      'for follow-up tasks instead of leaving it suspended.',
+    parameters: {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string', description: 'The background task ID to confirm' },
+        agent_id: { type: 'string', description: 'The sub-agent ID that completed the task' },
+        keep_alive: {
+          type: 'boolean',
+          description: 'If true, revive the sub-agent for follow-up tasks (default: false)',
+        },
+        user_id: { type: 'string', description: 'User ID (injected by system)' },
+      },
+      required: ['agent_id'],
+    },
+    async execute(args) {
+      const agentId = String(args.agent_id || '');
+      const taskId = args.task_id as string | undefined;
+      const keepAlive = Boolean(args.keep_alive);
+      const userId = String(args.user_id || 'default-user');
+
+      if (!agentId) return 'Error: agent_id is required.';
+
+      const agent = lifecycle.get(agentId);
+      if (!agent) return `Error: Sub-agent ${agentId} not found.`;
+
+      // If a specific task was provided, verify it exists
+      if (taskId) {
+        const task = background.getStatus(taskId);
+        if (!task) return `Error: Task ${taskId} not found.`;
+      }
+
+      if (keepAlive) {
+        // Revive the sub-agent so it can be reused
+        const revived = lifecycle.revive(agentId);
+        if (revived) {
+          return `Task confirmed. Sub-agent "${revived.role}" (${agentId}) kept alive for follow-up tasks.`;
+        }
+        return `Task confirmed. Sub-agent "${agent.role}" (${agentId}) is already active.`;
+      }
+
+      // Leave suspended (default) — task acknowledged
+      return `Task confirmed. Sub-agent "${agent.role}" (${agentId}) remains suspended. Use manage_sub_agent to revive if needed.`;
+    },
+  };
+
   return {
     tools: [
       delegateTask,
@@ -509,6 +563,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
       listSubAgents,
       manageSubAgent,
       manageTemplate,
+      confirmTask,
     ],
     lifecycle,
     templates,
