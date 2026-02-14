@@ -1,4 +1,4 @@
-import type { AgentContext, Database, Message, Provider, ToolCall, PendingApproval, ShieldEvent, ShieldDecision } from '@tinyclaw/types';
+import type { AgentContext, Message, ToolCall, PendingApproval, ShieldEvent, ShieldDecision } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
 import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from '@tinyclaw/delegation';
 
@@ -52,11 +52,6 @@ function getPendingApproval(userId: string): PendingApproval | undefined {
 const MAX_TOOL_ITERATIONS = 10;
 const MAX_JSON_TOOL_REPLIES = 3;
 const TOOL_ACTION_KEYS = ['action', 'tool', 'name'];
-
-/** Compaction triggers when stored messages exceed this count. */
-const COMPACTION_THRESHOLD = 60;
-/** Number of recent messages to keep after compaction. */
-const COMPACTION_KEEP_RECENT = 20;
 
 function normalizeToolArguments(args: Record<string, unknown>): Record<string, unknown> {
   const normalized = { ...args };
@@ -356,85 +351,6 @@ ${DELEGATION_HANDBOOK}
   return prompt;
 }
 
-/**
- * Compact conversation history when it grows too large.
- *
- * Asks the provider to summarize the oldest messages, stores the summary
- * as a compaction record, and deletes the originals from the database.
- */
-async function compactIfNeeded(
-  userId: string,
-  db: Database,
-  provider: Provider,
-): Promise<void> {
-  const count = db.getMessageCount(userId);
-  if (count < COMPACTION_THRESHOLD) return;
-
-  logger.info('Compacting conversation history', { userId, messageCount: count });
-
-  // Fetch all messages, then split into old and recent
-  const allMessages = db.getHistory(userId, count);
-  const splitAt = allMessages.length - COMPACTION_KEEP_RECENT;
-  if (splitAt <= 0) return;
-
-  const oldMessages = allMessages.slice(0, splitAt);
-
-  // Build a summary request
-  const summaryContent = oldMessages
-    .map((m) => `${m.role}: ${m.content}`)
-    .join('\n');
-
-  try {
-    const response = await provider.chat([
-      {
-        role: 'system',
-        content:
-          'You are a summarizer. Produce a concise summary of the following conversation. ' +
-          'Preserve: key facts about the user (name, preferences, location), ' +
-          'important decisions made, and any open tasks or TODOs.',
-      },
-      { role: 'user', content: summaryContent },
-    ]);
-
-    const summary = response.content ?? '';
-    if (!summary) return;
-
-    // The timestamp of the newest old message is used as the cutoff.
-    // We approximate it as "now minus a small buffer" since messages
-    // are ordered by created_at DESC in getHistory. A more precise
-    // approach would store created_at on Message, but the current
-    // schema returns only role+content. Instead we delete the exact
-    // count of old messages by using the created_at of the Nth-oldest row.
-    // For simplicity, we use Date.now() as the cutoff and keep
-    // COMPACTION_KEEP_RECENT most recent messages.
-    const cutoffTimestamp = Date.now();
-
-    db.saveCompaction(userId, summary, cutoffTimestamp);
-
-    // Delete all but the most recent COMPACTION_KEEP_RECENT messages.
-    // We do this by fetching the created_at of the Nth-most-recent message
-    // and deleting everything before it.
-    // Since we can't get timestamps from getHistory, we delete the older rows
-    // by count — delete (total - COMPACTION_KEEP_RECENT) oldest rows.
-    const totalNow = db.getMessageCount(userId);
-    const toDelete = totalNow - COMPACTION_KEEP_RECENT;
-    if (toDelete > 0) {
-      // Delete oldest messages. We use a subquery-style approach:
-      // deleteMessagesBefore expects a timestamp. We'll pass
-      // cutoffTimestamp which was recorded before saving new messages.
-      db.deleteMessagesBefore(userId, cutoffTimestamp);
-    }
-
-    logger.info('Compaction complete', {
-      userId,
-      summarized: oldMessages.length,
-      kept: COMPACTION_KEEP_RECENT,
-    });
-  } catch (err) {
-    logger.error('Compaction failed, skipping', err);
-  }
-}
-
 export async function agentLoop(
   message: string,
   userId: string,
@@ -555,17 +471,22 @@ export async function agentLoop(
   }
 
   // Compact history if it has grown too large
-  await compactIfNeeded(userId, db, provider);
+  if (context.compactor) {
+    await context.compactor.compactIfNeeded(userId, provider);
+  }
 
   // Load context — prepend compaction summary if one exists
-  const compaction = db.getLatestCompaction(userId);
+  const compactionSummary = context.compactor
+    ? context.compactor.getLatestSummary(userId)
+    : db.getLatestCompaction(userId)?.summary ?? null;
+
   const rawHistory = db.getHistory(userId, 20);
   const history: Message[] = [];
 
-  if (compaction) {
+  if (compactionSummary) {
     history.push({
       role: 'system',
-      content: `[Previous conversation summary]\n${compaction.summary}`,
+      content: `[Previous conversation summary]\n${compactionSummary}`,
     });
   }
   history.push(...rawHistory);
