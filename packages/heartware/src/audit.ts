@@ -12,6 +12,7 @@ import { appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { createHash } from 'crypto';
 import type { AuditLogEntry } from './types.js';
+import type { ShieldDecision } from '@tinyclaw/types';
 
 /**
  * Audit logger for heartware operations
@@ -131,6 +132,43 @@ export class AuditLogger {
    */
   getAuditLogPath(): string {
     return this.auditLogPath;
+  }
+
+  /**
+   * Log a shield enforcement event.
+   *
+   * Records the decision, the matched threat, and the outcome
+   * (e.g. 'blocked', 'approved', 'denied', 'logged').
+   *
+   * Non-blocking: same semantics as other audit log methods.
+   */
+  logShieldEvent(
+    decision: ShieldDecision,
+    outcome: 'blocked' | 'approved' | 'denied' | 'logged',
+    userId?: string,
+  ): void {
+    const logLine = JSON.stringify({
+      timestamp: new Date().toISOString(),
+      type: 'shield',
+      action: decision.action,
+      outcome,
+      scope: decision.scope,
+      threatId: decision.threatId,
+      fingerprint: decision.fingerprint,
+      matchedOn: decision.matchedOn,
+      matchValue: decision.matchValue,
+      reason: decision.reason,
+      userId: userId ?? 'unknown',
+    }) + '\n';
+
+    try {
+      appendFileSync(this.auditLogPath, logLine, {
+        encoding: 'utf-8',
+        flag: 'a',
+      });
+    } catch (err) {
+      console.error('[AUDIT ERROR] Failed to write shield audit log:', err);
+    }
   }
 }
 

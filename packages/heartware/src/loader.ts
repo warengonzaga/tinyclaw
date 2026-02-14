@@ -7,7 +7,8 @@
  * 3. USER.md - Who the user is
  * 4. AGENTS.md - Operating instructions
  * 5. TOOLS.md - Tool usage notes
- * 6. Recent memory files (today + yesterday)
+ * 6. SHIELD.md - Runtime security policy
+ * 7. Recent memory files (today + yesterday)
  *
  * This context is injected into the agent's system prompt on startup
  */
@@ -28,7 +29,8 @@ export async function loadHeartwareContext(
     'IDENTITY.md',  // Who the agent is
     'USER.md',      // Who the user is
     'AGENTS.md',    // Operating instructions
-    'TOOLS.md'      // Tool usage notes
+    'TOOLS.md',     // Tool usage notes
+    'SHIELD.md'     // Runtime security policy
   ];
 
   let context = '\n\n=== HEARTWARE CONFIGURATION ===\n';
@@ -57,6 +59,27 @@ export async function loadHeartwareContext(
   context += '\n\n=== END HEARTWARE CONFIGURATION ===\n';
 
   return context;
+}
+
+/**
+ * Load raw SHIELD.md content for the shield engine parser.
+ *
+ * This returns the unprocessed markdown content so the shield engine
+ * can parse it into structured threat entries independently of the
+ * system prompt injection.
+ *
+ * @param manager - Initialized HeartwareManager instance
+ * @returns Raw SHIELD.md content string, or empty string if not found
+ */
+export async function loadShieldContent(
+  manager: HeartwareManager
+): Promise<string> {
+  try {
+    return await manager.read('SHIELD.md');
+  } catch {
+    // SHIELD.md might not exist yet (first run) — return empty
+    return '';
+  }
 }
 
 /**

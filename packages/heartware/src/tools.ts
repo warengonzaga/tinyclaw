@@ -28,7 +28,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
       name: 'heartware_read',
       description:
         'Read a heartware configuration file or daily memory log. ' +
-        'Allowed files: IDENTITY.md, SOUL.md, USER.md, AGENTS.md, TOOLS.md, MEMORY.md, BOOTSTRAP.md, memory/YYYY-MM-DD.md',
+        'Allowed files: IDENTITY.md, SOUL.md, USER.md, AGENTS.md, TOOLS.md, SHIELD.md, MEMORY.md, BOOTSTRAP.md, memory/YYYY-MM-DD.md',
       parameters: {
         type: 'object',
         properties: {

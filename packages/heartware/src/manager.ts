@@ -269,12 +269,13 @@ export class HeartwareManager {
   /**
    * Create template files for first run
    *
-   * Creates all 7 heartware configuration files:
+   * Creates all 8 heartware configuration files:
    * - IDENTITY.md
    * - SOUL.md
    * - USER.md
    * - AGENTS.md
    * - TOOLS.md
+   * - SHIELD.md
    * - MEMORY.md
    * - BOOTSTRAP.md
    */
@@ -285,6 +286,7 @@ export class HeartwareManager {
       'USER.md',
       'AGENTS.md',
       'TOOLS.md',
+      'SHIELD.md',
       'MEMORY.md',
       'BOOTSTRAP.md'
     ];

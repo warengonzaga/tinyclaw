@@ -29,7 +29,7 @@
 // Core exports
 export { HeartwareManager } from './manager.js';
 export { createHeartwareTools } from './tools.js';
-export { loadHeartwareContext, loadMemoryByDate, loadMemoryRange } from './loader.js';
+export { loadHeartwareContext, loadShieldContent, loadMemoryByDate, loadMemoryRange } from './loader.js';
 
 // Security components (for advanced usage/testing)
 export { AuditLogger, computeContentHash, verifyContentHash } from './audit.js';
