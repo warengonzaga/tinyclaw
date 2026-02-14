@@ -12,6 +12,7 @@
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/logger": "workspace:*",
     "@tinyclaw/delegation": "workspace:*",
-    "@tinyclaw/secrets": "workspace:*"
+    "@tinyclaw/secrets": "workspace:*",
+    "@tinyclaw/shield": "workspace:*"
   }
 }

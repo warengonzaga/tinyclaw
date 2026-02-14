@@ -1,6 +1,22 @@
-import type { AgentContext, Database, Message, Provider, ToolCall } from '@tinyclaw/types';
+import type { AgentContext, Database, Message, Provider, ToolCall, PendingApproval, ShieldEvent, ShieldDecision } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
 import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from '@tinyclaw/delegation';
+
+// ---------------------------------------------------------------------------
+// Shield — in-memory pending approvals (conversational flow)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pending approval map keyed by userId.
+ *
+ * When a shield decision returns `require_approval`, the tool call is stored
+ * here and the agent asks the human for permission. On the next message from
+ * the same user, the loop checks this map and interprets the response as
+ * approval / denial before proceeding.
+ *
+ * Lost on restart — safe, since unapproved actions simply expire.
+ */
+const pendingApprovals = new Map<string, PendingApproval>();
 
 const MAX_TOOL_ITERATIONS = 10;
 const MAX_JSON_TOOL_REPLIES = 3;
@@ -394,7 +410,91 @@ export async function agentLoop(
   context: AgentContext,
   onStream?: (event: import('@tinyclaw/types').StreamEvent) => void
 ): Promise<string> {
-  const { db, provider, learning, tools, heartwareContext } = context;
+  const { db, provider, learning, tools, heartwareContext, shield } = context;
+
+  // ---------------------------------------------------------------------------
+  // Shield — check for pending approval from a previous turn
+  // ---------------------------------------------------------------------------
+
+  const pending = pendingApprovals.get(userId);
+  if (pending) {
+    pendingApprovals.delete(userId);
+
+    // Interpret the user's natural-language answer.
+    // We inject a focused system prompt and let the LLM classify the response.
+    const classifyMessages: Message[] = [
+      {
+        role: 'system',
+        content:
+          'You are a security approval classifier. The user was asked whether ' +
+          'they approve a tool action. Respond with exactly one word: ' +
+          'APPROVED, DENIED, or UNCLEAR. Do not add any other text.',
+      },
+      {
+        role: 'user',
+        content:
+          `The agent asked for approval to run tool "${pending.toolCall.name}" ` +
+          `because: ${pending.decision.reason}\n\n` +
+          `The user responded: "${message}"\n\n` +
+          `Is this APPROVED, DENIED, or UNCLEAR?`,
+      },
+    ];
+
+    const classifyResponse = await provider.chat(classifyMessages, []);
+    const verdict = (classifyResponse.content || '').trim().toUpperCase();
+
+    if (verdict.includes('APPROVED')) {
+      // Execute the previously blocked tool call
+      logger.info('Shield: approval granted', { tool: pending.toolCall.name, userId });
+      const tool = tools.find(t => t.name === pending.toolCall.name);
+      if (tool) {
+        try {
+          const result = await tool.execute({ ...pending.toolCall.arguments, user_id: userId });
+          const responseText = `Approved. Here's the result of running **${pending.toolCall.name}**:\n\n${result}`;
+          if (onStream) {
+            onStream({ type: 'text', content: responseText });
+            onStream({ type: 'done' });
+          }
+          db.saveMessage(userId, 'user', message);
+          db.saveMessage(userId, 'assistant', responseText);
+          return responseText;
+        } catch (err) {
+          const errorMsg = `Approved, but tool execution failed: ${(err as Error).message}`;
+          if (onStream) {
+            onStream({ type: 'text', content: errorMsg });
+            onStream({ type: 'done' });
+          }
+          db.saveMessage(userId, 'user', message);
+          db.saveMessage(userId, 'assistant', errorMsg);
+          return errorMsg;
+        }
+      }
+    } else if (verdict.includes('DENIED')) {
+      logger.info('Shield: approval denied', { tool: pending.toolCall.name, userId });
+      const responseText = `Understood — I won't run **${pending.toolCall.name}**. Let me know if you need anything else.`;
+      if (onStream) {
+        onStream({ type: 'text', content: responseText });
+        onStream({ type: 'done' });
+      }
+      db.saveMessage(userId, 'user', message);
+      db.saveMessage(userId, 'assistant', responseText);
+      return responseText;
+    } else {
+      // UNCLEAR — re-ask
+      logger.info('Shield: approval response unclear, re-asking', { tool: pending.toolCall.name, userId });
+      pendingApprovals.set(userId, pending); // Put it back
+      const responseText =
+        `I couldn't tell if you approved or denied running **${pending.toolCall.name}**.\n` +
+        `Could you clarify? Just say something like "yes, go ahead" or "no, don't do that".`;
+      if (onStream) {
+        onStream({ type: 'text', content: responseText });
+        onStream({ type: 'done' });
+      }
+      db.saveMessage(userId, 'user', message);
+      db.saveMessage(userId, 'assistant', responseText);
+      return responseText;
+    }
+  }
 
   // v3: Helper to record episodic memory event (fire-and-forget)
   function recordEpisodic(response: string): void {
@@ -514,6 +614,54 @@ export async function agentLoop(
             onStream({ type: 'tool_result', tool: toolCall.name, result: errorMsg });
           }
         } else {
+          // --- Shield gate (text-based tool call) ---
+          if (shield?.isActive()) {
+            const shieldEvent: ShieldEvent = {
+              scope: 'tool.call',
+              toolName: toolCall.name,
+              toolArgs: toolCall.arguments,
+              userId,
+            };
+            const decision = shield.evaluate(shieldEvent);
+
+            if (decision.action === 'block') {
+              const blockedMsg = `I can't run **${toolCall.name}** right now \u2014 it was blocked by a security policy: ${decision.reason}`;
+              toolResults.push({ id: toolCall.id, result: blockedMsg });
+              if (onStream) {
+                onStream({ type: 'tool_result', tool: toolCall.name, result: blockedMsg });
+              }
+              // Skip to returning the blocked result
+              if (onStream) {
+                onStream({ type: 'text', content: blockedMsg });
+                onStream({ type: 'done' });
+              }
+              db.saveMessage(userId, 'user', message);
+              db.saveMessage(userId, 'assistant', blockedMsg);
+              return blockedMsg;
+            }
+
+            if (decision.action === 'require_approval') {
+              pendingApprovals.set(userId, {
+                toolCall,
+                decision,
+                createdAt: Date.now(),
+              });
+              const approvalMsg =
+                `Before I run **${toolCall.name}**, I need your approval.\n\n` +
+                `**Reason:** ${decision.reason}\n\n` +
+                `Do you want me to go ahead? (yes / no)`;
+              if (onStream) {
+                onStream({ type: 'text', content: approvalMsg });
+                onStream({ type: 'done' });
+              }
+              db.saveMessage(userId, 'user', message);
+              db.saveMessage(userId, 'assistant', approvalMsg);
+              return approvalMsg;
+            }
+
+            // action === 'log' — proceed normally, decision is already logged by engine
+          }
+
           try {
             // Inject user_id so delegation tools always receive the correct userId
             const toolArgs = { ...toolCall.arguments, user_id: userId };
@@ -630,6 +778,47 @@ export async function agentLoop(
           }
           continue;
         }
+
+        // --- Shield gate (structured tool_calls) ---
+        if (shield?.isActive()) {
+          const shieldEvent: ShieldEvent = {
+            scope: 'tool.call',
+            toolName: toolCall.name,
+            toolArgs: toolCall.arguments,
+            userId,
+          };
+          const decision = shield.evaluate(shieldEvent);
+
+          if (decision.action === 'block') {
+            const blockedMsg = `Blocked by security policy: ${decision.reason}`;
+            toolResults.push({ id: toolCall.id, result: blockedMsg });
+            if (onStream) {
+              onStream({ type: 'tool_result', tool: toolCall.name, result: blockedMsg });
+            }
+            continue; // Skip this tool, proceed with others
+          }
+
+          if (decision.action === 'require_approval') {
+            // In structured multi-tool mode we can only block the single tool
+            // (other tools in the batch proceed). Store pending approval for
+            // the first one that needs it; user answers next turn.
+            if (!pendingApprovals.has(userId)) {
+              pendingApprovals.set(userId, {
+                toolCall,
+                decision,
+                createdAt: Date.now(),
+              });
+            }
+            const pendingMsg = `Requires approval: ${decision.reason}`;
+            toolResults.push({ id: toolCall.id, result: pendingMsg });
+            if (onStream) {
+              onStream({ type: 'tool_result', tool: toolCall.name, result: pendingMsg });
+            }
+            continue;
+          }
+
+          // action === 'log' — proceed normally
+        }
         
         try {
           // Inject user_id so delegation tools always receive the correct userId
@@ -648,6 +837,29 @@ export async function agentLoop(
             onStream({ type: 'tool_result', tool: toolCall.name, result: errorMsg });
           }
         }
+      }
+
+      // If pending approval was set during structured tool_calls, ask the user
+      if (pendingApprovals.has(userId)) {
+        const pa = pendingApprovals.get(userId)!;
+        const approvalMsg =
+          `Before I run **${pa.toolCall.name}**, I need your approval.\n\n` +
+          `**Reason:** ${pa.decision.reason}\n\n` +
+          `Do you want me to go ahead? (yes / no)`;
+        // Still return results for tools that did execute
+        const executedResults = toolResults.filter(r =>
+          !r.result.startsWith('Requires approval:') && !r.result.startsWith('Blocked by security')
+        );
+        const combined = executedResults.length > 0
+          ? `${executedResults.map(r => r.result).join('\n\n')}\n\n---\n\n${approvalMsg}`
+          : approvalMsg;
+        if (onStream) {
+          onStream({ type: 'text', content: combined });
+          onStream({ type: 'done' });
+        }
+        db.saveMessage(userId, 'user', message);
+        db.saveMessage(userId, 'assistant', combined);
+        return combined;
       }
       
       // Check if any tool was a read or delegation operation
