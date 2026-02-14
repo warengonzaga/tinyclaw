@@ -14,6 +14,8 @@ import type { Message, CompactionRecord, Provider } from '@tinyclaw/types';
 export interface CompactorStore {
   getMessageCount(userId: string): number;
   getHistory(userId: string, limit?: number): Message[];
+  /** Return message timestamps ordered ascending (oldest first). */
+  getMessageTimestamps(userId: string): number[];
   saveCompaction(userId: string, summary: string, replacedBefore: number): void;
   getLatestCompaction(userId: string): CompactionRecord | null;
   deleteMessagesBefore(userId: string, beforeTimestamp: number): void;
