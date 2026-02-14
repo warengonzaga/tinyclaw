@@ -9,7 +9,7 @@
  */
 
 import { logger } from '@tinyclaw/logger';
-import type { Provider, Tool, Message, ToolCall } from '@tinyclaw/types';
+import type { Provider, Tool, Message, ToolCall, ShieldEngine, ShieldEvent } from '@tinyclaw/types';
 import type {
   SubAgentConfig,
   SubAgentResult,
@@ -88,7 +88,30 @@ function extractToolCallFromText(text: string): ToolCall | null {
 async function executeToolCall(
   toolCall: ToolCall,
   tools: Tool[],
+  shield?: ShieldEngine,
 ): Promise<string> {
+  // --- Shield gate for sub-agents ---
+  // In sub-agent context, require_approval downgrades to block
+  // (sub-agents can't ask the user directly).
+  if (shield?.isActive()) {
+    const event: ShieldEvent = {
+      scope: 'tool.call',
+      toolName: toolCall.name,
+      toolArgs: toolCall.arguments,
+    };
+    const decision = shield.evaluate(event);
+
+    if (decision.action === 'block' || decision.action === 'require_approval') {
+      logger.info('Shield: sub-agent tool blocked', {
+        tool: toolCall.name,
+        originalAction: decision.action,
+        reason: decision.reason,
+      });
+      return `Error: Tool "${toolCall.name}" blocked by security policy: ${decision.reason}`;
+    }
+    // action === 'log' — proceed normally
+  }
+
   const tool = tools.find((t) => t.name === toolCall.name);
   if (!tool) {
     return `Error: Tool "${toolCall.name}" not found`;
@@ -144,6 +167,8 @@ interface AdaptiveLoopConfig {
   maxIterations: number;
   timeoutMs: number;
   estimator?: TimeoutEstimator;
+  /** Optional shield engine — require_approval downgrades to block for sub-agents. */
+  shield?: ShieldEngine;
 }
 
 async function runAgentLoop(
@@ -163,7 +188,7 @@ async function runAgentLoop(
 async function runAdaptiveAgentLoop(
   config: AdaptiveLoopConfig,
 ): Promise<{ success: boolean; response: string; iterations: number }> {
-  const { provider, tools, messages, estimator } = config;
+  const { provider, tools, messages, estimator, shield } = config;
 
   let maxIterations = config.maxIterations;
   let timeoutMs = config.timeoutMs;
@@ -238,7 +263,7 @@ async function runAdaptiveAgentLoop(
         const toolCall = extractToolCallFromText(response.content || '');
 
         if (toolCall) {
-          const result = await executeToolCall(toolCall, tools);
+          const result = await executeToolCall(toolCall, tools, shield);
           messages.push({
             role: 'assistant',
             content: response.content || '',
@@ -266,7 +291,7 @@ async function runAdaptiveAgentLoop(
         const assistantContent = response.content ?? '';
 
         for (const tc of response.toolCalls) {
-          const result = await executeToolCall(tc, tools);
+          const result = await executeToolCall(tc, tools, shield);
           messages.push({
             role: 'assistant',
             content: assistantContent,
