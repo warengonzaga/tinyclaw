@@ -76,7 +76,19 @@ export async function supervisedStart(): Promise<void> {
       env: { ...process.env, TINYCLAW_SUPERVISED: '1' },
     });
 
+    // Forward SIGINT to the child so it can do graceful shutdown.
+    // Use a named handler and remove it when the child exits to avoid
+    // accumulating listeners across restarts (MaxListenersExceededWarning).
+    const sigintHandler = () => {
+      if (child.exitCode === null && !child.killed) {
+        child.kill('SIGINT');
+      }
+    };
+    process.on('SIGINT', sigintHandler);
+
     child.on('exit', (code) => {
+      process.removeListener('SIGINT', sigintHandler);
+
       if (code === RESTART_EXIT_CODE) {
         logger.log('');
         logger.log('Restart requested — respawning agent...', undefined, { emoji: '🔄' });
@@ -92,11 +104,6 @@ export async function supervisedStart(): Promise<void> {
     child.on('error', (err) => {
       logger.error('Supervisor: failed to spawn agent process:', err);
       process.exit(1);
-    });
-
-    // Forward SIGINT to the child so it can do graceful shutdown
-    process.on('SIGINT', () => {
-      child.kill('SIGINT');
     });
   };
 
