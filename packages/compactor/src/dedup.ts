@@ -16,7 +16,7 @@ import type { Message } from '@tinyclaw/types';
 // ---------------------------------------------------------------------------
 
 /**
- * Extract character n-gram shingles from text.
+ * Extract word-level n-gram shingles from text.
  * Uses word-level shingles for better semantic comparison.
  */
 export function computeShingles(text: string, shingleSize: number = 3): Set<string> {
@@ -93,6 +93,7 @@ export function deduplicateMessages(
   for (let i = 0; i < shingled.length; i++) {
     if (dropped.has(i)) continue;
 
+    let foundDuplicate = false;
     for (let j = i + 1; j < shingled.length; j++) {
       if (dropped.has(j)) continue;
 
@@ -100,7 +101,11 @@ export function deduplicateMessages(
       if (similarity >= similarityThreshold) {
         // Drop the earlier (less recent) message
         dropped.add(i);
-        groupsRemoved++;
+        // Count one group per first duplicate detected (not per message)
+        if (!foundDuplicate) {
+          groupsRemoved++;
+          foundDuplicate = true;
+        }
         break; // This message is already marked, move on
       }
     }
