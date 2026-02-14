@@ -237,9 +237,21 @@ describe('mergeShortBullets', () => {
   });
 
   it('does not merge long bullets', () => {
-    const input = '- this is a long bullet point\n- another long bullet point here';
+    const input =
+      '- this is a long bullet point\n- another long bullet point here\n- a third long bullet with many words';
     const result = mergeShortBullets(input);
-    expect(result).toContain('this is a long bullet point');
+    const lines = result.split('\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toBe('- this is a long bullet point');
+    expect(lines[1]).toBe('- another long bullet point here');
+    expect(lines[2]).toBe('- a third long bullet with many words');
+  });
+
+  it('skips empty bullet content', () => {
+    const input = '- \n- one\n- two\n- three';
+    const result = mergeShortBullets(input);
+    expect(result).toContain('- ');
+    expect(result).toContain('one, two, three');
   });
 
   it('handles empty string', () => {
