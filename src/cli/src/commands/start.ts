@@ -32,6 +32,7 @@ import { createDelegationTools, createBlackboard, createTimeoutEstimator } from 
 import { createMemoryEngine } from '@tinyclaw/memory';
 import { createSandbox } from '@tinyclaw/sandbox';
 import { createShieldEngine } from '@tinyclaw/shield';
+import { createCompactor } from '@tinyclaw/compactor';
 import type { ChannelPlugin, Provider, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/ui';
 import { theme } from '../ui/theme.js';
@@ -312,6 +313,29 @@ export async function startCommand(): Promise<void> {
   const memoryEngine = createMemoryEngine(db);
   logger.info('Memory engine initialized (episodic + FTS5 + temporal decay)', undefined, { emoji: '✅' });
 
+  // Compactor (after db — uses compactions table, configurable via config engine)
+  const compactorConfig = {
+    threshold: configManager.get<number>('compaction.threshold') ?? undefined,
+    keepRecent: configManager.get<number>('compaction.keepRecent') ?? undefined,
+    tierBudgets: {
+      l0: configManager.get<number>('compaction.tierBudgets.l0') ?? undefined,
+      l1: configManager.get<number>('compaction.tierBudgets.l1') ?? undefined,
+      l2: configManager.get<number>('compaction.tierBudgets.l2') ?? undefined,
+    },
+    dedup: {
+      enabled: configManager.get<boolean>('compaction.dedup.enabled') ?? undefined,
+      similarityThreshold: configManager.get<number>('compaction.dedup.similarityThreshold') ?? undefined,
+    },
+    preCompression: {
+      stripEmoji: configManager.get<boolean>('compaction.preCompression.stripEmoji') ?? undefined,
+      removeDuplicateLines: configManager.get<boolean>('compaction.preCompression.removeDuplicateLines') ?? undefined,
+    },
+  };
+  // Remove undefined values so defaults apply
+  const cleanConfig = JSON.parse(JSON.stringify(compactorConfig));
+  const compactor = createCompactor(db, cleanConfig);
+  logger.info('Compactor initialized (tiered compression + dedup + pre-compression)', undefined, { emoji: '✅' });
+
   // Hybrid semantic matcher (standalone, no deps)
   const matcher = createHybridMatcher();
   logger.info('Hybrid matcher initialized', undefined, { emoji: '✅' });
@@ -411,6 +435,7 @@ export async function startCommand(): Promise<void> {
     learning,
     queue,
     timeoutEstimator,
+    getCompactedContext: (userId: string) => compactor.getLatestSummary(userId),
   });
 
   const allToolsWithDelegation = [...allTools, ...delegationResult.tools];
@@ -454,6 +479,7 @@ export async function startCommand(): Promise<void> {
     },
     memory: memoryEngine,
     shield,
+    compactor,
   };
 
   // --- Initialize pulse scheduler -----------------------------------------
