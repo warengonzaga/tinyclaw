@@ -239,6 +239,10 @@ export function createBackgroundRunner(
     cleanupStale(olderThanMs) {
       const stale = db.getStaleBackgroundTasks(olderThanMs);
       for (const task of stale) {
+        const controller = controllers.get(task.id);
+        if (controller) {
+          controller.abort();
+        }
         db.updateBackgroundTask(task.id, 'failed', 'Task timed out (stale)', Date.now());
         controllers.delete(task.id);
       }
