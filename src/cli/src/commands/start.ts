@@ -16,6 +16,9 @@ import {
   createDatabase,
   agentLoop,
   createOllamaProvider,
+  DEFAULT_MODEL,
+  DEFAULT_BASE_URL,
+  BUILTIN_MODEL_TAGS,
 } from '@tinyclaw/core';
 import { loadPlugins } from '@tinyclaw/plugins';
 import { createPulseScheduler } from '@tinyclaw/pulse';
@@ -113,9 +116,9 @@ export async function startCommand(): Promise<void> {
 
   // Read provider settings from config (fallback to defaults)
   const providerModel =
-    configManager.get<string>('providers.starterBrain.model') ?? 'gpt-oss:120b-cloud';
+    configManager.get<string>('providers.starterBrain.model') ?? DEFAULT_MODEL;
   const providerBaseUrl =
-    configManager.get<string>('providers.starterBrain.baseUrl') ?? 'https://ollama.com';
+    configManager.get<string>('providers.starterBrain.baseUrl') ?? DEFAULT_BASE_URL;
 
   // --- Initialize database ----------------------------------------------
 
@@ -248,17 +251,78 @@ export async function startCommand(): Promise<void> {
     }
   }
 
+  // --- Resolve primary provider (overrides built-in as default) ----------
+
+  // If a primary provider is configured and a matching plugin provider is
+  // loaded, it replaces the built-in Ollama provider as the orchestrator's
+  // default. The built-in remains registered as the ultimate safety net.
+
+  let routerDefaultProvider: Provider = defaultProvider;
+  let activeProviderName = defaultProvider.name;
+  let activeModelName = providerModel;
+
+  const primaryModel = configManager.get<string>('providers.primary.model');
+
+  if (primaryModel) {
+    // Find a plugin provider whose id matches the primary config.
+    // Convention: the provider ID from the plugin is used to look up matching.
+    const primaryBaseUrl = configManager.get<string>('providers.primary.baseUrl');
+    const primaryApiKeyRef = configManager.get<string>('providers.primary.apiKeyRef');
+
+    // Try to find a matching plugin provider by checking if any plugin
+    // provider's id is referenced in the tier mapping or matches a known pattern.
+    // For now, we look for a plugin provider whose model matches.
+    const matchingProvider = pluginProviders.find((pp) => {
+      // Check if this provider was configured with the primary model
+      // Plugin providers set their own id, so we check availability instead
+      return pp.id !== defaultProvider.id;
+    });
+
+    if (matchingProvider) {
+      try {
+        const available = await matchingProvider.isAvailable();
+        if (available) {
+          routerDefaultProvider = matchingProvider;
+          activeProviderName = matchingProvider.name;
+          activeModelName = primaryModel;
+          logger.info('Primary provider active, overriding built-in as default', {
+            primary: matchingProvider.id,
+            model: primaryModel,
+          }, { emoji: '✅' });
+        } else {
+          logger.warn(
+            `Primary provider "${matchingProvider.name}" unavailable, falling back to built-in`,
+          );
+        }
+      } catch {
+        logger.warn(
+          `Primary provider health check failed, falling back to built-in`,
+        );
+      }
+    } else {
+      logger.warn(
+        'Primary provider configured but no matching plugin provider found. ' +
+        'Ensure the provider plugin is installed and enabled.',
+      );
+    }
+  }
+
   // --- Initialize smart routing orchestrator -----------------------------
 
   const tierMapping = configManager.get<ProviderTierConfig>('routing.tierMapping');
 
   const orchestrator = new ProviderOrchestrator({
-    defaultProvider,
-    providers: pluginProviders,
+    defaultProvider: routerDefaultProvider,
+    providers: [
+      // Always include the built-in so it can serve as ultimate fallback
+      ...(routerDefaultProvider.id !== defaultProvider.id ? [defaultProvider] : []),
+      ...pluginProviders,
+    ],
     tierMapping: tierMapping ?? undefined,
   });
 
   logger.info('Smart routing initialized', {
+    default: routerDefaultProvider.id,
     providers: orchestrator.getRegistry().ids(),
     tierMapping: tierMapping ?? 'all-default',
   }, { emoji: '✅' });
@@ -284,7 +348,7 @@ export async function startCommand(): Promise<void> {
   // Create a temporary context for plugin tools that need AgentContext
   const baseContext = {
     db,
-    provider: defaultProvider,
+    provider: routerDefaultProvider,
     learning,
     tools,
     heartwareContext,
@@ -425,6 +489,241 @@ export async function startCommand(): Promise<void> {
 
   allTools.push(restartTool);
 
+  // builtin_model_switch tool — allows the agent to switch between built-in models
+  const modelSwitchTool: Tool = {
+    name: 'builtin_model_switch',
+    description:
+      'Switch the built-in Ollama Cloud model. Available models: ' +
+      BUILTIN_MODEL_TAGS.join(', ') + '. ' +
+      'This updates the configuration and triggers a restart so the new model ' +
+      'takes effect. Always warn the user before calling this — they will ' +
+      'briefly lose connectivity during the restart.',
+    parameters: {
+      type: 'object',
+      properties: {
+        model: {
+          type: 'string',
+          description: `Model tag to switch to. One of: ${BUILTIN_MODEL_TAGS.join(', ')}`,
+          enum: [...BUILTIN_MODEL_TAGS],
+        },
+      },
+      required: ['model'],
+    },
+    async execute(args) {
+      const model = (args.model as string)?.trim();
+
+      if (!BUILTIN_MODEL_TAGS.includes(model as typeof BUILTIN_MODEL_TAGS[number])) {
+        return (
+          `Invalid model "${model}". Available built-in models: ${BUILTIN_MODEL_TAGS.join(', ')}`
+        );
+      }
+
+      if (model === providerModel) {
+        return `Already running on ${model} — no switch needed.`;
+      }
+
+      // Persist the new model choice
+      configManager.set('providers.starterBrain.model', model);
+      logger.info(`Model switch: ${providerModel} → ${model}`, undefined, { emoji: '🔄' });
+
+      // Trigger restart so the new model takes effect
+      setTimeout(() => {
+        process.exit(RESTART_EXIT_CODE);
+      }, 500);
+
+      return (
+        `Switching from ${providerModel} to ${model}. ` +
+        'TinyClaw will restart in a few seconds with the new model.'
+      );
+    },
+  };
+
+  allTools.push(modelSwitchTool);
+
+  // primary_model_list tool — shows all installed provider plugins
+  const providerListTool: Tool = {
+    name: 'primary_model_list',
+    description:
+      'List all installed provider plugins and show which one is the primary provider. ' +
+      'Shows each provider\'s ID, name, and availability status. ' +
+      'The built-in Ollama Cloud provider is always available as the fallback.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    async execute() {
+      const currentPrimary = configManager.get<string>('providers.primary.model');
+      const lines: string[] = [];
+
+      // Built-in provider
+      lines.push('Built-in Provider (always available as fallback):');
+      lines.push(`  • ${defaultProvider.name} (${defaultProvider.id})`);
+      lines.push(`    Model: ${providerModel}`);
+      lines.push(`    Status: ${currentPrimary ? 'standby (primary is active)' : 'active (default)'}`);
+      lines.push('');
+
+      if (pluginProviders.length === 0) {
+        lines.push('No provider plugins installed.');
+        lines.push('');
+        lines.push('To install a provider plugin, add it to plugins.enabled in the config and restart.');
+      } else {
+        lines.push(`Installed Provider Plugins (${pluginProviders.length}):`);
+
+        for (const pp of pluginProviders) {
+          const isPrimary = routerDefaultProvider.id === pp.id;
+          let status = 'available';
+          try {
+            const avail = await pp.isAvailable();
+            status = avail ? 'available' : 'unavailable';
+          } catch {
+            status = 'unavailable';
+          }
+
+          const primaryTag = isPrimary ? ' [PRIMARY]' : '';
+          lines.push(`  • ${pp.name} (${pp.id})${primaryTag}`);
+          lines.push(`    Status: ${status}`);
+        }
+
+        if (!currentPrimary) {
+          lines.push('');
+          lines.push('No primary provider is set. Use primary_model_set to set one.');
+        }
+      }
+
+      return lines.join('\n');
+    },
+  };
+
+  allTools.push(providerListTool);
+
+  // primary_model_set tool — set an installed plugin provider as primary
+  const providerSetPrimaryTool: Tool = {
+    name: 'primary_model_set',
+    description:
+      'Set an installed provider plugin as the primary provider. ' +
+      'The primary provider overrides the built-in Ollama Cloud as the default ' +
+      'provider in the smart router. The built-in remains as the fallback if ' +
+      'the primary becomes unavailable. ' +
+      'Use primary_model_list first to see available providers. ' +
+      'This triggers a restart so the change takes effect. ' +
+      'Always confirm with the user before calling this.',
+    parameters: {
+      type: 'object',
+      properties: {
+        provider_id: {
+          type: 'string',
+          description: 'The ID of the installed provider plugin to set as primary (from primary_model_list)',
+        },
+      },
+      required: ['provider_id'],
+    },
+    async execute(args) {
+      const providerId = (args.provider_id as string)?.trim();
+
+      if (!providerId) {
+        return 'Error: provider_id is required. Use primary_model_list to see available providers.';
+      }
+
+      // Cannot set built-in as primary (it's always the fallback)
+      if (providerId === defaultProvider.id) {
+        return (
+          `"${providerId}" is the built-in provider and is always available as the fallback. ` +
+          'Use primary_model_clear to revert to using the built-in as default.'
+        );
+      }
+
+      // Find the matching plugin provider
+      const target = pluginProviders.find((pp) => pp.id === providerId);
+
+      if (!target) {
+        const available = pluginProviders.map((pp) => pp.id).join(', ');
+        return (
+          `Provider "${providerId}" is not installed. ` +
+          (available
+            ? `Available providers: ${available}`
+            : 'No provider plugins are installed.')
+        );
+      }
+
+      // Verify it's reachable
+      try {
+        const available = await target.isAvailable();
+        if (!available) {
+          return (
+            `Provider "${target.name}" (${target.id}) is currently unavailable. ` +
+            'Make sure it is properly configured with a valid API key before setting it as primary.'
+          );
+        }
+      } catch (err) {
+        return (
+          `Provider "${target.name}" health check failed: ${(err as Error).message}. ` +
+          'Ensure the provider is properly configured before setting it as primary.'
+        );
+      }
+
+      // Persist primary config
+      configManager.set('providers.primary', {
+        model: target.id,
+        baseUrl: undefined,
+        apiKeyRef: undefined,
+      });
+
+      logger.info(`Primary provider set: ${target.name} (${target.id})`, undefined, { emoji: '🔄' });
+
+      // Trigger restart
+      setTimeout(() => {
+        process.exit(RESTART_EXIT_CODE);
+      }, 500);
+
+      return (
+        `Primary provider set to "${target.name}" (${target.id}). ` +
+        'TinyClaw will restart in a few seconds. ' +
+        'The smart router will use this provider as the default instead of the built-in.'
+      );
+    },
+  };
+
+  allTools.push(providerSetPrimaryTool);
+
+  // primary_model_clear tool — remove primary override, revert to built-in
+  const providerClearPrimaryTool: Tool = {
+    name: 'primary_model_clear',
+    description:
+      'Remove the primary provider override and revert to using the built-in ' +
+      'Ollama Cloud provider as the default. The cleared provider plugin remains ' +
+      'installed and can still be used via tier mapping in the smart router. ' +
+      'This triggers a restart so the change takes effect. ' +
+      'Always confirm with the user before calling this.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    async execute() {
+      const currentPrimary = configManager.get<string>('providers.primary.model');
+
+      if (!currentPrimary) {
+        return 'No primary provider is currently set. The built-in is already the default.';
+      }
+
+      configManager.delete('providers.primary');
+      logger.info('Primary provider cleared, reverting to built-in', undefined, { emoji: '🔄' });
+
+      // Trigger restart
+      setTimeout(() => {
+        process.exit(RESTART_EXIT_CODE);
+      }, 500);
+
+      return (
+        'Primary provider cleared. TinyClaw will restart in a few seconds ' +
+        'and use the built-in Ollama Cloud provider as the default.'
+      );
+    },
+  };
+
+  allTools.push(providerClearPrimaryTool);
+
   // --- Create delegation v2 subsystems -----------------------------------
 
   const delegationResult = createDelegationTools({
@@ -466,12 +765,14 @@ export async function startCommand(): Promise<void> {
 
   const context = {
     db,
-    provider: defaultProvider,
+    provider: routerDefaultProvider,
     learning,
     tools: allToolsWithDelegation,
     heartwareContext,
     secrets: secretsManager,
     configManager,
+    modelName: activeModelName,
+    providerName: activeProviderName,
     delegation: {
       lifecycle: delegationResult.lifecycle,
       templates: delegationResult.templates,
