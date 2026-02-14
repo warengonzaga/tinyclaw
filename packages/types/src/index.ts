@@ -103,6 +103,8 @@ export interface Database {
   saveMessage(userId: string, role: string, content: string): void;
   getHistory(userId: string, limit?: number): Message[];
   getMessageCount(userId: string): number;
+  /** Return message timestamps ordered ascending (oldest first). */
+  getMessageTimestamps(userId: string): number[];
   deleteMessagesBefore(userId: string, beforeTimestamp: number): void;
   deleteMessagesForUser(userId: string): void;
 
