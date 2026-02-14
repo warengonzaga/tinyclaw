@@ -79,7 +79,7 @@ export async function supervisedStart(): Promise<void> {
     child.on('exit', (code) => {
       if (code === RESTART_EXIT_CODE) {
         logger.log('');
-        logger.log('🔄 Restart requested — respawning agent...');
+        logger.log('Restart requested — respawning agent...', undefined, { emoji: '🔄' });
         logger.log('');
         spawnAgent();
         return;
