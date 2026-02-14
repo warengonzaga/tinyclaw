@@ -63,24 +63,7 @@ TinyClaw is inspired by personal AI companions from science fiction like **Codsw
 
 ## 🏛️ Architecture
 
-```
-┌────────────────────────────────────────────────────────┐
-│  You (CLI, Web UI, Discord, or any channel plugin)     │
-└──────────────────────┬─────────────────────────────────┘
-                       v
-┌──────────────────────────────────────────────────────┐
-│  Session Queue (per-user serialized)                  │
-├──────────────────────────────────────────────────────┤
-│  Agent Loop → Tools → Smart Router → Provider        │
-├────────┬────────────┬──────────────┬─────────────────┤
-│ Memory │ Heartware  │  Delegation  │  Sandbox        │
-│ Engine │ (Soul/ID)  │  (Sub-agents)│  (Bun Worker)   │
-├────────┴────────────┴──────────────┴─────────────────┤
-│  Persistence (bun:sqlite)                             │
-├──────────────────────────────────────────────────────┤
-│  Pulse Scheduler (proactive tasks, memory cleanup)    │
-└──────────────────────────────────────────────────────┘
-```
+![Architecture](.github/assets/architecture.png)
 
 Everything above the plugin line is the **tiny core**. Channels, extra providers, and additional tools live as plugins in `plugins/`.
 
@@ -160,6 +143,7 @@ This project is licensed under [MIT License](https://opensource.org/license/MIT)
 
 - Inspired by [OpenClaw](https://github.com/openclaw/openclaw)
 - Smart routing inspired by [ClawRouter](https://github.com/BlockRunAI/ClawRouter)
+- Learnings applied from [Nader Dabit](https://x.com/dabit3)'s post on [You Could've Invented OpenClaw](https://x.com/dabit3/status/2021387483364151451)
 
 ## 📝 Author
 
