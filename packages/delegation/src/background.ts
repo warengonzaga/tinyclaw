@@ -162,11 +162,32 @@ export function createBackgroundRunner(
               db.updateBackgroundTask(taskId, 'failed', result.response, Date.now());
               lifecycle.recordTaskResult(agentId, false);
             }
+
+            // Auto-suspend sub-agent once all its tasks are done
+            // Check if there are any remaining running tasks for this agent
+            const allTasks = db.getUserBackgroundTasks(userId);
+            const hasRunningTasks = allTasks.some(
+              (t) => t.agentId === agentId && t.status === 'running',
+            );
+            if (!hasRunningTasks) {
+              lifecycle.suspend(agentId);
+              logger.info('Sub-agent auto-suspended (task complete)', { agentId });
+            }
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Unknown error';
             db.updateBackgroundTask(taskId, 'failed', errorMsg, Date.now());
             lifecycle.recordTaskResult(agentId, false);
             logger.error('Background task failed', { taskId, error: errorMsg });
+
+            // Auto-suspend sub-agent on failure too
+            const allTasks = db.getUserBackgroundTasks(userId);
+            const hasRunningTasks = allTasks.some(
+              (t) => t.agentId === agentId && t.status === 'running',
+            );
+            if (!hasRunningTasks) {
+              lifecycle.suspend(agentId);
+              logger.info('Sub-agent auto-suspended (task failed)', { agentId });
+            }
           } finally {
             controllers.delete(taskId);
           }
