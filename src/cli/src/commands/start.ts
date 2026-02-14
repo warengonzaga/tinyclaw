@@ -41,12 +41,12 @@ import { RESTART_EXIT_CODE } from '../supervisor.js';
  * Run the agent start flow
  */
 export async function startCommand(): Promise<void> {
-  logger.log('🐜 TinyClaw — Small agent, mighty friend');
+  logger.log('TinyClaw — Small agent, mighty friend', undefined, { emoji: '🐜' });
 
   // --- Data directory ---------------------------------------------------
 
   const dataDir = process.env.TINYCLAW_DATA_DIR || join(homedir(), '.tinyclaw');
-  logger.info('📂 Data directory:', { dataDir });
+  logger.info('Data directory:', { dataDir }, { emoji: '📂' });
 
   // --- Initialize secrets engine ----------------------------------------
 
@@ -82,9 +82,9 @@ export async function startCommand(): Promise<void> {
     throw err;
   }
 
-  logger.info('✅ Secrets engine initialized', {
+  logger.info('Secrets engine initialized', {
     storagePath: secretsManager.storagePath,
-  });
+  }, { emoji: '✅' });
 
   // --- Pre-flight: check for provider API key --------------------------
 
@@ -108,7 +108,7 @@ export async function startCommand(): Promise<void> {
   // --- Initialize config engine -----------------------------------------
 
   const configManager = await ConfigManager.create();
-  logger.info('✅ Config engine initialized', { configPath: configManager.path });
+  logger.info('Config engine initialized', { configPath: configManager.path }, { emoji: '✅' });
 
   // Read provider settings from config (fallback to defaults)
   const providerModel =
@@ -120,13 +120,13 @@ export async function startCommand(): Promise<void> {
 
   const dbPath = join(dataDir, 'data', 'agent.db');
   const db = createDatabase(dbPath);
-  logger.info('✅ Database initialized');
+  logger.info('Database initialized', undefined, { emoji: '✅' });
 
   // --- Initialize learning engine ---------------------------------------
 
   const learningPath = join(dataDir, 'learning');
   const learning = createLearningEngine({ storagePath: learningPath });
-  logger.info('✅ Learning engine initialized');
+  logger.info('Learning engine initialized', undefined, { emoji: '✅' });
 
   // --- Initialize heartware ---------------------------------------------
 
@@ -140,10 +140,10 @@ export async function startCommand(): Promise<void> {
 
   const heartwareManager = new HeartwareManager(heartwareConfig);
   await heartwareManager.initialize();
-  logger.info('✅ Heartware initialized');
+  logger.info('Heartware initialized', undefined, { emoji: '✅' });
 
   const heartwareContext = await loadHeartwareContext(heartwareManager);
-  logger.info('✅ Heartware context loaded');
+  logger.info('Heartware context loaded', undefined, { emoji: '✅' });
 
   // --- Initialize SHIELD.md runtime enforcement -------------------------
 
@@ -153,11 +153,11 @@ export async function startCommand(): Promise<void> {
     : undefined;
 
   if (shield) {
-    logger.info('🛡️ Shield engine active', {
+    logger.info('Shield engine active', {
       threats: shield.getThreats().length,
-    });
+    }, { emoji: '🛡️' });
   } else {
-    logger.info('🛡️ No SHIELD.md found — shield enforcement disabled');
+    logger.info('No SHIELD.md found — shield enforcement disabled', undefined, { emoji: '🛡️' });
   }
 
   // --- Initialize default provider (reads key from secrets-engine) ------
@@ -222,16 +222,16 @@ export async function startCommand(): Promise<void> {
     process.exit(1);
   }
 
-  logger.info('✅ Default provider connected and verified');
+  logger.info('Default provider connected and verified', undefined, { emoji: '✅' });
 
   // --- Load plugins ------------------------------------------------------
 
   const plugins = await loadPlugins(configManager);
-  logger.info('✅ Plugins loaded', {
+  logger.info('Plugins loaded', {
     channels: plugins.channels.length,
     providers: plugins.providers.length,
     tools: plugins.tools.length,
-  });
+  }, { emoji: '✅' });
 
   // --- Initialize plugin providers ---------------------------------------
 
@@ -241,7 +241,7 @@ export async function startCommand(): Promise<void> {
     try {
       const provider = await pp.createProvider(secretsManager);
       pluginProviders.push(provider);
-      logger.info(`✅ Plugin provider initialized: ${pp.name} (${provider.id})`);
+      logger.info(`Plugin provider initialized: ${pp.name} (${provider.id})`, undefined, { emoji: '✅' });
     } catch (err) {
       logger.error(`Failed to initialize provider plugin "${pp.name}":`, err);
     }
@@ -257,10 +257,10 @@ export async function startCommand(): Promise<void> {
     tierMapping: tierMapping ?? undefined,
   });
 
-  logger.info('✅ Smart routing initialized', {
+  logger.info('Smart routing initialized', {
     providers: orchestrator.getRegistry().ids(),
     tierMapping: tierMapping ?? 'all-default',
-  });
+  }, { emoji: '✅' });
 
   // --- Initialize tools -------------------------------------------------
 
@@ -300,33 +300,33 @@ export async function startCommand(): Promise<void> {
   // --- Initialize session queue (before delegation — background runner needs it) --
 
   const queue = createSessionQueue();
-  logger.info('✅ Session queue initialized');
+  logger.info('Session queue initialized', undefined, { emoji: '✅' });
 
   // --- Initialize v3 subsystems ------------------------------------------
 
   // Intercom (before delegation — delegation emits events)
   const intercom = createIntercom();
-  logger.info('✅ Intercom initialized');
+  logger.info('Intercom initialized', undefined, { emoji: '✅' });
 
   // Memory engine (after db — uses episodic_memory + memory_fts tables)
   const memoryEngine = createMemoryEngine(db);
-  logger.info('✅ Memory engine initialized (episodic + FTS5 + temporal decay)');
+  logger.info('Memory engine initialized (episodic + FTS5 + temporal decay)', undefined, { emoji: '✅' });
 
   // Hybrid semantic matcher (standalone, no deps)
   const matcher = createHybridMatcher();
-  logger.info('✅ Hybrid matcher initialized');
+  logger.info('Hybrid matcher initialized', undefined, { emoji: '✅' });
 
   // Timeout estimator (after db — uses task_metrics table)
   const timeoutEstimator = createTimeoutEstimator(db);
-  logger.info('✅ Timeout estimator initialized');
+  logger.info('Timeout estimator initialized', undefined, { emoji: '✅' });
 
   // Code execution sandbox
   const sandbox = createSandbox();
-  logger.info('✅ Sandbox initialized');
+  logger.info('Sandbox initialized', undefined, { emoji: '✅' });
 
   // Blackboard (after db + intercom)
   const blackboard = createBlackboard(db, intercom);
-  logger.info('✅ Blackboard initialized');
+  logger.info('Blackboard initialized', undefined, { emoji: '✅' });
 
   // execute_code tool — sandboxed code execution for agents
   const executeCodeTool: Tool = {
@@ -385,7 +385,7 @@ export async function startCommand(): Promise<void> {
     },
     async execute(args) {
       const reason = (args.reason as string) || 'Agent-initiated restart';
-      logger.info(`🔄 Restart requested: ${reason}`);
+      logger.info(`Restart requested: ${reason}`, undefined, { emoji: '🔄' });
 
       // Give a short delay so the response can be sent to the user
       setTimeout(() => {
@@ -414,7 +414,28 @@ export async function startCommand(): Promise<void> {
   });
 
   const allToolsWithDelegation = [...allTools, ...delegationResult.tools];
-  logger.info('✅ Loaded tools', { count: allToolsWithDelegation.length });
+  logger.info('Loaded tools', { count: allToolsWithDelegation.length }, { emoji: '✅' });
+
+  // --- Cleanup idle sub-agents from previous sessions --------------------
+  // Sub-agents that are still 'active' but have no running tasks are stale
+  // leftovers. Suspend them so the UI doesn't show orphaned idle agents.
+  {
+    const activeAgents = db.getActiveSubAgents('default-user');
+    const allTasks = db.getUserBackgroundTasks('default-user');
+    let suspended = 0;
+    for (const agent of activeAgents) {
+      const hasRunning = allTasks.some(
+        (t) => t.agentId === agent.id && t.status === 'running',
+      );
+      if (!hasRunning) {
+        delegationResult.lifecycle.suspend(agent.id);
+        suspended++;
+      }
+    }
+    if (suspended > 0) {
+      logger.info('Suspended idle sub-agents from previous session', { count: suspended });
+    }
+  }
 
   // --- Create agent context ---------------------------------------------
 
@@ -490,7 +511,7 @@ export async function startCommand(): Promise<void> {
   });
 
   pulse.start();
-  logger.info('✅ Pulse scheduler initialized');
+  logger.info('Pulse scheduler initialized', undefined, { emoji: '✅' });
 
   // --- Auto-build Web UI if needed --------------------------------------
 
@@ -507,7 +528,7 @@ export async function startCommand(): Promise<void> {
   const webDistIndex = join(webRoot, 'dist', 'index.html');
 
   if (!existsSync(webDistIndex)) {
-    logger.info('🔨 Web UI not built — building now...');
+    logger.info('Web UI not built — building now...', undefined, { emoji: '🔨' });
     try {
       const buildResult = Bun.spawnSync(['bun', 'run', 'build'], {
         cwd: webRoot,
@@ -515,14 +536,14 @@ export async function startCommand(): Promise<void> {
       });
 
       if (buildResult.exitCode === 0) {
-        logger.info('✅ Web UI built successfully');
+        logger.info('Web UI built successfully', undefined, { emoji: '✅' });
       } else {
         const stderr = buildResult.stderr?.toString().trim();
-        logger.warn('⚠️ Web UI build failed — dashboard will show setup instructions');
+        logger.warn('Web UI build failed — dashboard will show setup instructions', undefined, { emoji: '⚠️' });
         if (stderr) logger.warn(stderr);
       }
     } catch (err) {
-      logger.warn('⚠️ Could not build Web UI:', err);
+      logger.warn('Could not build Web UI:', err, { emoji: '⚠️' });
     }
   }
 
@@ -587,16 +608,16 @@ export async function startCommand(): Promise<void> {
   for (const channel of plugins.channels) {
     try {
       await channel.start(pluginRuntimeContext);
-      logger.info(`✅ Channel plugin started: ${channel.name}`);
+      logger.info(`Channel plugin started: ${channel.name}`, undefined, { emoji: '✅' });
     } catch (err) {
       logger.error(`Failed to start channel plugin "${channel.name}":`, err);
     }
   }
 
   const stats = learning.getStats();
-  logger.log(`🧠 Learning: ${stats.totalPatterns} patterns learned`);
+  logger.log(`Learning: ${stats.totalPatterns} patterns learned`, undefined, { emoji: '🧠' });
   logger.log('');
-  logger.log('🎉 TinyClaw is ready!');
+  logger.log('TinyClaw is ready!', undefined, { emoji: '🎉' });
   logger.log(`   API server: http://localhost:${port}`);
   logger.log('   Web UI: Run "bun run dev:ui" then open http://localhost:5173');
   logger.log('');
@@ -611,7 +632,7 @@ export async function startCommand(): Promise<void> {
       return;
     }
     isShuttingDown = true;
-    logger.info('👋 Shutting down TinyClaw...');
+    logger.info('Shutting down TinyClaw...', undefined, { emoji: '👋' });
 
     // 0. Pulse scheduler + session queue
     try {
