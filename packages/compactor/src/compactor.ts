@@ -122,14 +122,16 @@ export function createCompactor(
         const tokensAfter = estimateTokens(summary.l2);
 
         // 7. Save compaction and delete old messages
-        const cutoffTimestamp = Date.now();
-        db.saveCompaction(userId, summary.l2, cutoffTimestamp);
+        // Compute cutoff from actual message timestamps instead of Date.now()
+        // so we only delete messages that were part of the summarized batch.
+        const timestamps = db.getMessageTimestamps(userId);
+        // The cutoff is the timestamp of the first message we want to keep
+        // (i.e. the oldest of the keepRecent most-recent messages).
+        const keepFromIndex = Math.max(0, timestamps.length - cfg.keepRecent);
+        const cutoffTimestamp = timestamps[keepFromIndex] ?? Date.now();
 
-        const totalNow = db.getMessageCount(userId);
-        const toDelete = totalNow - cfg.keepRecent;
-        if (toDelete > 0) {
-          db.deleteMessagesBefore(userId, cutoffTimestamp);
-        }
+        db.saveCompaction(userId, summary.l2, cutoffTimestamp);
+        db.deleteMessagesBefore(userId, cutoffTimestamp);
 
         const durationMs = Date.now() - startTime;
 
