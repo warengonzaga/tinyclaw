@@ -46,7 +46,7 @@ TinyClaw is inspired by personal AI companions from science fiction like **Codsw
 - **Self-configuring.** No manual config files. The agent configures itself through conversation.
 - **Own personality.** Ships with a personality (Heartware system) that's uniquely its own.
 - **Native, not wrapped.** Every component is built from scratch with zero dependency on external AI frameworks.
-- **Easy to start.** Uses Ollama Cloud (gpt-oss-cloud-120b) as the built-in provider. Free to sign up with a generous free tier.
+- **Easy to start.** Uses Ollama Cloud with two built-in models — kimi-k2.5 (default) and gpt-oss:120b. Choose your model during setup and switch anytime via conversation.
 - **Cost-conscious.** Smart routing tiers queries across your installed providers. Cheap models handle simple stuff, powerful models only fire when needed.
 
 ## ✨ Features
