@@ -26,9 +26,10 @@ function showHelp(): void {
   console.log(`    ${theme.cmd('tinyclaw')} ${theme.dim('<command>')}`);
   console.log();
   console.log('  ' + theme.label('Commands'));
-  console.log(`    ${theme.cmd('setup')}   Interactive setup wizard — configure your provider`);
-  console.log(`    ${theme.cmd('start')}   Start the TinyClaw agent`);
-  console.log(`    ${theme.cmd('purge')}   Wipe all data for a fresh install (--force to include secrets)`);
+  console.log(`    ${theme.cmd('setup')}    Interactive setup wizard - configure your provider`);
+  console.log(`    ${theme.cmd('start')}    Start the TinyClaw agent`);
+  console.log(`    ${theme.cmd('config')}   Manage models, providers, and settings`);
+  console.log(`    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`);
   console.log();
   console.log('  ' + theme.label('Options'));
   console.log(`    ${theme.dim('--version, -v')}   Show version number`);
@@ -58,6 +59,12 @@ async function main(): Promise<void> {
     case '--supervised-start': {
       const { startCommand } = await import('./commands/start.js');
       await startCommand();
+      break;
+    }
+
+    case 'config': {
+      const { configCommand } = await import('./commands/config.js');
+      await configCommand(args.slice(1));
       break;
     }
 
