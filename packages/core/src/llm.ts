@@ -1,6 +1,7 @@
 import { logger } from '@tinyclaw/logger';
 import type { Provider, Message, LLMResponse, Tool, ToolCall } from '@tinyclaw/types';
 import type { SecretsManager } from '@tinyclaw/secrets';
+import { DEFAULT_MODEL } from './models.js';
 
 export interface OllamaConfig {
   apiKey?: string;
@@ -94,11 +95,14 @@ function extractToolCallFromText(text: string): ToolCall | null {
  */
 export function createOllamaProvider(config: OllamaConfig): Provider {
   const baseUrl = config.baseUrl || 'https://ollama.com';
-  const model = config.model || 'gpt-oss:120b-cloud';
+  const model = config.model || DEFAULT_MODEL;
+
+  // Derive a human-readable short name from the model tag
+  const shortName = model.split(':')[0];
   
   return {
     id: 'ollama-cloud',
-    name: 'Ollama Cloud (gpt-oss:120b)',
+    name: `Ollama Cloud (${shortName})`,
     
     async chat(messages: Message[], tools?: Tool[]): Promise<LLMResponse> {
       try {
