@@ -209,14 +209,15 @@ function evaluateCondition(
       if (expected.includes(' or ')) {
         const alternatives = expected.split(/\s+or\s+/i);
         for (const alt of alternatives) {
-          if (eventDomain === alt.trim() || eventDomain.endsWith(alt.trim())) {
+          const trimmed = alt.trim();
+          if (eventDomain === trimmed || eventDomain.endsWith('.' + trimmed)) {
             return { matchedOn: 'domain', matchValue: event.domain };
           }
         }
         return null;
       }
 
-      if (eventDomain === expected || eventDomain.endsWith(expected)) {
+      if (eventDomain === expected || eventDomain.endsWith('.' + expected)) {
         return { matchedOn: 'domain', matchValue: event.domain };
       }
     }
@@ -251,7 +252,7 @@ function evaluateCondition(
       const expected = pathMatch[1].trim();
       const toolArgs = event.toolArgs ?? {};
       const filePath = String(toolArgs.filename ?? toolArgs.file_path ?? toolArgs.path ?? '');
-      if (filePath === expected || filePath.includes(expected)) {
+      if (filePath === expected) {
         return { matchedOn: 'file.path', matchValue: filePath };
       }
     }
