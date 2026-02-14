@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
+    "@tinyclaw/core": "workspace:*",
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/logger": "workspace:*",
     "@wgtechlabs/config-engine": "^0.1.0",

@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core';
 
 // Re-export shared interfaces from @tinyclaw/types
 export type { ConfigManagerConfig, ConfigManagerInterface } from '@tinyclaw/types';
@@ -139,8 +140,8 @@ export type TinyClawConfigData = z.infer<typeof TinyClawConfigSchema>;
 export const CONFIG_DEFAULTS: Partial<TinyClawConfigData> = {
   providers: {
     starterBrain: {
-      model: 'gpt-oss:120b-cloud',
-      baseUrl: 'https://ollama.com',
+      model: DEFAULT_MODEL,
+      baseUrl: DEFAULT_BASE_URL,
     },
   },
   channels: {},

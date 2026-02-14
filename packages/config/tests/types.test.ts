@@ -7,6 +7,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { TinyClawConfigSchema, CONFIG_DEFAULTS } from '../src/types.js';
+import { DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core';
 
 // -----------------------------------------------------------------------
 // Defaults validation
@@ -28,8 +29,8 @@ describe('CONFIG_DEFAULTS', () => {
   });
 
   test('defaults have correct starter brain config', () => {
-    expect(CONFIG_DEFAULTS.providers?.starterBrain?.model).toBe('gpt-oss:120b-cloud');
-    expect(CONFIG_DEFAULTS.providers?.starterBrain?.baseUrl).toBe('https://ollama.com');
+    expect(CONFIG_DEFAULTS.providers?.starterBrain?.model).toBe(DEFAULT_MODEL);
+    expect(CONFIG_DEFAULTS.providers?.starterBrain?.baseUrl).toBe(DEFAULT_BASE_URL);
   });
 
   test('defaults have correct learning config', () => {
