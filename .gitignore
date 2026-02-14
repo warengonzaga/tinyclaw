@@ -42,4 +42,4 @@ coverage/
 # Misc
 *.bak
 *.tmp
-docs/*.md
+docs/**.*
