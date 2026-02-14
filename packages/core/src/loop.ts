@@ -1,6 +1,7 @@
 import type { AgentContext, Message, ToolCall, PendingApproval, ShieldEvent, ShieldDecision } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
 import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from '@tinyclaw/delegation';
+import { BUILTIN_MODEL_TAGS } from './models.js';
 
 // ---------------------------------------------------------------------------
 // Shield — in-memory pending approvals (conversational flow)
@@ -271,10 +272,31 @@ function summarizeToolResults(
   return summaries.join(' ');
 }
 
-function getBaseSystemPrompt(heartwareContext?: string): string {
+function getBaseSystemPrompt(heartwareContext?: string, modelInfo?: { model: string; provider: string }): string {
   let prompt = `You are TinyClaw 🐜, a helpful AI companion.
 
 You are small but mighty — focused, efficient, and always learning.
+
+## Current Runtime
+- **Model:** ${modelInfo?.model ?? 'unknown'}
+- **Provider:** ${modelInfo?.provider ?? 'unknown'}
+- **Available built-in models:** ${BUILTIN_MODEL_TAGS.join(', ')}
+
+When the user asks what model you are running, always refer to the information above.
+If the user asks to switch models, use the builtin_model_switch tool.
+
+## Provider Management
+
+TinyClaw has a two-tier provider system:
+- **Built-in** (Ollama Cloud) - always available as a free fallback
+- **Primary** (plugin provider) - overrides the built-in as the default provider
+
+When the user asks to set up or change their primary provider:
+1. Use primary_model_list to show installed providers
+2. Use primary_model_set to set one as the primary
+3. Use primary_model_clear to revert to the built-in
+
+Providers must be installed as plugins first (added to plugins.enabled in the config).
 
 ## How to Use Tools
 
@@ -292,11 +314,19 @@ To add to memory:
 To update your identity (like nickname):
 {"action": "identity_update", "name": "Anty", "tagline": "Your small-but-mighty AI companion"}
 
+To switch to a different built-in model:
+{"action": "builtin_model_switch", "model": "${BUILTIN_MODEL_TAGS.find(t => t !== modelInfo?.model) ?? BUILTIN_MODEL_TAGS[1]}"}
+
 **Available tools:**
 - heartware_read, heartware_write, heartware_list, heartware_search
 - memory_add, memory_daily_log, memory_recall
 - identity_update, soul_update, preferences_set, bootstrap_complete
 - execute_code (sandboxed JavaScript/TypeScript execution)
+- builtin_model_switch (switch between built-in models - requires restart)
+- primary_model_list (list installed provider plugins and primary status)
+- primary_model_set (set an installed provider as the primary default)
+- primary_model_clear (revert to built-in as default)
+- tinyclaw_restart (restart TinyClaw after configuration changes)
 - ${DELEGATION_TOOL_NAMES.join(', ')}
 
 ## CRITICAL: When to Use Tools
@@ -357,7 +387,12 @@ export async function agentLoop(
   context: AgentContext,
   onStream?: (event: import('@tinyclaw/types').StreamEvent) => void
 ): Promise<string> {
-  const { db, provider, learning, tools, heartwareContext, shield } = context;
+  const { db, provider, learning, tools, heartwareContext, shield, modelName, providerName } = context;
+
+  // Build model info for system prompt injection
+  const modelInfo = modelName || providerName
+    ? { model: modelName ?? 'unknown', provider: providerName ?? 'unknown' }
+    : undefined;
 
   // ---------------------------------------------------------------------------
   // Shield — check for pending approval from a previous turn
@@ -515,7 +550,7 @@ export async function agentLoop(
   const learnedContext = learning.getContext();
 
   // Build system prompt with heartware and learnings
-  let basePrompt = getBaseSystemPrompt(heartwareContext);
+  let basePrompt = getBaseSystemPrompt(heartwareContext, modelInfo);
 
   // v3: Inject relevant memories from adaptive memory engine
   if (context.memory) {
