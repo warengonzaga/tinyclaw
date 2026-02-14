@@ -1,25 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  /* Discord-inspired modern dark theme */
-  --color-bg-primary: #111214;
-  --color-bg-secondary: #1e1f22;
-  --color-bg-tertiary: #2b2d31;
-  --color-bg-modifier-hover: #35373c;
-  --color-bg-modifier-active: #3f4248;
-  
+  /* Ultra-dark theme */
+  --color-bg-titlebar: #060708;
+  --color-bg-primary: #08090a;
+  --color-bg-secondary: #0d0e10;
+  --color-bg-tertiary: #131416;
+  --color-bg-modifier-hover: #1a1c20;
+  --color-bg-modifier-active: #22252a;
+
   --color-text-normal: #dbdee1;
   --color-text-muted: #949ba4;
   --color-text-link: #00a8fc;
-  
+
   --color-brand: #5865f2;
   --color-brand-hover: #4752c4;
   --color-green: #23a55a;
   --color-yellow: #f0b232;
   --color-red: #f23f43;
-  
-  --color-input-bg: #383a40;
-  --color-scrollbar-thin-thumb: #1a1b1e;
+  --color-status-offline: #80848e;
+
+  --color-input-bg: #1a1c20;
+  --color-scrollbar-thin-thumb: #1a1c20;
   --color-scrollbar-thin-track: transparent;
 }
 
@@ -159,4 +161,41 @@ html, body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Profile panel sidebar slide-in */
+@keyframes panel-slide-right {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 18rem;
+    opacity: 1;
+  }
+}
+
+.panel-sidebar {
+  animation: panel-slide-right 0.2s ease-out;
+  overflow: hidden;
+}
+
+/* Online status pulse */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.status-online {
+  animation: status-pulse 3s ease-in-out infinite;
+}
+
+/* Title bar icon links */
+.titlebar-link {
+  color: var(--color-text-muted);
+  transition: color 0.15s ease;
+}
+
+.titlebar-link:hover {
+  color: var(--color-text-normal);
 }

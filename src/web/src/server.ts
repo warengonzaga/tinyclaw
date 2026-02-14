@@ -97,6 +97,7 @@ export function createWebUI(config) {
     getSubAgents
   } = config
 
+  const serverStartedAt = Date.now()
   let server = null
 
   return {
@@ -118,7 +119,7 @@ export function createWebUI(config) {
           const pathname = url.pathname
 
           if (pathname === '/api/health' && request.method === 'GET') {
-            return jsonResponse({ ok: true })
+            return jsonResponse({ ok: true, startedAt: serverStartedAt })
           }
 
           if (pathname === '/api/background-tasks' && request.method === 'GET') {

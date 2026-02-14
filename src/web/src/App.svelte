@@ -21,6 +21,7 @@
   let backgroundTasks = $state([])    // Background tasks list (running + completed + failed)
   let subAgents = $state([])          // All sub-agents (active + soft_deleted)
   let showPanel = $state(false)       // Toggle for the side panel
+  let botStartedAt = $state(null)    // Timestamp from health API for uptime
 
   // Track which background task completions have been auto-injected into chat.
   // Non-reactive — used purely for dedup, not rendered.
@@ -63,10 +64,23 @@
   async function checkHealth() {
     try {
       const res = await fetch('/api/health')
-      status = res.ok ? 'online' : 'offline'
+      if (res.ok) {
+        const data = await res.json()
+        status = 'online'
+        if (data.startedAt) botStartedAt = data.startedAt
+      } else {
+        status = 'offline'
+      }
     } catch (error) {
       status = 'offline'
     }
+  }
+
+  function formatStartDate(ts) {
+    if (!ts) return 'Unknown'
+    return new Date(ts).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    })
   }
 
   async function fetchBackgroundTasks() {
@@ -497,41 +511,88 @@
   )
 </script>
 
-<div class="h-full flex bg-bg-tertiary">
-  <!-- Main Chat Area -->
-  <div class="flex-1 flex flex-col min-w-0">
-    <!-- Header -->
-    <header class="h-12 min-h-12 px-4 flex items-center border-b border-bg-modifier-active bg-bg-tertiary shadow-sm">
-      <div class="flex items-center gap-2">
-        <span class="text-text-muted">#</span>
-        <h1 class="text-base font-semibold text-text-normal">tinyclaw</h1>
-      </div>
-      <div class="ml-auto flex items-center gap-3">
-        <!-- Delegation panel toggle -->
-        <button
-          onclick={() => showPanel = !showPanel}
-          class="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors hover:bg-bg-modifier-hover {showPanel ? 'bg-bg-modifier-active text-text-normal' : 'text-text-muted'}"
-          title="Sub-agents & Background Tasks"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-            <path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM14.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 18a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.636.818.818 0 0 1-.36.98A7.465 7.465 0 0 1 14.5 16Z" />
-          </svg>
-          <span>Agents</span>
-          {#if runningBgTasks > 0 || activeAgentCount > 0}
-            <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-medium">
-              {activeAgentCount}
-            </span>
-          {/if}
-        </button>
-        <div class="flex items-center gap-2 text-sm">
-          <span class={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-green' : status === 'offline' ? 'bg-red' : 'bg-yellow'}`}></span>
-          <span class="text-text-muted">{status}</span>
-        </div>
-      </div>
-    </header>
+<div class="h-full flex flex-col bg-bg-tertiary">
+  <!-- Title Bar -->
+  <div class="h-9 min-h-9 px-4 flex items-center bg-bg-titlebar border-b border-bg-modifier-active relative">
+    <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+      <span class="text-sm font-semibold text-text-normal tracking-wide">TinyClaw</span>
+      <span class="text-xs text-text-muted/50 font-medium">Beta</span>
+      <span class="text-[10px] text-text-muted/30">v1.0.0</span>
+    </div>
+    <div class="ml-auto flex items-center gap-1">
+      <a
+        href="https://github.com/warengonzaga/tinyclaw"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="titlebar-link p-1.5 rounded hover:bg-bg-modifier-hover"
+        title="Star on GitHub"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+          <path fill-rule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401Z" clip-rule="evenodd" />
+        </svg>
+      </a>
+      <a
+        href="https://github.com/sponsors/warengonzaga"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="titlebar-link p-1.5 rounded hover:bg-bg-modifier-hover"
+        title="Sponsor"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+          <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.723.723 0 01-.692 0h-.002z" />
+        </svg>
+      </a>
+      <a
+        href="https://github.com/warengonzaga/tinyclaw/blob/main/CONTRIBUTING.md"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="titlebar-link p-1.5 rounded hover:bg-bg-modifier-hover"
+        title="Contribute"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4">
+          <path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z" />
+        </svg>
+      </a>
+    </div>
+  </div>
 
+  <!-- Profile Bar -->
+  <div class="h-12 min-h-12 px-4 flex items-center border-b border-bg-modifier-active bg-bg-tertiary shadow-sm">
+    <div class="flex items-center gap-2.5">
+      <div class="relative">
+        <div class="w-8 h-8 rounded-full bg-green flex items-center justify-center">
+          <span class="text-base">🐾</span>
+        </div>
+        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-bg-tertiary {status === 'online' ? 'bg-green status-online' : status === 'offline' ? 'bg-status-offline' : 'bg-yellow'}"></span>
+      </div>
+      <div class="flex flex-col">
+        <span class="text-sm font-semibold text-text-normal leading-tight">TinyClaw</span>
+        <span class="text-[11px] {status === 'offline' ? 'text-text-muted/50' : 'text-text-muted'} leading-tight capitalize">{status}</span>
+      </div>
+    </div>
+
+    <button
+      onclick={() => showPanel = !showPanel}
+      class="relative ml-auto p-1.5 rounded-md transition-colors hover:bg-bg-modifier-hover {showPanel ? 'text-text-normal' : 'text-text-muted'}"
+      title="Toggle Profile Panel"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+        <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z" />
+      </svg>
+      {#if runningBgTasks > 0 || activeAgentCount > 0}
+        <span class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-brand text-white text-[9px] flex items-center justify-center font-medium">
+          {activeAgentCount}
+        </span>
+      {/if}
+    </button>
+  </div>
+
+  <!-- Content Area: Chat + Optional Right Sidebar -->
+  <div class="flex-1 flex min-h-0">
+    <!-- Main Chat Area -->
+    <div class="flex-1 flex flex-col min-w-0">
     <!-- Messages Area -->
-    <div 
+    <div
       bind:this={messagesContainer}
       class="flex-1 overflow-y-auto px-4 py-4"
     >
@@ -725,7 +786,7 @@
           <textarea
             bind:value={input}
             onkeydown={handleKeydown}
-            placeholder="Message #tinyclaw"
+            placeholder="Message @tinyclaw"
             rows="1"
             class="flex-1 bg-transparent text-text-normal placeholder-text-muted px-4 py-3 resize-none outline-none max-h-48 min-h-[48px]"
             style="field-sizing: content;"
@@ -761,23 +822,50 @@
     </div>
   </div>
 
-  <!-- Side Panel: Sub-Agents -->
+  <!-- Right Sidebar: Profile Panel -->
   {#if showPanel}
-    <div class="w-72 border-l border-bg-modifier-active bg-bg-secondary flex flex-col overflow-hidden">
-      <div class="px-4 py-3 border-b border-bg-modifier-active">
-        <h2 class="text-sm font-semibold text-text-normal">Agents & Tasks</h2>
-      </div>
-      <div class="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-        
-        <!-- Active Sub-Agents section -->
-        <div>
-          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-            Active ({activeAgents.length + (activeDelegation ? 1 : 0)})
-          </h3>
+    <div class="panel-sidebar w-72 min-w-72 border-l border-bg-modifier-active bg-bg-secondary flex flex-col overflow-hidden">
+      <!-- Banner -->
+      <div class="h-16 min-h-16 bg-brand"></div>
 
-          <!-- Live delegation being set up (before tool returns) -->
+      <!-- Avatar overlapping banner -->
+      <div class="px-4 -mt-8 mb-2">
+        <div class="relative inline-block">
+          <div class="w-16 h-16 rounded-full bg-green flex items-center justify-center border-4 border-bg-secondary">
+            <span class="text-2xl">🐾</span>
+          </div>
+          <span class="absolute bottom-1 right-0 w-4 h-4 rounded-full border-[3px] border-bg-secondary {status === 'online' ? 'bg-green status-online' : status === 'offline' ? 'bg-status-offline' : 'bg-yellow'}"></span>
+        </div>
+      </div>
+
+      <!-- Name -->
+      <div class="px-4 mb-3">
+        <h2 class="text-lg font-bold text-text-normal">TinyClaw</h2>
+      </div>
+
+      <!-- Info Card -->
+      <div class="mx-4 p-3 rounded-lg bg-bg-tertiary">
+        <h3 class="text-xs font-bold text-text-muted uppercase mb-1">Uptime Since</h3>
+        <p class="text-sm text-text-normal">{formatStartDate(botStartedAt)}</p>
+      </div>
+
+      <!-- Divider -->
+      <div class="mx-4 mt-3 border-t border-bg-modifier-active"></div>
+
+      <!-- Agents & Tasks (like Mutual Servers / Mutual Friends) -->
+      <div class="flex-1 overflow-y-auto">
+        <!-- Active Agents row -->
+        <div class="px-4 py-3 flex items-center justify-between cursor-default">
+          <span class="text-sm text-text-normal">Active Agents — {activeAgents.length + (activeDelegation ? 1 : 0)}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-text-muted">
+            <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+          </svg>
+        </div>
+
+        <!-- Inline agent list -->
+        <div class="px-3 pb-2 space-y-2">
           {#if activeDelegation}
-            <div class="p-2.5 rounded-lg bg-brand/10 border border-brand/20 mb-2">
+            <div class="p-2.5 rounded-lg bg-brand/10 border border-brand/20">
               <div class="flex items-center gap-2">
                 <div class="delegation-spinner w-2.5 h-2.5 border-2 border-brand/30 border-t-brand rounded-full flex-shrink-0"></div>
                 <span class="text-sm font-medium text-brand truncate">{activeDelegation.role}</span>
@@ -795,52 +883,61 @@
           {/if}
 
           {#if activeAgents.length === 0 && !activeDelegation}
-            <p class="text-xs text-text-muted py-2">No active sub-agents</p>
+            <p class="text-xs text-text-muted py-1 px-1">No active sub-agents</p>
           {:else}
-            <div class="space-y-2">
-              {#each activeAgents as agent (agent.id)}
-                {@const statusLabel = getAgentStatusLabel(agent)}
-                {@const currentTask = getAgentCurrentTask(agent)}
-                <div class="p-2.5 rounded-lg bg-bg-tertiary {statusLabel === 'working' ? 'border border-brand/20' : ''}">
-                  <div class="flex items-center gap-2">
-                    {#if statusLabel === 'working'}
-                      <div class="delegation-spinner w-2.5 h-2.5 border-2 border-brand/30 border-t-brand rounded-full flex-shrink-0"></div>
-                    {:else}
-                      <span class={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(agent.status)}`}></span>
-                    {/if}
-                    <span class="text-sm font-medium text-text-normal truncate">{agent.role}</span>
-                  </div>
-                  {#if currentTask}
-                    <p class="text-xs text-text-muted mt-1 line-clamp-2">
-                      {currentTask.taskDescription || currentTask.task_description || 'Working...'}
-                    </p>
-                    {#if currentTask.status === 'completed' && currentTask.result}
-                      <div class="mt-1.5 p-2 rounded bg-bg-primary text-xs text-text-normal max-h-16 overflow-y-auto line-clamp-3">
-                        {currentTask.result}
-                      </div>
-                    {/if}
+            {#each activeAgents as agent (agent.id)}
+              {@const statusLabel = getAgentStatusLabel(agent)}
+              {@const currentTask = getAgentCurrentTask(agent)}
+              <div class="p-2.5 rounded-lg bg-bg-tertiary {statusLabel === 'working' ? 'border border-brand/20' : ''}">
+                <div class="flex items-center gap-2">
+                  {#if statusLabel === 'working'}
+                    <div class="delegation-spinner w-2.5 h-2.5 border-2 border-brand/30 border-t-brand rounded-full flex-shrink-0"></div>
+                  {:else}
+                    <span class={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(agent.status)}`}></span>
                   {/if}
-                  <div class="flex items-center gap-3 mt-1.5 text-xs text-text-muted">
-                    <span title="Performance">{((agent.performanceScore || 0) * 100).toFixed(0)}%</span>
-                    <span title="Tasks">{agent.successfulTasks || 0}/{agent.totalTasks || 0} tasks</span>
-                    <span class={statusLabel === 'working' ? 'text-brand' : 'capitalize'}>{statusLabel}</span>
-                  </div>
-                  {#if agent.lastActiveAt}
-                    <div class="text-[10px] text-text-muted mt-1">{formatTimeAgo(agent.lastActiveAt)}</div>
-                  {/if}
+                  <span class="text-sm font-medium text-text-normal truncate">{agent.role}</span>
                 </div>
-              {/each}
-            </div>
+                {#if currentTask}
+                  <p class="text-xs text-text-muted mt-1 line-clamp-2">
+                    {currentTask.taskDescription || currentTask.task_description || 'Working...'}
+                  </p>
+                  {#if currentTask.status === 'completed' && currentTask.result}
+                    <div class="mt-1.5 p-2 rounded bg-bg-primary text-xs text-text-normal max-h-16 overflow-y-auto line-clamp-3">
+                      {currentTask.result}
+                    </div>
+                  {/if}
+                {/if}
+                <div class="flex items-center gap-3 mt-1.5 text-xs text-text-muted">
+                  <span title="Performance">{((agent.performanceScore || 0) * 100).toFixed(0)}%</span>
+                  <span title="Tasks">{agent.successfulTasks || 0}/{agent.totalTasks || 0} tasks</span>
+                  <span class={statusLabel === 'working' ? 'text-brand' : 'capitalize'}>{statusLabel}</span>
+                </div>
+                {#if agent.lastActiveAt}
+                  <div class="text-[10px] text-text-muted mt-1">{formatTimeAgo(agent.lastActiveAt)}</div>
+                {/if}
+              </div>
+            {/each}
           {/if}
         </div>
 
-        <!-- Archived (soft_deleted) Sub-Agents -->
+        <!-- Background Tasks row -->
+        <div class="px-4 py-3 flex items-center justify-between cursor-default border-t border-bg-modifier-active">
+          <span class="text-sm text-text-normal">Background Tasks — {backgroundTasks.length}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-text-muted">
+            <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+          </svg>
+        </div>
+
+        <!-- Archived agents -->
         {#if archivedAgents.length > 0}
-          <div>
-            <h3 class="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              History ({archivedAgents.length})
-            </h3>
-            <div class="space-y-2">
+          <div class="border-t border-bg-modifier-active">
+            <div class="px-4 py-3 flex items-center justify-between cursor-default">
+              <span class="text-sm text-text-muted">History — {archivedAgents.length}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-text-muted">
+                <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="px-3 pb-2 space-y-2">
               {#each archivedAgents as agent (agent.id)}
                 {@const lastTask = getAgentCurrentTask(agent)}
                 <div class="p-2.5 rounded-lg bg-bg-tertiary opacity-60">
@@ -864,4 +961,5 @@
       </div>
     </div>
   {/if}
+  </div>
 </div>

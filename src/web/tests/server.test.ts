@@ -48,10 +48,11 @@ describe('GET /api/health', () => {
     await ui.stop();
   });
 
-  test('returns 200 with { ok: true }', async () => {
+  test('returns 200 with { ok: true } and startedAt timestamp', async () => {
     const { status, body } = await fetchJSON(port, '/api/health');
     expect(status).toBe(200);
-    expect(body).toEqual({ ok: true });
+    expect(body.ok).toBe(true);
+    expect(typeof body.startedAt).toBe('number');
   });
 });
 
