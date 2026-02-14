@@ -73,6 +73,8 @@ export interface AgentContext {
   configManager?: ConfigManagerInterface; // Optional config manager for persistent settings
   /** Adaptive memory engine (v3) — episodic memory + FTS5 + temporal decay. */
   memory?: MemoryEngine;
+  /** Runtime SHIELD.md enforcement engine. */
+  shield?: ShieldEngine;
   /** Delegation v2 subsystems (lifecycle, templates, background runner). */
   delegation?: {
     lifecycle: unknown;
@@ -522,6 +524,124 @@ export interface PluginRuntimeContext {
   secrets: SecretsManagerInterface;
   /** Config manager for reading/writing channel config. */
   configManager: ConfigManagerInterface;
+}
+
+// ---------------------------------------------------------------------------
+// Shield — Runtime SHIELD.md Enforcement
+// ---------------------------------------------------------------------------
+
+/** The three enforcement actions defined by the SHIELD.md v0.1 spec. */
+export type ShieldAction = 'block' | 'require_approval' | 'log';
+
+/**
+ * Event scopes that the shield engine can evaluate.
+ * Maps 1:1 to the SHIELD.md specification's scope definitions.
+ */
+export type ShieldScope =
+  | 'prompt'
+  | 'skill.install'
+  | 'skill.execute'
+  | 'tool.call'
+  | 'network.egress'
+  | 'secrets.read'
+  | 'mcp';
+
+/** Threat severity levels. */
+export type ThreatSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+/**
+ * Threat categories from the SHIELD.md v0.1 spec.
+ */
+export type ThreatCategory =
+  | 'prompt'
+  | 'tool'
+  | 'mcp'
+  | 'memory'
+  | 'supply_chain'
+  | 'vulnerability'
+  | 'fraud'
+  | 'policy_bypass'
+  | 'anomaly'
+  | 'skill'
+  | 'other';
+
+/**
+ * A parsed threat entry from SHIELD.md.
+ */
+export interface ThreatEntry {
+  id: string;
+  fingerprint: string;
+  category: ThreatCategory;
+  severity: ThreatSeverity;
+  confidence: number;
+  action: ShieldAction;
+  title: string;
+  description: string;
+  recommendationAgent: string;
+  expiresAt: string | null;
+  revoked: boolean;
+  revokedAt: string | null;
+}
+
+/**
+ * An event to evaluate against the shield threat feed.
+ */
+export interface ShieldEvent {
+  scope: ShieldScope;
+  /** Tool name (for tool.call scope). */
+  toolName?: string;
+  /** Tool arguments (for tool.call scope). */
+  toolArgs?: Record<string, unknown>;
+  /** Target domain (for network.egress scope). */
+  domain?: string;
+  /** Secret key path (for secrets.read scope). */
+  secretPath?: string;
+  /** Skill/plugin name (for skill.install / skill.execute scope). */
+  skillName?: string;
+  /** Raw input text (for prompt scope). */
+  inputText?: string;
+  /** The user ID associated with this event. */
+  userId?: string;
+}
+
+/**
+ * The decision output — maps 1:1 to the SHIELD.md DECISION block format.
+ */
+export interface ShieldDecision {
+  action: ShieldAction;
+  scope: ShieldScope;
+  threatId: string | null;
+  fingerprint: string | null;
+  matchedOn: string | null;
+  matchValue: string | null;
+  reason: string;
+}
+
+/**
+ * A tool call pending human approval via conversational flow.
+ */
+export interface PendingApproval {
+  /** The tool call that was blocked. */
+  toolCall: ToolCall;
+  /** The shield decision that triggered the approval request. */
+  decision: ShieldDecision;
+  /** Timestamp when approval was requested. */
+  createdAt: number;
+}
+
+/**
+ * Runtime shield engine interface.
+ *
+ * Evaluates events against the parsed SHIELD.md threat feed and returns
+ * deterministic decisions following the v0.1 spec.
+ */
+export interface ShieldEngine {
+  /** Evaluate an event against active threats. */
+  evaluate(event: ShieldEvent): ShieldDecision;
+  /** Whether the shield has active threats loaded. */
+  isActive(): boolean;
+  /** Get all loaded threat entries (for debugging/audit). */
+  getThreats(): ThreatEntry[];
 }
 
 // ---------------------------------------------------------------------------
