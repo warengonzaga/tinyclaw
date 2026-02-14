@@ -346,7 +346,10 @@ export function mergeShortBullets(
     if (m) {
       const content = m[2].trim();
       bulletPrefix = m[1];
-      if (content.split(/\s+/).length <= maxWords) {
+      if (!content) {
+        flushShort();
+        result.push(line);
+      } else if (content.split(/\s+/).length <= maxWords) {
         shortBullets.push(content);
         if (shortBullets.length >= maxMerge) flushShort();
       } else {

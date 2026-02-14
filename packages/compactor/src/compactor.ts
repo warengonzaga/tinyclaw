@@ -125,10 +125,25 @@ export function createCompactor(
         // Compute cutoff from actual message timestamps instead of Date.now()
         // so we only delete messages that were part of the summarized batch.
         const timestamps = db.getMessageTimestamps(userId);
+
+        if (timestamps.length === 0) {
+          logger.warn('No message timestamps found, skipping compaction persistence', { userId });
+          return null;
+        }
+
         // The cutoff is the timestamp of the first message we want to keep
         // (i.e. the oldest of the keepRecent most-recent messages).
         const keepFromIndex = Math.max(0, timestamps.length - cfg.keepRecent);
-        const cutoffTimestamp = timestamps[keepFromIndex] ?? Date.now();
+        const cutoffTimestamp = timestamps[keepFromIndex];
+
+        if (cutoffTimestamp === undefined) {
+          logger.warn('Invalid cutoff index, skipping compaction persistence', {
+            userId,
+            keepFromIndex,
+            timestampCount: timestamps.length,
+          });
+          return null;
+        }
 
         db.saveCompaction(userId, summary.l2, cutoffTimestamp);
         db.deleteMessagesBefore(userId, cutoffTimestamp);
