@@ -171,4 +171,8 @@ export const CONFIG_DEFAULTS: Partial<TinyClawConfigData> = {
       reasoning: 'ollama-cloud',
     },
   },
+  compaction: {
+    threshold: 60,
+    keepRecent: 20,
+  },
 };
