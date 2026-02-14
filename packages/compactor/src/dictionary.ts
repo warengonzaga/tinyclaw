@@ -152,14 +152,26 @@ export function buildCodebook(
   return codebook;
 }
 
+/** Regex matching the code pattern produced by buildCodebook: $AA..$ZZ or $AAA..$ZZZ */
+const CODE_PATTERN_RE = /^\$[A-Z]{2,3}$/;
+
 /**
  * Normalize a codebook to {code: phrase} format.
  * Accepts either {code: phrase} or {phrase: code}.
+ *
+ * Detection: if ALL keys match the $XX / $XXX code pattern, treat input
+ * as {code: phrase} and return as-is. Otherwise assume {phrase: code}
+ * and reverse entries. This avoids misclassifying phrase keys that
+ * happen to start with '$'.
  */
 function normalizeCodebook(codebook: Codebook): Codebook {
-  if (!Object.keys(codebook).length) return {};
-  const firstKey = Object.keys(codebook)[0];
-  if (firstKey.startsWith('$')) return codebook;
+  const keys = Object.keys(codebook);
+  if (!keys.length) return {};
+
+  // Check if every key matches the code pattern
+  const allKeysAreCodes = keys.every((k) => CODE_PATTERN_RE.test(k));
+  if (allKeysAreCodes) return codebook;
+
   // Reverse: {phrase: code} -> {code: phrase}
   const reversed: Codebook = {};
   for (const [phrase, code] of Object.entries(codebook)) {
