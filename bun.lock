@@ -27,6 +27,7 @@
         "@tinyclaw/delegation": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/secrets": "workspace:*",
+        "@tinyclaw/shield": "workspace:*",
         "@tinyclaw/types": "workspace:*",
       },
     },
@@ -125,6 +126,14 @@
         "@wgtechlabs/secrets-engine": "^2.0.0",
       },
     },
+    "packages/shield": {
+      "name": "@tinyclaw/shield",
+      "version": "0.0.1",
+      "dependencies": {
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
+      },
+    },
     "packages/types": {
       "name": "@tinyclaw/types",
       "version": "1.0.0",
@@ -169,6 +178,7 @@
         "@tinyclaw/router": "workspace:*",
         "@tinyclaw/sandbox": "workspace:*",
         "@tinyclaw/secrets": "workspace:*",
+        "@tinyclaw/shield": "workspace:*",
         "@tinyclaw/types": "workspace:*",
         "@tinyclaw/ui": "workspace:*",
         "@wgtechlabs/log-engine": "^2.3.0",
@@ -395,6 +405,8 @@
     "@tinyclaw/sandbox": ["@tinyclaw/sandbox@workspace:packages/sandbox"],
 
     "@tinyclaw/secrets": ["@tinyclaw/secrets@workspace:packages/secrets"],
+
+    "@tinyclaw/shield": ["@tinyclaw/shield@workspace:packages/shield"],
 
     "@tinyclaw/types": ["@tinyclaw/types@workspace:packages/types"],
 

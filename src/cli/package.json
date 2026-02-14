@@ -28,6 +28,7 @@
     "@tinyclaw/router": "workspace:*",
     "@tinyclaw/sandbox": "workspace:*",
     "@tinyclaw/secrets": "workspace:*",
+    "@tinyclaw/shield": "workspace:*",
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/ui": "workspace:*",
     "@wgtechlabs/log-engine": "^2.3.0",

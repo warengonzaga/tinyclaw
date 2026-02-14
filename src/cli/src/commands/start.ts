@@ -24,13 +24,14 @@ import { createHybridMatcher } from '@tinyclaw/matcher';
 import { createSessionQueue } from '@tinyclaw/queue';
 import { logger } from '@tinyclaw/logger';
 import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';
-import { HeartwareManager, createHeartwareTools, loadHeartwareContext, type HeartwareConfig } from '@tinyclaw/heartware';
+import { HeartwareManager, createHeartwareTools, loadHeartwareContext, loadShieldContent, type HeartwareConfig } from '@tinyclaw/heartware';
 import { createLearningEngine } from '@tinyclaw/learning';
 import { SecretsManager, createSecretsTools, buildProviderKeyName } from '@tinyclaw/secrets';
 import { ConfigManager, createConfigTools } from '@tinyclaw/config';
 import { createDelegationTools, createBlackboard, createTimeoutEstimator } from '@tinyclaw/delegation';
 import { createMemoryEngine } from '@tinyclaw/memory';
 import { createSandbox } from '@tinyclaw/sandbox';
+import { createShieldEngine } from '@tinyclaw/shield';
 import type { ChannelPlugin, Provider, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/ui';
 import { theme } from '../ui/theme.js';
@@ -143,6 +144,21 @@ export async function startCommand(): Promise<void> {
 
   const heartwareContext = await loadHeartwareContext(heartwareManager);
   logger.info('✅ Heartware context loaded');
+
+  // --- Initialize SHIELD.md runtime enforcement -------------------------
+
+  const shieldContent = await loadShieldContent(heartwareManager);
+  const shield = shieldContent
+    ? createShieldEngine(shieldContent)
+    : undefined;
+
+  if (shield) {
+    logger.info('🛡️ Shield engine active', {
+      threats: shield.getThreats().length,
+    });
+  } else {
+    logger.info('🛡️ No SHIELD.md found — shield enforcement disabled');
+  }
 
   // --- Initialize default provider (reads key from secrets-engine) ------
 
@@ -416,6 +432,7 @@ export async function startCommand(): Promise<void> {
       background: delegationResult.background,
     },
     memory: memoryEngine,
+    shield,
   };
 
   // --- Initialize pulse scheduler -----------------------------------------
