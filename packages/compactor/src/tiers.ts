@@ -91,10 +91,11 @@ export function generateTiers(
 function buildTierFromPriority(text: string, tokenBudget: number): string {
   const lines = text.split('\n').filter((line) => line.trim().length > 0);
 
-  // Score and sort by priority (descending)
-  const scored = lines.map((line) => ({
+  // Score lines and capture original index during initial mapping
+  const scored = lines.map((line, idx) => ({
     line,
     score: scoreLine(line),
+    originalIndex: idx,
   }));
 
   scored.sort((a, b) => b.score - a.score);
@@ -103,11 +104,11 @@ function buildTierFromPriority(text: string, tokenBudget: number): string {
   const selected: Array<{ line: string; originalIndex: number }> = [];
   let currentTokens = 0;
 
-  for (const { line, score } of scored) {
+  for (const { line, originalIndex } of scored) {
     const lineTokens = estimateTokens(line);
     if (currentTokens + lineTokens > tokenBudget) continue;
 
-    selected.push({ line, originalIndex: lines.indexOf(line) });
+    selected.push({ line, originalIndex });
     currentTokens += lineTokens;
   }
 
