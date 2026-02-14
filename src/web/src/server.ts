@@ -125,9 +125,6 @@ export function createWebUI(config) {
             const userId = url.searchParams.get('userId') || 'default-user'
             try {
               const agents = getSubAgents ? getSubAgents(userId) : []
-              if (agents.length > 0) {
-                console.log(`[/api/sub-agents] Returning ${agents.length} agents for userId="${userId}":`, agents.map(a => `${a.role}(${a.status})`))
-              }
               return jsonResponse({ agents })
             } catch (err) {
               console.error('[/api/sub-agents] Error fetching sub-agents:', err)
