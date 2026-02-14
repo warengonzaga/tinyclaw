@@ -29,6 +29,7 @@
       "name": "@tinyclaw/config",
       "version": "1.0.0",
       "dependencies": {
+        "@tinyclaw/core": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
         "@wgtechlabs/config-engine": "^0.1.0",
