@@ -472,7 +472,11 @@ export async function agentLoop(
 
   // Compact history if it has grown too large
   if (context.compactor) {
-    await context.compactor.compactIfNeeded(userId, provider);
+    try {
+      await context.compactor.compactIfNeeded(userId, provider);
+    } catch (err) {
+      logger.error('Compaction failed, continuing without compaction', err);
+    }
   }
 
   // Load context — prepend compaction summary if one exists
