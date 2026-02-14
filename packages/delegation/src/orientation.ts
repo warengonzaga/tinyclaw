@@ -34,8 +34,9 @@ export function buildOrientationContext(config: {
   learning: LearningEngine;
   db: DelegationStore;
   userId: string;
+  getCompactedContext?: (userId: string) => string | null;
 }): OrientationContext {
-  const { heartwareContext, learning, db, userId } = config;
+  const { heartwareContext, learning, db, userId, getCompactedContext } = config;
 
   // 1. Identity — truncate heartware context to keep prompt lean
   const identity = heartwareContext
@@ -65,7 +66,10 @@ export function buildOrientationContext(config: {
     memories = truncate(memories, MAX_MEMORIES_CHARS);
   }
 
-  return { identity, preferences, memories };
+  // 4. Compacted conversation context (L0 tier, ~200 tokens)
+  const compactedContext = getCompactedContext?.(userId) ?? undefined;
+
+  return { identity, preferences, memories, compactedContext };
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +97,11 @@ export function formatOrientation(ctx: OrientationContext): string {
   if (ctx.memories) {
     sections.push('## Key Memories');
     sections.push(ctx.memories);
+  }
+
+  if (ctx.compactedContext) {
+    sections.push('## Conversation Context');
+    sections.push(ctx.compactedContext);
   }
 
   sections.push('=== END ORIENTATION ===');

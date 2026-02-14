@@ -78,6 +78,8 @@ export interface OrientationContext {
   identity: string;
   preferences: string;
   memories: string;
+  /** Ultra-compact conversation summary (L0 tier, ~200 tokens). */
+  compactedContext?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +95,8 @@ export interface DelegationV2Config {
   defaultSubAgentTools?: string[];
   /** Adaptive timeout estimator (v3). When provided, replaces fixed timeouts. */
   timeoutEstimator?: TimeoutEstimator;
+  /** Returns the L0 compacted context for a user (if available). */
+  getCompactedContext?: (userId: string) => string | null;
 }
 
 // ---------------------------------------------------------------------------

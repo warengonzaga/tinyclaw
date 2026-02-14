@@ -103,6 +103,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
       learning,
       db,
       userId,
+      getCompactedContext: config.getCompactedContext,
     });
   }
 
