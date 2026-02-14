@@ -37,6 +37,7 @@ Sub-agents inherit your knowledge and personality, so they already know the user
 
 ### How Delegation Works
 - Use delegate_task or delegate_to_existing — tasks always run in the background
+- delegate_background works identically to delegate_task but is an explicit alias that emphasises background execution; prefer delegate_task for consistency
 - Tell the user you've started the task and they can keep chatting
 - Results arrive automatically on the next conversation turn
 - The user can see progress in their side panel
