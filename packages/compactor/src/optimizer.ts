@@ -78,22 +78,22 @@ export function minimizeWhitespace(text: string): string {
 
 /**
  * Remove bullet prefixes from long consecutive bullet lists (3+).
- * Short lists (1-2 items) keep their bullets.
+ * Short lists (1-2 items) keep their original bullets.
  */
 export function compactBullets(text: string): string {
   if (!text) return '';
 
   const lines = text.split('\n');
   const result: string[] = [];
-  const bulletRun: string[] = [];
+  const bulletRun: Array<{ text: string; prefix: string; indent: string }> = [];
 
   function flush(): void {
     if (bulletRun.length >= 3) {
-      // Strip bullet prefix
-      for (const content of bulletRun) result.push(content);
+      // Strip bullet prefix for long runs
+      for (const item of bulletRun) result.push(item.text);
     } else {
-      // Keep original bullets
-      for (const content of bulletRun) result.push('- ' + content);
+      // Keep original bullet character and indentation
+      for (const item of bulletRun) result.push(item.indent + item.prefix + item.text);
     }
     bulletRun.length = 0;
   }
@@ -101,7 +101,13 @@ export function compactBullets(text: string): string {
   for (const line of lines) {
     const m = BULLET_RE.exec(line);
     if (m) {
-      bulletRun.push(m[2]);
+      // m[1] = full prefix incl. indent + bullet char, m[2] = content
+      // Separate leading whitespace from the bullet character
+      const fullPrefix = m[1];
+      const indentMatch = fullPrefix.match(/^(\s*)(.+)/);
+      const indent = indentMatch ? indentMatch[1] : '';
+      const prefix = indentMatch ? indentMatch[2] + ' ' : '- ';
+      bulletRun.push({ text: m[2], prefix, indent });
     } else {
       flush();
       result.push(line);
@@ -138,13 +144,23 @@ export function compressTableToKv(text: string): string {
         i++;
       }
 
+      const hasNonEmptyHeader = headers.some((h) => h.length > 0);
+
       if (headers.length === 2) {
+        // 2-column: key:value format
+        if (hasNonEmptyHeader) {
+          result.push(`${headers[0] ?? ''}: ${headers[1] ?? ''}`);
+        }
         for (const row of rows) {
           const k = row[0] ?? '';
           const v = row[1] ?? '';
           if (k || v) result.push(`${k}: ${v}`);
         }
       } else {
+        // Multi-column: compact pipe-delimited
+        if (hasNonEmptyHeader) {
+          result.push(headers.join(' | '));
+        }
         for (const row of rows) {
           result.push(row.join(' | '));
         }
