@@ -141,9 +141,12 @@ This project is licensed under [MIT License](https://opensource.org/license/MIT)
 
 ## 🙏 Credits
 
-- Inspired by [OpenClaw](https://github.com/openclaw/openclaw)
-- Smart routing inspired by [ClawRouter](https://github.com/BlockRunAI/ClawRouter)
-- Learnings applied from [Nader Dabit](https://x.com/dabit3)'s post on [You Could've Invented OpenClaw](https://x.com/dabit3/status/2021387483364151451)
+- [OpenClaw](https://github.com/openclaw/openclaw) — project inspiration
+- [ClawRouter](https://github.com/BlockRunAI/ClawRouter) — smart routing inspiration
+- [Nader Dabit](https://x.com/dabit3) — learnings from [You Could've Invented OpenClaw](https://x.com/dabit3/status/2021387483364151451)
+- [SHIELD.md](https://nova-hunting.github.io/shield.md/) by [Thomas Roccia](https://x.com/fr0gger_) — security policy inspiration
+- [Bun](https://bun.sh) by [Oven](https://github.com/oven-sh) — all-in-one JavaScript runtime
+- [Secrets Engine](https://github.com/wgtechlabs/secrets-engine), [Config Engine](https://github.com/wgtechlabs/config-engine), and [Log Engine](https://github.com/wgtechlabs/log-engine) by [WG Tech Labs](https://github.com/wgtechlabs) — built for this project
 
 ## 📝 Author
 
