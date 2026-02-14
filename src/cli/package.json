@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.0.0",
+    "@tinyclaw/compactor": "workspace:*",
     "@tinyclaw/core": "workspace:*",
     "@tinyclaw/config": "workspace:*",
     "@tinyclaw/delegation": "workspace:*",
