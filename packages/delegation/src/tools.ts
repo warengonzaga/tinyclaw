@@ -535,10 +535,18 @@ export function createDelegationTools(config: DelegationToolsConfig): {
       const agent = lifecycle.get(agentId);
       if (!agent) return `Error: Sub-agent ${agentId} not found.`;
 
-      // If a specific task was provided, verify it exists
+      // Validate ownership: ensure the calling user owns this sub-agent
+      if (agent.userId && agent.userId !== userId) {
+        return `Error: Sub-agent ${agentId} does not belong to user ${userId}.`;
+      }
+
+      // If a specific task was provided, verify it exists and is completed
       if (taskId) {
         const task = background.getStatus(taskId);
         if (!task) return `Error: Task ${taskId} not found.`;
+        if (task.status !== 'completed' && task.status !== 'delivered') {
+          return `Error: Task ${taskId} is not completed yet (current status: ${task.status}).`;
+        }
       }
 
       if (keepAlive) {
