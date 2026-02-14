@@ -17,6 +17,7 @@ import type { OrientationContext } from './types.js';
 const MAX_IDENTITY_CHARS = 1600;
 const MAX_PREFERENCES_CHARS = 800;
 const MAX_MEMORIES_CHARS = 800;
+const MAX_COMPACTED_CONTEXT_CHARS = 800;
 
 // ---------------------------------------------------------------------------
 // Builder
@@ -67,7 +68,10 @@ export function buildOrientationContext(config: {
   }
 
   // 4. Compacted conversation context (L0 tier, ~200 tokens)
-  const compactedContext = getCompactedContext?.(userId) ?? undefined;
+  const rawCompactedContext = getCompactedContext?.(userId) ?? undefined;
+  const compactedContext = rawCompactedContext
+    ? truncate(rawCompactedContext, MAX_COMPACTED_CONTEXT_CHARS)
+    : undefined;
 
   return { identity, preferences, memories, compactedContext };
 }
