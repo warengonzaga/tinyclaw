@@ -1,4 +1,4 @@
-import { LogEngine, LogMode, EmojiSelector, EMOJI_MAPPINGS, FALLBACK_EMOJI } from '@wgtechlabs/log-engine';
+import { LogEngine, LogMode, EmojiSelector, EMOJI_MAPPINGS, FALLBACK_EMOJI, type LogCallOptions } from '@wgtechlabs/log-engine';
 
 // Only local time with context-aware emoji
 LogEngine.configure({
@@ -40,4 +40,4 @@ LogEngine.configure({
 
 // Re-export configured logger and emoji utilities
 export const logger = LogEngine;
-export { EmojiSelector, EMOJI_MAPPINGS, FALLBACK_EMOJI };
+export { EmojiSelector, EMOJI_MAPPINGS, FALLBACK_EMOJI, type LogCallOptions };
