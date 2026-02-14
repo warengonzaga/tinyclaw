@@ -1,8 +1,17 @@
 {
   "name": "@tinyclaw/compactor",
   "version": "0.0.1",
+  "description": "Context compaction engine for TinyClaw",
+  "license": "MIT",
+  "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "bun test"
@@ -12,6 +21,7 @@
     "@tinyclaw/logger": "workspace:*"
   },
   "devDependencies": {
-    "@tinyclaw/core": "workspace:*"
+    "@tinyclaw/core": "workspace:*",
+    "typescript": "^5.0.0"
   }
 }
