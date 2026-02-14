@@ -16,16 +16,20 @@ const CJK_RANGE =
  * - English text: ~4 characters per token
  * - CJK text: ~1.5 characters per token
  * - Mixed: weighted average
+ *
+ * Counts Unicode code points (not UTF-16 code units) so supplementary
+ * characters are measured consistently.
  */
 export function estimateTokens(text: string): number {
   if (!text) return 0;
 
   let cjkChars = 0;
+  let totalChars = 0;
   for (const char of text) {
+    totalChars++;
     if (CJK_RANGE.test(char)) cjkChars++;
   }
 
-  const totalChars = text.length;
   const asciiChars = totalChars - cjkChars;
 
   // ASCII at ~4 chars/token, CJK at ~1.5 chars/token
@@ -37,22 +41,52 @@ export function estimateTokens(text: string): number {
 
 /**
  * Truncate text to fit within a token budget.
- * Cuts at word boundaries when possible.
+ * Uses an adaptive chars-per-token ratio based on content composition
+ * and slices by Unicode code points to avoid splitting surrogate pairs.
+ * Iteratively trims until the token count is within budget.
  */
 export function truncateToTokenBudget(text: string, maxTokens: number): string {
   if (estimateTokens(text) <= maxTokens) return text;
 
-  // Approximate character limit from token budget
-  const charLimit = maxTokens * 4;
-  let truncated = text.slice(0, charLimit);
+  // Detect CJK density to choose an adaptive chars-per-token ratio
+  const codePoints = Array.from(text);
+  let cjkCount = 0;
+  for (const cp of codePoints) {
+    if (CJK_RANGE.test(cp)) cjkCount++;
+  }
+  const cjkRatio = codePoints.length > 0 ? cjkCount / codePoints.length : 0;
+  // Blend between ~1.5 (pure CJK) and ~4 (pure ASCII)
+  const charsPerToken = cjkRatio > 0.3 ? 1.5 + (1 - cjkRatio) * 2.5 : 4;
+
+  // Initial estimate: slice by code points
+  let charLimit = Math.floor(maxTokens * charsPerToken);
+  let truncated = codePoints.slice(0, charLimit).join('');
 
   // Cut at last newline or space for clean boundary
   const lastNewline = truncated.lastIndexOf('\n');
   const lastSpace = truncated.lastIndexOf(' ');
   const cutPoint = Math.max(lastNewline, lastSpace);
 
-  if (cutPoint > charLimit * 0.5) {
+  if (cutPoint > truncated.length * 0.5) {
     truncated = truncated.slice(0, cutPoint);
+  }
+
+  // Iteratively trim if still over budget
+  while (estimateTokens(truncated) > maxTokens && truncated.length > 0) {
+    const overBy = estimateTokens(truncated) - maxTokens;
+    // Remove roughly overBy * charsPerToken code points
+    const trimBy = Math.max(1, Math.floor(overBy * charsPerToken));
+    const trimmedCps = Array.from(truncated);
+    trimmedCps.length = Math.max(0, trimmedCps.length - trimBy);
+    truncated = trimmedCps.join('');
+
+    // Re-cut at word boundary
+    const ls = truncated.lastIndexOf(' ');
+    const ln = truncated.lastIndexOf('\n');
+    const cp2 = Math.max(ls, ln);
+    if (cp2 > truncated.length * 0.5) {
+      truncated = truncated.slice(0, cp2);
+    }
   }
 
   return truncated;
