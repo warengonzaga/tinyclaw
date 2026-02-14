@@ -86,6 +86,12 @@ export interface AgentContext {
       cleanupStale(olderThanMs: number): number;
     };
   };
+  /** Compaction engine — tiered compression of conversation history. */
+  compactor?: {
+    compactIfNeeded(userId: string, provider: Provider): Promise<unknown>;
+    getLatestSummary(userId: string): string | null;
+    estimateTokens(text: string): number;
+  };
 }
 
 // ---------------------------------------------------------------------------
