@@ -175,8 +175,11 @@ export function parseThreatBlock(block: string): ThreatEntry | null {
   // Filter out revoked threats
   if (revoked === 'true') return null;
 
-  // Filter out expired threats
+  // Filter out expired threats (enforce ISO 8601 format)
   if (expiresAt && expiresAt !== 'null') {
+    if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(expiresAt)) {
+      return null; // Reject non-ISO date strings
+    }
     const expiryDate = new Date(expiresAt);
     if (!isNaN(expiryDate.getTime()) && expiryDate.getTime() < Date.now()) {
       return null;
@@ -252,7 +255,7 @@ function parseThreatBlockRaw(block: string): ThreatEntry | null {
   if (!VALID_CATEGORIES.has(category)) return null;
   if (!VALID_SEVERITIES.has(severity)) return null;
   if (!VALID_ACTIONS.has(action)) return null;
-  if (isNaN(confidence)) return null;
+  if (isNaN(confidence) || confidence < 0 || confidence > 1) return null;
 
   return {
     id,
