@@ -44,8 +44,10 @@ export interface CcpResultWithStats extends CcpResult {
   instructionTokens: number;
   /** Net tokens (compressed + instructions). */
   netTokens: number;
-  /** Reduction percentage (based on compressed vs original). */
+  /** Reduction percentage (compressed vs original, ignoring instruction overhead). */
   reductionPct: number;
+  /** Net reduction percentage including instruction token overhead. */
+  netReductionPct: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +264,10 @@ export function compressContext(text: string, level: CcpLevel = 'medium'): CcpRe
 /**
  * Compress text and return statistics.
  *
+ * Returns both `reductionPct` (compressed vs original, ignoring instruction
+ * overhead) and `netReductionPct` (end-to-end savings including the
+ * instruction tokens that must be prepended to the context).
+ *
  * @param text - The text to compress.
  * @param level - Compression level: 'ultra', 'medium', or 'light'.
  * @returns Compressed text, instructions, and token statistics.
@@ -279,6 +285,11 @@ export function compressContextWithStats(
     originalTokens > 0
       ? Math.round(((originalTokens - compressedTokens) / originalTokens) * 1000) / 10
       : 0;
+  // Net reduction accounts for instruction token overhead
+  const netReductionPct =
+    originalTokens > 0
+      ? Math.round(((originalTokens - netTokens) / originalTokens) * 1000) / 10
+      : 0;
 
   return {
     ...result,
@@ -287,5 +298,6 @@ export function compressContextWithStats(
     instructionTokens,
     netTokens,
     reductionPct,
+    netReductionPct,
   };
 }
