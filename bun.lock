@@ -13,6 +13,17 @@
         "typescript": "^5.7.0",
       },
     },
+    "packages/compactor": {
+      "name": "@tinyclaw/compactor",
+      "version": "0.0.1",
+      "dependencies": {
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
+      },
+      "devDependencies": {
+        "@tinyclaw/core": "workspace:*",
+      },
+    },
     "packages/config": {
       "name": "@tinyclaw/config",
       "version": "1.0.0",
@@ -374,6 +385,8 @@
     "@tailwindcss/oxide-win32-x64-msvc": ["@tailwindcss/oxide-win32-x64-msvc@4.1.18", "", { "os": "win32", "cpu": "x64" }, "sha512-bJWbyYpUlqamC8dpR7pfjA0I7vdF6t5VpUGMWRkXVE3AXgIZjYUYAK7II1GNaxR8J1SSrSrppRar8G++JekE3Q=="],
 
     "@tailwindcss/vite": ["@tailwindcss/vite@4.1.18", "", { "dependencies": { "@tailwindcss/node": "4.1.18", "@tailwindcss/oxide": "4.1.18", "tailwindcss": "4.1.18" }, "peerDependencies": { "vite": "^5.2.0 || ^6 || ^7" } }, "sha512-jVA+/UpKL1vRLg6Hkao5jldawNmRo7mQYrZtNHMIVpLfLhDml5nMRUo/8MwoX2vNXvnaXNNMedrMfMugAVX1nA=="],
+
+    "@tinyclaw/compactor": ["@tinyclaw/compactor@workspace:packages/compactor"],
 
     "@tinyclaw/config": ["@tinyclaw/config@workspace:packages/config"],
 
