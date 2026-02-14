@@ -96,6 +96,30 @@ export const TinyClawConfigSchema = z.object({
       reasoning: z.string().optional(),
     }).optional(),
   }).optional(),
+
+  /** Compaction settings */
+  compaction: z.object({
+    /** Message count threshold to trigger compaction. Default: 60 */
+    threshold: z.number().int().positive().optional(),
+    /** Number of recent messages to keep after compaction. Default: 20 */
+    keepRecent: z.number().int().positive().optional(),
+    /** Token budgets per summary tier */
+    tierBudgets: z.object({
+      l0: z.number().int().positive().optional(),
+      l1: z.number().int().positive().optional(),
+      l2: z.number().int().positive().optional(),
+    }).optional(),
+    /** Near-duplicate message detection */
+    dedup: z.object({
+      enabled: z.boolean().optional(),
+      similarityThreshold: z.number().min(0).max(1).optional(),
+    }).optional(),
+    /** Pre-compression rules before LLM summarization */
+    preCompression: z.object({
+      stripEmoji: z.boolean().optional(),
+      removeDuplicateLines: z.boolean().optional(),
+    }).optional(),
+  }).optional(),
 }).passthrough();
 
 /**
