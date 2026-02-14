@@ -7,16 +7,47 @@ import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from '@tinyclaw/delegation
 // ---------------------------------------------------------------------------
 
 /**
- * Pending approval map keyed by userId.
+ * Pending approval queue keyed by userId.
  *
- * When a shield decision returns `require_approval`, the tool call is stored
- * here and the agent asks the human for permission. On the next message from
- * the same user, the loop checks this map and interprets the response as
- * approval / denial before proceeding.
+ * When a shield decision returns `require_approval`, the tool call is pushed
+ * to the queue. On the next message from the same user, the loop pops the
+ * first entry and interprets the response as approval / denial. Multiple
+ * tools may be queued across a single structured tool_calls batch.
  *
  * Lost on restart — safe, since unapproved actions simply expire.
+ *
+ * TODO: For horizontal scaling, replace with a shared store (e.g. Redis)
+ * so approvals survive across process boundaries.
  */
-const pendingApprovals = new Map<string, PendingApproval>();
+const pendingApprovals = new Map<string, PendingApproval[]>();
+
+/** Approval entries older than this are silently discarded. */
+const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Pop the first non-expired pending approval for a user, cleaning up stale
+ * entries along the way.
+ */
+function getPendingApproval(userId: string): PendingApproval | undefined {
+  const queue = pendingApprovals.get(userId);
+  if (!queue || queue.length === 0) {
+    pendingApprovals.delete(userId);
+    return undefined;
+  }
+
+  const now = Date.now();
+  // Drop expired entries from the front
+  while (queue.length > 0 && now - queue[0].createdAt > APPROVAL_TIMEOUT_MS) {
+    queue.shift();
+  }
+
+  if (queue.length === 0) {
+    pendingApprovals.delete(userId);
+    return undefined;
+  }
+
+  return queue.shift(); // FIFO — return the oldest valid entry
+}
 
 const MAX_TOOL_ITERATIONS = 10;
 const MAX_JSON_TOOL_REPLIES = 3;
@@ -416,9 +447,8 @@ export async function agentLoop(
   // Shield — check for pending approval from a previous turn
   // ---------------------------------------------------------------------------
 
-  const pending = pendingApprovals.get(userId);
+  const pending = getPendingApproval(userId);
   if (pending) {
-    pendingApprovals.delete(userId);
 
     // Interpret the user's natural-language answer.
     // We inject a focused system prompt and let the LLM classify the response.
@@ -443,7 +473,7 @@ export async function agentLoop(
     const classifyResponse = await provider.chat(classifyMessages, []);
     const verdict = (classifyResponse.content || '').trim().toUpperCase();
 
-    if (verdict.includes('APPROVED')) {
+    if (/^\s*APPROVED\s*$/.test(verdict)) {
       // Execute the previously blocked tool call
       logger.info('Shield: approval granted', { tool: pending.toolCall.name, userId });
       const tool = tools.find(t => t.name === pending.toolCall.name);
@@ -468,8 +498,19 @@ export async function agentLoop(
           db.saveMessage(userId, 'assistant', errorMsg);
           return errorMsg;
         }
+      } else {
+        // Tool no longer registered — inform the user and persist the event
+        logger.error('Shield: approved tool no longer available', { tool: pending.toolCall.name, userId });
+        const errorMsg = `Approved, but tool **${pending.toolCall.name}** is no longer available. It may have been unregistered.`;
+        if (onStream) {
+          onStream({ type: 'text', content: errorMsg });
+          onStream({ type: 'done' });
+        }
+        db.saveMessage(userId, 'user', message);
+        db.saveMessage(userId, 'assistant', errorMsg);
+        return errorMsg;
       }
-    } else if (verdict.includes('DENIED')) {
+    } else if (/^\s*DENIED\s*$/.test(verdict)) {
       logger.info('Shield: approval denied', { tool: pending.toolCall.name, userId });
       const responseText = `Understood — I won't run **${pending.toolCall.name}**. Let me know if you need anything else.`;
       if (onStream) {
@@ -480,9 +521,11 @@ export async function agentLoop(
       db.saveMessage(userId, 'assistant', responseText);
       return responseText;
     } else {
-      // UNCLEAR — re-ask
+      // UNCLEAR — re-ask: push the entry back to the front of the queue
       logger.info('Shield: approval response unclear, re-asking', { tool: pending.toolCall.name, userId });
-      pendingApprovals.set(userId, pending); // Put it back
+      const queue = pendingApprovals.get(userId) ?? [];
+      queue.unshift(pending);
+      pendingApprovals.set(userId, queue);
       const responseText =
         `I couldn't tell if you approved or denied running **${pending.toolCall.name}**.\n` +
         `Could you clarify? Just say something like "yes, go ahead" or "no, don't do that".`;
@@ -641,11 +684,13 @@ export async function agentLoop(
             }
 
             if (decision.action === 'require_approval') {
-              pendingApprovals.set(userId, {
+              const queue = pendingApprovals.get(userId) ?? [];
+              queue.push({
                 toolCall,
                 decision,
                 createdAt: Date.now(),
               });
+              pendingApprovals.set(userId, queue);
               const approvalMsg =
                 `Before I run **${toolCall.name}**, I need your approval.\n\n` +
                 `**Reason:** ${decision.reason}\n\n` +
@@ -799,16 +844,15 @@ export async function agentLoop(
           }
 
           if (decision.action === 'require_approval') {
-            // In structured multi-tool mode we can only block the single tool
-            // (other tools in the batch proceed). Store pending approval for
-            // the first one that needs it; user answers next turn.
-            if (!pendingApprovals.has(userId)) {
-              pendingApprovals.set(userId, {
-                toolCall,
-                decision,
-                createdAt: Date.now(),
-              });
-            }
+            // In structured multi-tool mode each blocked tool is queued;
+            // the user is prompted once per pending approval on subsequent turns.
+            const queue = pendingApprovals.get(userId) ?? [];
+            queue.push({
+              toolCall,
+              decision,
+              createdAt: Date.now(),
+            });
+            pendingApprovals.set(userId, queue);
             const pendingMsg = `Requires approval: ${decision.reason}`;
             toolResults.push({ id: toolCall.id, result: pendingMsg });
             if (onStream) {
@@ -839,12 +883,16 @@ export async function agentLoop(
         }
       }
 
-      // If pending approval was set during structured tool_calls, ask the user
-      if (pendingApprovals.has(userId)) {
-        const pa = pendingApprovals.get(userId)!;
+      // If pending approvals were queued during structured tool_calls, ask the user
+      // about the first one (subsequent ones will be handled on following turns).
+      const paQueue = pendingApprovals.get(userId);
+      if (paQueue && paQueue.length > 0) {
+        const pa = paQueue[0]; // peek — don't pop yet; getPendingApproval does that next turn
+        const remainingCount = paQueue.length;
         const approvalMsg =
           `Before I run **${pa.toolCall.name}**, I need your approval.\n\n` +
           `**Reason:** ${pa.decision.reason}\n\n` +
+          (remainingCount > 1 ? `_(${remainingCount - 1} more tool(s) also pending approval)_\n\n` : '') +
           `Do you want me to go ahead? (yes / no)`;
         // Still return results for tools that did execute
         const executedResults = toolResults.filter(r =>
