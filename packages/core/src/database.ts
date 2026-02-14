@@ -182,6 +182,12 @@ export function createDatabase(path: string): Database {
     WHERE user_id = ?
   `);
 
+  const getMessageTimestampsStmt = db.prepare(`
+    SELECT created_at FROM messages
+    WHERE user_id = ?
+    ORDER BY created_at ASC
+  `);
+
   const saveCompactionStmt = db.prepare(`
     INSERT INTO compactions (user_id, summary, replaced_before, created_at)
     VALUES (?, ?, ?, ?)
@@ -488,6 +494,11 @@ export function createDatabase(path: string): Database {
     getMessageCount(userId: string): number {
       const row = getMessageCountStmt.get(userId) as { count: number } | null;
       return row?.count ?? 0;
+    },
+
+    getMessageTimestamps(userId: string): number[] {
+      const rows = getMessageTimestampsStmt.all(userId) as Array<{ created_at: number }>;
+      return rows.map((r) => r.created_at);
     },
 
     saveCompaction(userId: string, summary: string, replacedBefore: number): void {
