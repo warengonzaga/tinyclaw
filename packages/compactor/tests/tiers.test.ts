@@ -64,11 +64,10 @@ describe('generateTiers', () => {
     // With a tight L0 budget, identity and decisions should be kept
     const tiers = generateTiers(summary, { l0: 50, l1: 100, l2: 3000 });
 
-    // L0 should contain the high-priority lines
-    if (tiers.l0.length > 0) {
-      const hasIdentity = tiers.l0.includes('name') || tiers.l0.includes('decision') || tiers.l0.includes('Decision');
-      expect(hasIdentity).toBe(true);
-    }
+    // L0 should be non-empty and contain high-priority lines
+    expect(tiers.l0.length).toBeGreaterThan(0);
+    const hasIdentity = tiers.l0.includes('name') || tiers.l0.includes('decision') || tiers.l0.includes('Decision');
+    expect(hasIdentity).toBe(true);
   });
 
   it('L2 >= L1 >= L0 in token count', () => {

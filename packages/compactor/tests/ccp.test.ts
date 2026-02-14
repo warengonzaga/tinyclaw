@@ -81,6 +81,9 @@ describe('compressContextWithStats', () => {
     expect(result.instructionTokens).toBeGreaterThan(0);
     expect(result.netTokens).toBe(result.compressedTokens + result.instructionTokens);
     expect(result.reductionPct).toBeGreaterThanOrEqual(0);
+    expect(typeof result.netReductionPct).toBe('number');
+    // netReductionPct should be <= reductionPct since it includes instruction overhead
+    expect(result.netReductionPct).toBeLessThanOrEqual(result.reductionPct);
   });
 
   it('shows reduction for verbose text', () => {

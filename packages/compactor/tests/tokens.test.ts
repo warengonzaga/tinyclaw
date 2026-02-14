@@ -54,9 +54,10 @@ describe('truncateToTokenBudget', () => {
     // Should not cut in the middle of a word (no partial words)
     expect(result.length).toBeLessThan(text.length);
     // Each word in the result should be a complete word from the original
+    const originalWords = text.trim().split(/\s+/);
     const resultWords = result.trim().split(/\s+/);
     for (const w of resultWords) {
-      expect(text).toContain(w);
+      expect(originalWords.includes(w)).toBe(true);
     }
   });
 });

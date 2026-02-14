@@ -79,11 +79,18 @@ describe('compactBullets', () => {
     expect(result).toContain('three');
   });
 
-  it('keeps bullets for 1-2 items', () => {
-    const input = '- one\n- two';
+  it('keeps bullets with original prefix for 1-2 items', () => {
+    const input = '* one\n* two';
     const result = compactBullets(input);
-    expect(result).toContain('- one');
-    expect(result).toContain('- two');
+    expect(result).toContain('* one');
+    expect(result).toContain('* two');
+  });
+
+  it('preserves indentation for short lists', () => {
+    const input = '  + alpha\n  + beta';
+    const result = compactBullets(input);
+    expect(result).toContain('  + alpha');
+    expect(result).toContain('  + beta');
   });
 
   it('handles empty string', () => {
@@ -92,10 +99,18 @@ describe('compactBullets', () => {
 });
 
 describe('compressTableToKv', () => {
-  it('converts 2-column table to key:value', () => {
+  it('converts 2-column table to key:value with header', () => {
     const input = '| Key | Value |\n| --- | --- |\n| name | test |';
     const result = compressTableToKv(input);
+    expect(result).toContain('Key: Value');
     expect(result).toContain('name: test');
+  });
+
+  it('emits multi-column header row', () => {
+    const input = '| A | B | C |\n| --- | --- | --- |\n| 1 | 2 | 3 |';
+    const result = compressTableToKv(input);
+    expect(result).toContain('A | B | C');
+    expect(result).toContain('1 | 2 | 3');
   });
 
   it('passes non-table text through', () => {
