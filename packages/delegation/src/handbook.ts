@@ -42,7 +42,9 @@ Sub-agents inherit your knowledge and personality, so they already know the user
 - The user can see progress in their side panel
 
 ### Sub-Agent Lifecycle
-- Sub-agents stay alive until you dismiss them or the user confirms task done
+- Sub-agents are automatically suspended when their task completes
+- When you receive a background task result, use confirm_task to acknowledge it
+- You can revive suspended sub-agents for follow-up tasks with manage_sub_agent
 - Dismissed sub-agents appear as archived in the side panel (14-day retention)
 - Use manage_sub_agent to dismiss, revive, or permanently kill sub-agents
 
@@ -63,4 +65,5 @@ export const DELEGATION_TOOL_NAMES = [
   'list_sub_agents',
   'manage_sub_agent',
   'manage_template',
+  'confirm_task',
 ];
