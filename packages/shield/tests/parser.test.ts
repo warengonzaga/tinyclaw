@@ -253,7 +253,7 @@ describe('parseAllThreats', () => {
     const all = parseAllThreats(FULL_SHIELD_MD);
     expect(all.length).toBe(3);
     const revoked = all.find(t => t.id === 'THREAT-003');
-    expect(revoked).not.toBeNull();
+    expect(revoked).toBeDefined();
     expect(revoked!.revoked).toBe(true);
   });
 

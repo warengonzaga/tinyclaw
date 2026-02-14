@@ -125,7 +125,7 @@ describe('matchEvent — tool.call', () => {
     expect(matches).toHaveLength(0);
   });
 
-  it('should not match incompatible scope/category', () => {
+  it('should match compatible scope/category', () => {
     const threat = makeThreat({
       category: 'prompt', // prompt category
       recommendationAgent: 'BLOCK: tool.call execute_code',
