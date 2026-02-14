@@ -12,10 +12,10 @@ import { afterEach, beforeEach, describe, expect, test, mock, jest } from 'bun:t
 
 const mockIntro = mock(() => {});
 const mockOutro = mock(() => {});
-const mockSelect = mock(() => 'ollama');
+const mockSelect = mock(() => 'kimi-k2.5:cloud');
 const mockPassword = mock(() => 'test-api-key');
 const mockText = mock(() => 'https://ollama.com');
-const mockConfirm = mock(() => false);
+const mockConfirm = mock(() => true);
 const mockSpinnerStart = mock(() => {});
 const mockSpinnerStop = mock(() => {});
 const mockSpinner = mock(() => ({
@@ -90,6 +90,10 @@ mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
     isAvailable: mockIsAvailable,
   })),
+  DEFAULT_PROVIDER: 'ollama',
+  DEFAULT_MODEL: 'kimi-k2.5:cloud',
+  DEFAULT_BASE_URL: 'https://ollama.com',
+
 }));
 
 // ── Import after mocks are set up ────────────────────────────────────
@@ -134,7 +138,7 @@ beforeEach(() => {
   // Reset to default implementations
   mockIsCancel.mockImplementation(() => false);
   mockSecretsCheck.mockImplementation(() => Promise.resolve(false));
-  mockSelect.mockImplementation(() => 'ollama');
+  mockConfirm.mockImplementation(() => true);
   mockPassword.mockImplementation(() => 'test-api-key');
   mockText.mockImplementation(() => 'https://ollama.com');
   mockIsAvailable.mockImplementation(() => Promise.resolve(true));
@@ -169,16 +173,16 @@ describe('setupCommand', () => {
     );
   });
 
-  test('persists provider config via config manager', async () => {
+  test('persists provider config with default model', async () => {
     await setupCommand();
     expect(mockConfigSet).toHaveBeenCalledWith('providers.starterBrain', {
-      model: 'gpt-oss:120b-cloud',
+      model: 'kimi-k2.5:cloud',
       baseUrl: 'https://ollama.com',
       apiKeyRef: 'provider.ollama.apiKey',
     });
   });
 
-  test('verifies provider connectivity', async () => {
+  test('validates API key on entry', async () => {
     await setupCommand();
     expect(mockIsAvailable).toHaveBeenCalled();
   });
@@ -199,14 +203,19 @@ describe('setupCommand — cancellation', () => {
     await setupCommand();
     expect(mockOutro).toHaveBeenCalled();
     // Should not attempt to store anything
-    expect(mockSecretsStore).not.toHaveBeenCalled();
+    expect(mockConfigSet).not.toHaveBeenCalled();
   });
 });
 
 describe('setupCommand — existing configuration', () => {
   test('prompts to reconfigure when already configured', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
-    mockConfirm.mockImplementation(() => false);
+    // First confirm = security accepted, second = reconfigure declined
+    let callCount = 0;
+    mockConfirm.mockImplementation(() => {
+      callCount++;
+      return callCount === 1 ? true : false;
+    });
 
     await setupCommand();
     expect(mockConfirm).toHaveBeenCalled();
@@ -214,10 +223,14 @@ describe('setupCommand — existing configuration', () => {
 
   test('skips setup when user declines reconfiguration', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
-    mockConfirm.mockImplementation(() => false);
+    let callCount = 0;
+    mockConfirm.mockImplementation(() => {
+      callCount++;
+      return callCount === 1 ? true : false;
+    });
 
     await setupCommand();
-    expect(mockSecretsStore).not.toHaveBeenCalled();
+    expect(mockConfigSet).not.toHaveBeenCalled();
     expect(mockOutro).toHaveBeenCalled();
   });
 
