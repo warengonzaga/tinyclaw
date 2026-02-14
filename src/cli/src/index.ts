@@ -92,6 +92,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  logger.error('❌ Fatal error:', error);
+  logger.error('Fatal error:', error, { emoji: '❌' });
   process.exit(1);
 });
