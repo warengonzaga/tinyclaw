@@ -56,7 +56,7 @@ const ZH_PUNCT_RE = new RegExp(
  */
 export function normalizeCjkPunctuation(text: string): string {
   if (!text) return '';
-  let result = text.replace('\u2014\u2014', '--'); // em-dash pair
+  let result = text.replaceAll('\u2014\u2014', '--'); // em-dash pair (global)
   result = result.replace(ZH_PUNCT_RE, (m) => ZH_PUNCT_MAP[m] ?? m);
   return result;
 }
