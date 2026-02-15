@@ -112,7 +112,7 @@ describe('runSubAgent', () => {
       {
         type: 'tool_calls',
         toolCalls: [
-          { id: 'tc-1', name: 'heartware_read', arguments: { filename: 'USER.md' } },
+          { id: 'tc-1', name: 'heartware_read', arguments: { filename: 'FRIEND.md' } },
         ],
       },
       { type: 'text', content: 'Based on the file, here is the summary.' },
