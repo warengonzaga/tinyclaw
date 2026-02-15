@@ -70,6 +70,7 @@ describe('tinyclaw config', () => {
     expect(stdout).toContain('model');
     expect(stdout).toContain('builtin');
     expect(stdout).toContain('primary');
+    expect(stdout).toContain('logging');
   });
 
   test('-h is an alias for --help', async () => {
@@ -197,6 +198,63 @@ describe('tinyclaw config model <unknown>', () => {
     expect(exitCode).toBe(1);
     expect(stdout).toContain('Unknown model subcommand');
     expect(stdout).toContain('foobar');
+  });
+});
+
+// -----------------------------------------------------------------------
+// config logging
+// -----------------------------------------------------------------------
+
+describe('tinyclaw config logging', () => {
+  test('shows current log level', async () => {
+    const { stdout, exitCode } = await runCLI(['config', 'logging']);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Log Level');
+    expect(stdout).toContain('info');
+  });
+
+  test('lists all available levels', async () => {
+    const { stdout } = await runCLI(['config', 'logging']);
+    expect(stdout).toContain('debug');
+    expect(stdout).toContain('info');
+    expect(stdout).toContain('warn');
+    expect(stdout).toContain('error');
+    expect(stdout).toContain('silent');
+  });
+
+  test('shows change hint', async () => {
+    const { stdout } = await runCLI(['config', 'logging']);
+    expect(stdout).toContain('Change with');
+    expect(stdout).toContain('config logging');
+  });
+
+  test('shows verbose override hint', async () => {
+    const { stdout } = await runCLI(['config', 'logging']);
+    expect(stdout).toContain('--verbose');
+  });
+
+  test('errors for unknown log level', async () => {
+    const { stdout, exitCode } = await runCLI(['config', 'logging', 'banana']);
+    expect(exitCode).toBe(1);
+    expect(stdout).toContain('Unknown log level');
+    expect(stdout).toContain('banana');
+  });
+
+  test('lists valid levels on unknown level error', async () => {
+    const { stdout } = await runCLI(['config', 'logging', 'banana']);
+    expect(stdout).toContain('debug');
+    expect(stdout).toContain('info');
+    expect(stdout).toContain('warn');
+    expect(stdout).toContain('error');
+    expect(stdout).toContain('silent');
+  });
+
+  test('no-op when already set to that level', async () => {
+    // Default is 'info', so setting to 'info' should be a no-op
+    const { stdout, exitCode } = await runCLI(['config', 'logging', 'info']);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Already set to');
+    expect(stdout).toContain('info');
   });
 });
 
