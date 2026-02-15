@@ -1,27 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  /* Ultra-dark theme */
-  --color-bg-titlebar: #060708;
-  --color-bg-primary: #08090a;
-  --color-bg-secondary: #0d0e10;
-  --color-bg-tertiary: #131416;
-  --color-bg-modifier-hover: #1a1c20;
-  --color-bg-modifier-active: #22252a;
+  /* Ant Colony theme — neutral blacks + dark brown accents */
+  --color-bg-titlebar: #050505;
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #171717;
+  --color-bg-modifier-hover: #1e1e1e;
+  --color-bg-modifier-active: #262626;
 
-  --color-text-normal: #dbdee1;
-  --color-text-muted: #949ba4;
-  --color-text-link: #00a8fc;
+  --color-text-normal: #e0e0e0;
+  --color-text-muted: #8a8a8a;
+  --color-text-link: #c98540;
 
-  --color-brand: #5865f2;
-  --color-brand-hover: #4752c4;
-  --color-green: #23a55a;
-  --color-yellow: #f0b232;
-  --color-red: #f23f43;
-  --color-status-offline: #80848e;
+  --color-brand: #8b5a2b;
+  --color-brand-hover: #6d4422;
+  --color-green: #39ff14;
+  --color-yellow: #c49530;
+  --color-red: #b24035;
+  --color-status-offline: #666666;
+  --color-led-off: #1a2a12;
+  --color-led-bezel: #0f0f0f;
 
-  --color-input-bg: #1a1c20;
-  --color-scrollbar-thin-thumb: #1a1c20;
+  --color-input-bg: #1a1a1a;
+  --color-scrollbar-thin-thumb: #1e1e1e;
   --color-scrollbar-thin-track: transparent;
 }
 
@@ -180,14 +182,31 @@ html, body {
   overflow: hidden;
 }
 
-/* Online status pulse */
-@keyframes status-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+/* LED status state classes (used by AvatarLed component) */
+
+.led-online {
+  background: var(--color-green);
+  box-shadow:
+    0 0 3px var(--color-green),
+    0 0 8px rgba(57, 255, 20, 0.4),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
-.status-online {
-  animation: status-pulse 3s ease-in-out infinite;
+.led-offline {
+  background: var(--color-led-off);
+  box-shadow:
+    inset 0 -1px 2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.led-checking {
+  background: var(--color-yellow);
+  box-shadow:
+    0 0 3px var(--color-yellow),
+    0 0 6px rgba(196, 149, 48, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 /* Title bar icon links */
