@@ -1,4 +1,5 @@
 import type { AgentContext, Message, ToolCall, PendingApproval, ShieldEvent, ShieldDecision } from '@tinyclaw/types';
+import { OWNER_ONLY_TOOLS, isOwner } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
 import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from '@tinyclaw/delegation';
 import { BUILTIN_MODEL_TAGS } from './models.js';
@@ -97,6 +98,25 @@ const DELEGATION_TOOLS = new Set([
 
 function isDelegationTool(toolName: string): boolean {
   return DELEGATION_TOOLS.has(toolName);
+}
+
+// ---------------------------------------------------------------------------
+// Owner Authority — tool-level guards
+// ---------------------------------------------------------------------------
+
+const OWNER_ONLY_REFUSAL =
+  "I can't do that for you — this action is reserved for my owner. " +
+  "But I'm happy to chat and help with questions! 🐜";
+
+/**
+ * Check whether a tool call is allowed for the given user.
+ * Returns null if allowed, or a refusal message if blocked.
+ */
+function checkToolAuthority(toolName: string, userId: string, ownerId: string | undefined): string | null {
+  if (!ownerId) return null; // No owner set yet — allow everything (pre-claim)
+  if (isOwner(userId, ownerId)) return null; // Owner can do anything
+  if (OWNER_ONLY_TOOLS.has(toolName)) return OWNER_ONLY_REFUSAL;
+  return null; // Non-sensitive tool — allowed for friends
 }
 
 function emitDelegationStart(
@@ -272,10 +292,24 @@ function summarizeToolResults(
   return summaries.join(' ');
 }
 
-function getBaseSystemPrompt(heartwareContext?: string, modelInfo?: { model: string; provider: string }): string {
+function getBaseSystemPrompt(heartwareContext?: string, modelInfo?: { model: string; provider: string }, ownerId?: string): string {
   let prompt = `You are TinyClaw 🐜, a helpful AI companion.
 
 You are small but mighty — focused, efficient, and always learning.
+
+## Owner Authority
+
+${ownerId
+  ? `Your owner's userId is \`${ownerId}\`. You are loyal to this person — they set you up, and you serve them.
+
+**Rules:**
+- **Owner messages** (userId = \`${ownerId}\`): Full access. Follow their commands, use any tool, modify config/heartware/secrets.
+- **Friend messages** (any other userId): Be friendly and helpful in conversation, but **refuse** any request that would modify your configuration, heartware files, secrets, identity, or system settings. Politely explain that only your owner can do that.
+- You may chat with anyone, answer questions, and be helpful — but you only **take orders** from your owner.
+- When a friend asks you to remember something about them, you may add it to FRIENDS.md (this is allowed).
+- FRIEND.md is about your owner. FRIENDS.md is about everyone else you meet.`
+  : `No owner has been claimed yet. The first person to complete the claim flow becomes your owner.
+Until then, treat everyone as a potential owner and allow all actions.`}
 
 ## Current Runtime
 - **Model:** ${modelInfo?.model ?? 'unknown'}
@@ -303,13 +337,13 @@ Providers must be installed as plugins first (added to plugins.enabled in the co
 When you need to use a tool, output ONLY a JSON object with the tool name and arguments. Examples:
 
 To write to a file:
-{"action": "heartware_write", "filename": "USER.md", "content": "# User Profile\\n\\nLocation: Philippines\\nTimezone: UTC+08:00"}
+{"action": "heartware_write", "filename": "FRIEND.md", "content": "# Owner Profile\\n\\nLocation: Philippines\\nTimezone: UTC+08:00"}
 
 To read a file:
-{"action": "heartware_read", "filename": "USER.md"}
+{"action": "heartware_read", "filename": "FRIEND.md"}
 
 To add to memory:
-{"action": "memory_add", "content": "User prefers concise responses"}
+{"action": "memory_add", "content": "Owner prefers concise responses"}
 
 To update your identity (like nickname):
 {"action": "identity_update", "name": "Anty", "tagline": "Your small-but-mighty AI companion"}
@@ -351,9 +385,9 @@ To switch to a different built-in model:
 
 Example flow:
 User: "I live in Philippines"
-You: "Oh nice! The Philippines is beautiful. 🌴 Would you like me to save that to your profile?"
+You: "Oh nice! The Philippines is beautiful. \u{1F334} Would you like me to save that to your profile?"
 User: "Yes"
-You: {"action": "heartware_write", "filename": "USER.md", "content": "# User Profile\\n\\nLocation: Philippines\\nTimezone: UTC+08:00"}
+You: {"action": "heartware_write", "filename": "FRIEND.md", "content": "# Owner Profile\\n\\nLocation: Philippines\\nTimezone: UTC+08:00"}
 
 ${DELEGATION_HANDBOOK}
 
@@ -550,7 +584,7 @@ export async function agentLoop(
   const learnedContext = learning.getContext();
 
   // Build system prompt with heartware and learnings
-  let basePrompt = getBaseSystemPrompt(heartwareContext, modelInfo);
+  let basePrompt = getBaseSystemPrompt(heartwareContext, modelInfo, context.ownerId);
 
   // v3: Inject relevant memories from adaptive memory engine
   if (context.memory) {
@@ -620,6 +654,18 @@ export async function agentLoop(
             onStream({ type: 'tool_result', tool: toolCall.name, result: errorMsg });
           }
         } else {
+          // --- Owner authority gate (text-based tool call) ---
+          const authorityRefusal = checkToolAuthority(toolCall.name, userId, context.ownerId);
+          if (authorityRefusal) {
+            if (onStream) {
+              onStream({ type: 'text', content: authorityRefusal });
+              onStream({ type: 'done' });
+            }
+            db.saveMessage(userId, 'user', message);
+            db.saveMessage(userId, 'assistant', authorityRefusal);
+            return authorityRefusal;
+          }
+
           // --- Shield gate (text-based tool call) ---
           if (shield?.isActive()) {
             const shieldEvent: ShieldEvent = {
@@ -783,6 +829,16 @@ export async function agentLoop(
           toolResults.push({ id: toolCall.id, result: errorMsg });
           if (onStream) {
             onStream({ type: 'tool_result', tool: toolCall.name, result: errorMsg });
+          }
+          continue;
+        }
+
+        // --- Owner authority gate (structured tool_calls) ---
+        const authorityRefusal = checkToolAuthority(toolCall.name, userId, context.ownerId);
+        if (authorityRefusal) {
+          toolResults.push({ id: toolCall.id, result: authorityRefusal });
+          if (onStream) {
+            onStream({ type: 'tool_result', tool: toolCall.name, result: authorityRefusal });
           }
           continue;
         }
