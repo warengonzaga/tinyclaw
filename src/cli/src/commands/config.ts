@@ -2,7 +2,7 @@
  * Config Command
  *
  * CLI interface for managing TinyClaw configuration - models, providers,
- * and routing settings.
+ * logging, and routing settings.
  *
  * Usage:
  *   tinyclaw config model                 Show current model configuration
@@ -10,6 +10,8 @@
  *   tinyclaw config model builtin <tag>   Switch the built-in model
  *   tinyclaw config model primary         Show current primary provider
  *   tinyclaw config model primary clear   Remove primary provider override
+ *   tinyclaw config logging               Show current log level
+ *   tinyclaw config logging <level>       Set log level (debug|info|warn|error|silent)
  *
  * Two-tier model hierarchy:
  *   - Built-in (Ollama Cloud) = free fallback, always available
@@ -30,6 +32,10 @@ import { theme } from '../ui/theme.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Valid log levels matching the Zod schema in @tinyclaw/config. */
+const LOG_LEVELS = ['debug', 'info', 'warn', 'error', 'silent'] as const;
+type LogLevel = (typeof LOG_LEVELS)[number];
+
 function printUsage(): void {
   console.log();
   console.log('  ' + theme.label('Usage'));
@@ -38,6 +44,9 @@ function printUsage(): void {
   console.log(`    ${theme.cmd('tinyclaw config model builtin')} <tag>   Switch the built-in model`);
   console.log(`    ${theme.cmd('tinyclaw config model primary')}         Show current primary provider`);
   console.log(`    ${theme.cmd('tinyclaw config model primary clear')}   Remove primary provider override`);
+  console.log();
+  console.log(`    ${theme.cmd('tinyclaw config logging')}               Show current log level`);
+  console.log(`    ${theme.cmd('tinyclaw config logging')} <level>       Set log level (debug|info|warn|error|silent)`);
   console.log();
 }
 
@@ -205,6 +214,67 @@ async function handlePrimary(configManager: ConfigManager, action?: string): Pro
 }
 
 // ---------------------------------------------------------------------------
+// Logging subcommands
+// ---------------------------------------------------------------------------
+
+/**
+ * `tinyclaw config logging` - Show current log level
+ */
+async function showLogLevel(configManager: ConfigManager): Promise<void> {
+  const current = configManager.get<string>('logging.level') ?? 'info';
+
+  console.log();
+  console.log('  ' + theme.label('Log Level'));
+  console.log();
+
+  for (const level of LOG_LEVELS) {
+    const isCurrent = level === current;
+    const marker = isCurrent ? theme.success('●') : theme.dim('○');
+    const name = isCurrent ? theme.brand(level) : level;
+    console.log(`  ${marker} ${name}`);
+  }
+
+  console.log();
+  console.log(`  ${theme.dim('Change with:')} ${theme.cmd('tinyclaw config logging <level>')}`);
+  console.log(`  ${theme.dim('Override per session with:')} ${theme.cmd('tinyclaw start --verbose')}`);
+  console.log();
+}
+
+/**
+ * `tinyclaw config logging <level>` - Set the persistent log level
+ */
+async function setLogLevel(configManager: ConfigManager, level: string): Promise<void> {
+  if (!LOG_LEVELS.includes(level as LogLevel)) {
+    console.log();
+    console.log(theme.error(`  ✖ Unknown log level: ${level}`));
+    console.log();
+    console.log(`  Available levels:`);
+    for (const l of LOG_LEVELS) {
+      console.log(`    ${theme.dim('•')} ${l}`);
+    }
+    console.log();
+    process.exit(1);
+  }
+
+  const current = configManager.get<string>('logging.level') ?? 'info';
+
+  if (current === level) {
+    console.log();
+    console.log(`  ${theme.dim('Already set to')} ${theme.brand(level)}`);
+    console.log();
+    return;
+  }
+
+  configManager.set('logging.level', level);
+
+  console.log();
+  console.log(`  ${theme.success('✔')} Log level set to ${theme.brand(level)}`);
+  console.log();
+  console.log(`  ${theme.dim('Restart TinyClaw for changes to take effect.')}`);
+  console.log();
+}
+
+// ---------------------------------------------------------------------------
 // Main entry
 // ---------------------------------------------------------------------------
 
@@ -219,7 +289,7 @@ export async function configCommand(args: string[]): Promise<void> {
     return;
   }
 
-  if (sub !== 'model') {
+  if (sub !== 'model' && sub !== 'logging') {
     console.log(theme.error(`  Unknown config subcommand: ${sub}`));
     printUsage();
     process.exit(1);
@@ -229,6 +299,18 @@ export async function configCommand(args: string[]): Promise<void> {
   const configManager = await ConfigManager.create();
 
   try {
+    // ---- logging ----
+    if (sub === 'logging') {
+      const level = args[1];
+      if (!level) {
+        await showLogLevel(configManager);
+      } else {
+        await setLogLevel(configManager, level);
+      }
+      return;
+    }
+
+    // ---- model ----
     const modelSub = args[1];
 
     switch (modelSub) {
