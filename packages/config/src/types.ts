@@ -98,6 +98,12 @@ export const TinyClawConfigSchema = z.object({
     }).optional(),
   }).optional(),
 
+  /** Logging settings */
+  logging: z.object({
+    /** Log level: 'debug' | 'info' | 'warn' | 'error' | 'silent'. Default: 'info' */
+    level: z.enum(['debug', 'info', 'warn', 'error', 'silent']).optional(),
+  }).optional(),
+
   /** Compaction settings */
   compaction: z.object({
     /** Message count threshold to trigger compaction. Default: 60 */
@@ -171,6 +177,9 @@ export const CONFIG_DEFAULTS: Partial<TinyClawConfigData> = {
       complex: 'ollama-cloud',
       reasoning: 'ollama-cloud',
     },
+  },
+  logging: {
+    level: 'info',
   },
   compaction: {
     threshold: 60,
