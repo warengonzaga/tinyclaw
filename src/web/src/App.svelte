@@ -2,6 +2,7 @@
   import { onMount, tick } from 'svelte'
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
+  import AvatarLed from './AvatarLed.svelte'
 
   marked.setOptions({
     breaks: true,
@@ -559,12 +560,7 @@
   <!-- Profile Bar -->
   <div class="h-12 min-h-12 px-4 flex items-center border-b border-bg-modifier-active bg-bg-tertiary shadow-sm">
     <div class="flex items-center gap-2.5">
-      <div class="relative">
-        <div class="w-8 h-8 rounded-full bg-green flex items-center justify-center">
-          <span class="text-base">🐾</span>
-        </div>
-        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-bg-tertiary {status === 'online' ? 'bg-green status-online' : status === 'offline' ? 'bg-status-offline' : 'bg-yellow'}"></span>
-      </div>
+      <AvatarLed size={32} {status} />
       <div class="flex flex-col">
         <span class="text-sm font-semibold text-text-normal leading-tight">TinyClaw</span>
         <span class="text-[11px] {status === 'offline' ? 'text-text-muted/50' : 'text-text-muted'} leading-tight capitalize">{status}</span>
@@ -830,12 +826,7 @@
 
       <!-- Avatar overlapping banner -->
       <div class="px-4 -mt-8 mb-2">
-        <div class="relative inline-block">
-          <div class="w-16 h-16 rounded-full bg-green flex items-center justify-center border-4 border-bg-secondary">
-            <span class="text-2xl">🐾</span>
-          </div>
-          <span class="absolute bottom-1 right-0 w-4 h-4 rounded-full border-[3px] border-bg-secondary {status === 'online' ? 'bg-green status-online' : status === 'offline' ? 'bg-status-offline' : 'bg-yellow'}"></span>
-        </div>
+        <AvatarLed size={64} {status} ringColor="var(--color-bg-secondary)" cutoutColor="var(--color-bg-secondary)" />
       </div>
 
       <!-- Name -->
