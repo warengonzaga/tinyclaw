@@ -60,6 +60,80 @@ export interface Tool {
 }
 
 // ---------------------------------------------------------------------------
+// Owner Authority
+// ---------------------------------------------------------------------------
+
+/**
+ * Authority tier determines what a user is allowed to do.
+ *
+ * - **owner**: Full control — config, secrets, heartware, delegation, model switching, tools.
+ *   There is exactly one owner per TinyClaw instance (the "assigned human").
+ * - **friend**: Chat only — TinyClaw is friendly and remembers preferences,
+ *   but refuses commands that modify its internals or take action on the owner's behalf.
+ */
+export type AuthorityTier = 'owner' | 'friend';
+
+/**
+ * Owner authority configuration stored in config.
+ *
+ * Set during first-time claim flow: TinyClaw generates a claim token on boot,
+ * the first person to enter it in the web UI becomes the owner.
+ */
+export interface OwnerAuthority {
+  /** The userId of the owner (e.g. 'web:owner', 'discord:123456'). */
+  ownerId: string;
+  /** SHA-256 hash of the persistent session token (never store raw tokens). */
+  sessionTokenHash: string;
+  /** Timestamp when ownership was claimed. */
+  claimedAt: number;
+}
+
+/**
+ * Sensitive tools that only the owner may invoke.
+ * Non-owner users receive a polite refusal when these are called.
+ */
+export const OWNER_ONLY_TOOLS: ReadonlySet<string> = new Set([
+  // Heartware modifications
+  'heartware_write',
+  'identity_update',
+  'soul_update',
+  'soul_info',
+  'soul_explain',
+  'preferences_set',
+  'bootstrap_complete',
+  // System control
+  'builtin_model_switch',
+  'primary_model_list',
+  'primary_model_set',
+  'primary_model_clear',
+  'tinyclaw_restart',
+  // Code execution
+  'execute_code',
+  // Delegation
+  'delegate_task',
+  'delegate_background',
+  'delegate_to_existing',
+  'manage_sub_agent',
+  'confirm_task',
+  'list_sub_agents',
+  // Config & secrets (pairing tools are dynamically added)
+  'config_get',
+  'config_set',
+  'config_reset',
+  'secrets_store',
+  'secrets_check',
+  'secrets_list',
+]);
+
+/**
+ * Check whether a userId has owner authority.
+ */
+export function isOwner(userId: string, ownerId: string | undefined): boolean {
+  if (!ownerId) return false;
+  return userId === ownerId;
+}
+
+// ---------------------------------------------------------------------------
 // Agent Context
 // ---------------------------------------------------------------------------
 
@@ -75,6 +149,8 @@ export interface AgentContext {
   modelName?: string;
   /** Human-readable provider name (e.g. 'Ollama Cloud'). */
   providerName?: string;
+  /** The userId of the instance owner. */
+  ownerId?: string;
   /** Adaptive memory engine (v3) — episodic memory + FTS5 + temporal decay. */
   memory?: MemoryEngine;
   /** Runtime SHIELD.md enforcement engine. */
