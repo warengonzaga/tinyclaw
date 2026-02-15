@@ -1,9 +1,10 @@
 /**
  * Tests for the setup command.
  *
- * Mocks @clack/prompts, @tinyclaw/secrets, @tinyclaw/config, and
- * @tinyclaw/core to test the setup wizard logic without user
- * interaction or real filesystem side-effects.
+ * Mocks @clack/prompts, @tinyclaw/secrets, @tinyclaw/config,
+ * @tinyclaw/core, @tinyclaw/heartware, and @tinyclaw/logger to
+ * test the setup wizard logic without user interaction or real
+ * filesystem side-effects.
  */
 
 import { afterEach, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
@@ -12,9 +13,10 @@ import { afterEach, beforeEach, describe, expect, test, mock, jest } from 'bun:t
 
 const mockIntro = mock(() => {});
 const mockOutro = mock(() => {});
-const mockSelect = mock(() => 'kimi-k2.5:cloud');
+const mockNote = mock(() => {});
+const mockSelect = mock(() => 'keep');
 const mockPassword = mock(() => 'test-api-key');
-const mockText = mock(() => 'https://ollama.com');
+const mockText = mock(() => '');
 const mockConfirm = mock(() => true);
 const mockSpinnerStart = mock(() => {});
 const mockSpinnerStop = mock(() => {});
@@ -31,6 +33,7 @@ const mockIsCancel = mock(() => false);
 mock.module('@clack/prompts', () => ({
   intro: mockIntro,
   outro: mockOutro,
+  note: mockNote,
   select: mockSelect,
   password: mockPassword,
   text: mockText,
@@ -93,7 +96,40 @@ mock.module('@tinyclaw/core', () => ({
   DEFAULT_PROVIDER: 'ollama',
   DEFAULT_MODEL: 'kimi-k2.5:cloud',
   DEFAULT_BASE_URL: 'https://ollama.com',
+}));
 
+// ── Mock @tinyclaw/heartware ────────────────────────────────────────
+
+const mockParseSeed = mock((input: unknown) => {
+  const n = Number(input);
+  if (!input || isNaN(n)) return 42;
+  return n;
+});
+const mockGenerateRandomSeed = mock(() => 42);
+const mockGenerateSoul = mock(() => ({
+  traits: {
+    character: { suggestedName: 'TestClaw' },
+    values: ['curiosity', 'kindness'],
+  },
+}));
+
+mock.module('@tinyclaw/heartware', () => ({
+  parseSeed: mockParseSeed,
+  generateRandomSeed: mockGenerateRandomSeed,
+  generateSoul: mockGenerateSoul,
+}));
+
+// ── Mock @tinyclaw/logger ───────────────────────────────────────────
+
+mock.module('@tinyclaw/logger', () => ({
+  setLogMode: mock(() => {}),
+  logger: {
+    log: mock(() => {}),
+    info: mock(() => {}),
+    warn: mock(() => {}),
+    error: mock(() => {}),
+    debug: mock(() => {}),
+  },
 }));
 
 // ── Import after mocks are set up ────────────────────────────────────
@@ -115,6 +151,7 @@ beforeEach(() => {
   // Clear all mock call counts and reset to defaults
   mockIntro.mockClear();
   mockOutro.mockClear();
+  mockNote.mockClear();
   mockSelect.mockClear();
   mockPassword.mockClear();
   mockText.mockClear();
@@ -134,14 +171,30 @@ beforeEach(() => {
   mockConfigSet.mockClear();
   mockConfigClose.mockClear();
   mockIsAvailable.mockClear();
+  mockParseSeed.mockClear();
+  mockGenerateRandomSeed.mockClear();
+  mockGenerateSoul.mockClear();
 
   // Reset to default implementations
   mockIsCancel.mockImplementation(() => false);
   mockSecretsCheck.mockImplementation(() => Promise.resolve(false));
   mockConfirm.mockImplementation(() => true);
   mockPassword.mockImplementation(() => 'test-api-key');
-  mockText.mockImplementation(() => 'https://ollama.com');
+  mockText.mockImplementation(() => '');
+  mockSelect.mockImplementation(() => 'keep');
   mockIsAvailable.mockImplementation(() => Promise.resolve(true));
+  mockParseSeed.mockImplementation((input: unknown) => {
+    const n = Number(input);
+    if (!input || isNaN(n)) return 42;
+    return n;
+  });
+  mockGenerateRandomSeed.mockImplementation(() => 42);
+  mockGenerateSoul.mockImplementation(() => ({
+    traits: {
+      character: { suggestedName: 'TestClaw' },
+      values: ['curiosity', 'kindness'],
+    },
+  }));
 });
 
 afterEach(() => {
@@ -210,7 +263,11 @@ describe('setupCommand — cancellation', () => {
 describe('setupCommand — existing configuration', () => {
   test('prompts to reconfigure when already configured', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
-    // First confirm = security accepted, second = reconfigure declined
+    // Return a saved seed so the setup detects "fully configured"
+    mockConfigGet.mockImplementation((key: string) =>
+      key === 'heartware.seed' ? 42 : undefined,
+    );
+    // confirm calls: risk acceptance → true, reconfigure → false (decline)
     let callCount = 0;
     mockConfirm.mockImplementation(() => {
       callCount++;
@@ -223,6 +280,9 @@ describe('setupCommand — existing configuration', () => {
 
   test('skips setup when user declines reconfiguration', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
+    mockConfigGet.mockImplementation((key: string) =>
+      key === 'heartware.seed' ? 42 : undefined,
+    );
     let callCount = 0;
     mockConfirm.mockImplementation(() => {
       callCount++;
@@ -230,12 +290,15 @@ describe('setupCommand — existing configuration', () => {
     });
 
     await setupCommand();
-    expect(mockConfigSet).not.toHaveBeenCalled();
+    expect(mockSecretsStore).not.toHaveBeenCalled();
     expect(mockOutro).toHaveBeenCalled();
   });
 
   test('proceeds with setup when user confirms reconfiguration', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
+    mockConfigGet.mockImplementation((key: string) =>
+      key === 'heartware.seed' ? 42 : undefined,
+    );
     mockConfirm.mockImplementation(() => true);
 
     await setupCommand();

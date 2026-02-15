@@ -57,6 +57,8 @@ const mockDbClose = mock(() => {});
 mock.module('@tinyclaw/core', () => ({
   createDatabase: mock(() => ({
     close: mockDbClose,
+    getActiveSubAgents: mock(() => []),
+    getUserBackgroundTasks: mock(() => []),
   })),
   agentLoop: mock(() => Promise.resolve('agent response')),
   createOllamaProvider: mock(() => ({
@@ -117,7 +119,9 @@ mock.module('@tinyclaw/logger', () => ({
     info: mock(() => {}),
     warn: mock(() => {}),
     error: mock(() => {}),
+    debug: mock(() => {}),
   },
+  setLogMode: mock(() => {}),
 }));
 
 // ── Mock @tinyclaw/router ───────────────────────────────────────────
@@ -144,6 +148,11 @@ mock.module('@tinyclaw/heartware', () => ({
   })),
   createHeartwareTools: mock(() => []),
   loadHeartwareContext: mock(() => Promise.resolve({})),
+  loadShieldContent: mock(() => Promise.resolve('')),
+  parseSeed: mock((input: unknown) => {
+    const n = Number(input);
+    return isNaN(n) ? undefined : n;
+  }),
 }));
 
 // ── Mock @tinyclaw/learning ─────────────────────────────────────────
