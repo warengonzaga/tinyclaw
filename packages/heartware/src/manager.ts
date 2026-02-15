@@ -372,7 +372,8 @@ export class HeartwareManager {
    * Creates all 8 heartware configuration files:
    * - IDENTITY.md
    * - SOUL.md
-   * - USER.md
+   * - FRIEND.md
+   * - FRIENDS.md
    * - AGENTS.md
    * - TOOLS.md
    * - SHIELD.md
@@ -383,7 +384,8 @@ export class HeartwareManager {
     const templateFiles = [
       'IDENTITY.md',
       'SOUL.md',
-      'USER.md',
+      'FRIEND.md',
+      'FRIENDS.md',
       'AGENTS.md',
       'TOOLS.md',
       'SHIELD.md',

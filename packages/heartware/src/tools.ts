@@ -29,7 +29,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
       name: 'heartware_read',
       description:
         'Read a heartware configuration file or daily memory log. ' +
-        'Allowed files: IDENTITY.md, SOUL.md, USER.md, AGENTS.md, TOOLS.md, SHIELD.md, MEMORY.md, BOOTSTRAP.md, memory/YYYY-MM-DD.md',
+        'Allowed files: IDENTITY.md, SOUL.md, FRIEND.md, FRIENDS.md, AGENTS.md, TOOLS.md, SHIELD.md, MEMORY.md, BOOTSTRAP.md, memory/YYYY-MM-DD.md',
       parameters: {
         type: 'object',
         properties: {
@@ -488,7 +488,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
     {
       name: 'preferences_set',
       description:
-        'Set user preferences in USER.md. ' +
+        'Set owner preferences in FRIEND.md. ' +
         'Supports nested keys with dot notation (e.g., "timezone", "communication.style")',
       parameters: {
         type: 'object',
@@ -509,7 +509,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         const value = args.value as string;
 
         try {
-          let user = await manager.read('USER.md');
+          let user = await manager.read('FRIEND.md');
 
           // Simple append to Notes section
           const notesSection = '## Notes';
@@ -522,7 +522,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
             user += `\n\n## Notes\n- **${key}:** ${value}`;
           }
 
-          await manager.write('USER.md', user);
+          await manager.write('FRIEND.md', user);
           return `Set preference ${key} = ${value}`;
         } catch (err) {
           return `Error setting preference: ${(err as Error).message}`;

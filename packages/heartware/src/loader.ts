@@ -4,7 +4,8 @@
  * Loads heartware configuration files into agent context in priority order:
  * 1. SOUL.md - Personality first
  * 2. IDENTITY.md - Who the agent is
- * 3. USER.md - Who the user is
+ * 3. FRIEND.md - Who the owner is
+ * 3b. FRIENDS.md - People I've met (non-owner friends)
  * 4. AGENTS.md - Operating instructions
  * 5. TOOLS.md - Tool usage notes
  * 6. SHIELD.md - Runtime security policy
@@ -32,7 +33,8 @@ export async function loadHeartwareContext(
   const loadOrder = [
     'SOUL.md',      // Load first - defines personality
     'IDENTITY.md',  // Who the agent is
-    'USER.md',      // Who the user is
+    'FRIEND.md',    // Who the owner is
+    'FRIENDS.md',   // People I've met (non-owner friends)
     'AGENTS.md',    // Operating instructions
     'TOOLS.md',     // Tool usage notes
     'SHIELD.md'     // Runtime security policy

@@ -112,7 +112,8 @@ export interface RateLimitConfig {
 export type AllowedFile =
   | 'IDENTITY.md'
   | 'SOUL.md'
-  | 'USER.md'
+  | 'FRIEND.md'
+  | 'FRIENDS.md'
   | 'AGENTS.md'
   | 'TOOLS.md'
   | 'MEMORY.md'

@@ -27,7 +27,8 @@ import type {
 const ALLOWED_FILES: readonly string[] = [
   'IDENTITY.md',
   'SOUL.md',
-  'USER.md',
+  'FRIEND.md',
+  'FRIENDS.md',
   'AGENTS.md',
   'TOOLS.md',
   'MEMORY.md',

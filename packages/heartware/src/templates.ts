@@ -26,7 +26,9 @@ This file defines my identity. Update it anytime you want me to adjust how I pre
 > The same seed always produces the same soul. SOUL.md is immutable once generated.
 `,
 
-  'USER.md': `# USER.md - About You
+  'FRIEND.md': `# FRIEND.md - About My Owner
+
+This is my owner — the person who set me up and who I'm loyal to.
 
 - **Name:** [Not set yet]
 - **Preferred address:** [Not set yet]
@@ -38,6 +40,18 @@ This file defines my identity. Update it anytime you want me to adjust how I pre
 
 ---
 This file helps me understand you better. Update it anytime your preferences change.
+`,
+
+  'FRIENDS.md': `# FRIENDS.md - People I've Met
+
+This file records notes about friends (non-owner users) I interact with
+across channels like Discord, web chat, etc.
+
+## Friends
+[I'll add entries here as I meet and learn about new people]
+
+---
+Each friend gets a section with their name, channel, and things I've learned about them.
 `,
 
   'AGENTS.md': `# AGENTS.md - Operating Instructions
@@ -489,7 +503,7 @@ This is my first time running. Let's figure out who I am together.
 
 Ask me these questions naturally, and I'll update my files based on what we discuss:
 - Who am I? (my identity)
-- Who are you? (user profile)
+- Who are you? (owner profile)
 - How should I behave? (personality guidelines)
 
 Once we're done, I'll delete this file and we'll never need it again.
@@ -498,7 +512,7 @@ Once we're done, I'll delete this file and we'll never need it again.
 
 **Note to self:** After learning these things:
 1. Update IDENTITY.md with my name, emoji, vibe
-2. Update USER.md with user's name and preferences
+2. Update FRIEND.md with my owner's name and preferences
 3. Delete this BOOTSTRAP.md file
 
 > **Note:** SOUL.md is generated from my soul seed and cannot be changed.
