@@ -96,7 +96,6 @@
     border-radius: 50%;
     border-style: solid;
     border-color: var(--color-bg-tertiary);
-    background: var(--color-led-off);
     box-sizing: border-box;
   }
 </style>

@@ -15,7 +15,7 @@
 
   --color-brand: #8b5a2b;
   --color-brand-hover: #6d4422;
-  --color-green: #39ff14;
+  --color-green: #7AB648;
   --color-yellow: #c49530;
   --color-red: #b24035;
   --color-status-offline: #666666;
@@ -237,12 +237,60 @@ html, body {
 /* LED status state classes (used by AvatarLed component) */
 
 .led-online {
-  background: var(--color-green);
+  background: #7AB648;
   box-shadow:
     0 0 3px var(--color-green),
-    0 0 8px rgba(57, 255, 20, 0.4),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
-    inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    0 0 8px rgba(122, 182, 72, 0.4);
+  animation: led-power-on 1s ease-out forwards, led-flicker 12s 1s infinite step-end;
+}
+
+/* Power-on: boot up from dead LED to full green */
+@keyframes led-power-on {
+  0% {
+    background: var(--color-led-off);
+    box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  }
+  20% {
+    background: #2a4a1a;
+    box-shadow: none;
+  }
+  35% {
+    background: #4a7830;
+    box-shadow: 0 0 1px rgba(122, 182, 72, 0.15);
+  }
+  45% {
+    background: var(--color-led-off);
+    box-shadow: none;
+  }
+  55% {
+    background: #5a8a35;
+    box-shadow: 0 0 2px rgba(122, 182, 72, 0.2);
+  }
+  65% {
+    background: var(--color-led-off);
+    box-shadow: none;
+  }
+  75% {
+    background: #6a9c40;
+    box-shadow: 0 0 2px rgba(122, 182, 72, 0.3), 0 0 5px rgba(122, 182, 72, 0.2);
+  }
+  100% {
+    background: #7AB648;
+    box-shadow: 0 0 3px var(--color-green), 0 0 8px rgba(122, 182, 72, 0.4);
+  }
+}
+
+@keyframes led-flicker {
+  0%   { background: #7AB648; box-shadow: 0 0 3px var(--color-green), 0 0 8px rgba(122, 182, 72, 0.4); }
+  /* brief double-glitch at ~14% */
+  14%  { background: var(--color-led-off); box-shadow: inset 0 -1px 2px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.05); }
+  14.5%{ background: #7AB648; box-shadow: 0 0 3px var(--color-green), 0 0 8px rgba(122, 182, 72, 0.4); }
+  15%  { background: var(--color-led-off); box-shadow: inset 0 -1px 2px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.05); }
+  15.3%{ background: #7AB648; box-shadow: 0 0 3px var(--color-green), 0 0 8px rgba(122, 182, 72, 0.4); }
+  /* single blip at ~73% */
+  73%  { background: var(--color-led-off); box-shadow: inset 0 -1px 2px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.05); }
+  73.4%{ background: #7AB648; box-shadow: 0 0 3px var(--color-green), 0 0 8px rgba(122, 182, 72, 0.4); }
+  100% { background: #7AB648; box-shadow: 0 0 3px var(--color-green), 0 0 8px rgba(122, 182, 72, 0.4); }
 }
 
 .led-offline {
@@ -250,6 +298,42 @@ html, body {
   box-shadow:
     inset 0 -1px 2px rgba(0, 0, 0, 0.4),
     inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  animation: led-power-off 1.2s ease-out forwards;
+}
+
+@keyframes led-power-off {
+  0% {
+    background: #7AB648;
+    box-shadow: 0 0 3px var(--color-green), 0 0 8px rgba(122, 182, 72, 0.4);
+  }
+  15% {
+    background: #5a8a35;
+    box-shadow: 0 0 2px rgba(122, 182, 72, 0.3), 0 0 5px rgba(122, 182, 72, 0.2);
+  }
+  25% {
+    background: #7AB648;
+    box-shadow: 0 0 2px rgba(122, 182, 72, 0.3), 0 0 4px rgba(122, 182, 72, 0.15);
+  }
+  35% {
+    background: #3d6525;
+    box-shadow: 0 0 1px rgba(122, 182, 72, 0.2);
+  }
+  45% {
+    background: #4a7830;
+    box-shadow: 0 0 1px rgba(122, 182, 72, 0.15);
+  }
+  60% {
+    background: #2a4a1a;
+    box-shadow: none;
+  }
+  80% {
+    background: #1f3514;
+    box-shadow: none;
+  }
+  100% {
+    background: var(--color-led-off);
+    box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  }
 }
 
 .led-checking {
