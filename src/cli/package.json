@@ -14,8 +14,8 @@
   "dependencies": {
     "@clack/prompts": "^1.0.0",
     "@tinyclaw/compactor": "workspace:*",
-    "@tinyclaw/core": "workspace:*",
     "@tinyclaw/config": "workspace:*",
+    "@tinyclaw/core": "workspace:*",
     "@tinyclaw/delegation": "workspace:*",
     "@tinyclaw/heartware": "workspace:*",
     "@tinyclaw/intercom": "workspace:*",
@@ -33,6 +33,10 @@
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/ui": "workspace:*",
     "@wgtechlabs/log-engine": "^2.3.0",
+    "figlet": "^1.10.0",
     "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.7.0"
   }
 }
