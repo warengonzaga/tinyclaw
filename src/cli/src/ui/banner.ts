@@ -2,9 +2,11 @@
  * TUI Banner
  *
  * ASCII art logo and version display for TinyClaw CLI.
+ * Uses figlet with ANSI Shadow font for a modern look.
  * Displayed at the top of setup wizard and help output.
  */
 
+import figlet from 'figlet';
 import { theme } from './theme.js';
 
 // version is read lazily to avoid import issues with JSON modules
@@ -24,21 +26,31 @@ function getVersion(): string {
   return cachedVersion!;
 }
 
-const LOGO = `
-  _____ _             ____ _               
- |_   _(_)_ __  _   _/ ___| | __ ___      __
-   | | | | '_ \\| | | | |   | |/ _\` \\ \\ /\\ / /
-   | | | | | | | |_| | |___| | (_| |\\ V  V / 
-   |_| |_|_| |_|\\__, |\\____|_|\\__,_| \\_/\\_/  
-                 |___/                        `;
+// Generate the logo at module load time (synchronous, fast)
+let LOGO: string;
+try {
+  LOGO = figlet.textSync('TinyClaw', { font: 'ANSI Shadow' });
+} catch {
+  // Fallback if figlet font not available
+  LOGO =
+    `████████╗██╗███╗   ██╗██╗   ██╗ ██████╗██╗      █████╗ ██╗    ██╗\n` +
+    `╚══██╔══╝██║████╗  ██║╚██╗ ██╔╝██╔════╝██║     ██╔══██╗██║    ██║\n` +
+    `   ██║   ██║██╔██╗ ██║ ╚████╔╝ ██║     ██║     ███████║██║ █╗ ██║\n` +
+    `   ██║   ██║██║╚██╗██║  ╚██╔╝  ██║     ██║     ██╔══██║██║███╗██║\n` +
+    `   ██║   ██║██║ ╚████║   ██║   ╚██████╗███████╗██║  ██║╚███╔███╔╝\n` +
+    `   ╚═╝   ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝`;
+}
 
 /**
  * Print the branded banner to stdout
  */
 export function showBanner(): void {
-  console.log(theme.brand(LOGO));
+  console.log(theme.brand('\n' + LOGO));
   console.log(
-    `  ${theme.dim('v' + getVersion())} ${theme.dim('—')} ${theme.dim('Small agent, mighty friend')}`
+    `  ${theme.dim('v' + getVersion())} ${theme.dim('—')} ${theme.dim('Your Personal Autonomous AI Companion 🐜')}`
+  );
+  console.log(
+    `  ${theme.dim('The original TinyClaw written from scratch, inspired by OpenClaw 🦞')}`
   );
   console.log();
 }
