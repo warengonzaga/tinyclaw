@@ -5,7 +5,7 @@
  *   - ~/.tinyclaw/ (config DB, agent DB, learning, heartware, audit)
  *   - Optionally ~/.secrets-engine/ when --force is used
  *
- * Safety: requires the user to type "tinyclaw" to confirm.
+ * Safety: requires the user to type "goodbye <soul name> my tinyclaw friend" to confirm.
  *
  * Flags:
  *   --force   Also delete the secrets store (~/.secrets-engine/)
@@ -16,10 +16,11 @@
 
 import { join } from 'path';
 import { homedir } from 'os';
-import { rm, access } from 'fs/promises';
+import { rm, access, readFile } from 'fs/promises';
 import * as p from '@clack/prompts';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
+import { parseSeed, generateSoul } from '@tinyclaw/heartware';
 
 // ---------------------------------------------------------------------------
 // Path resolution
@@ -42,6 +43,22 @@ async function dirExists(path: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Try to read the soul name from the SEED.txt file.
+ * Returns the suggested name if found, null otherwise.
+ */
+async function getSoulName(dataDir: string): Promise<string | null> {
+  try {
+    const seedPath = join(dataDir, 'heartware', 'SEED.txt');
+    const raw = await readFile(seedPath, 'utf-8');
+    const seed = parseSeed(raw.trim());
+    const result = generateSoul(seed);
+    return result.traits.character.suggestedName;
+  } catch {
+    return null;
   }
 }
 
@@ -127,15 +144,21 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
 
   // --- Type-to-confirm ------------------------------------------------
 
+  // Build dynamic confirmation phrase using soul name
+  const soulName = await getSoulName(dataDir);
+  const confirmPhrase = soulName
+    ? `goodbye ${soulName.toLowerCase()} my tinyclaw friend`
+    : 'goodbye my tinyclaw friend';
+
   if (flags.yes) {
     p.log.info(theme.dim('Skipping confirmation (--yes)'));
   } else {
     const confirmation = await p.text({
-      message: `Type ${theme.label('tinyclaw')} to confirm purge`,
-      placeholder: 'tinyclaw',
+      message: `Type ${theme.label(confirmPhrase)} to confirm purge`,
+      placeholder: confirmPhrase,
       validate: (value) => {
-        if (!value || value.trim().toLowerCase() !== 'tinyclaw') {
-          return 'Type "tinyclaw" to confirm, or press Ctrl+C to cancel';
+        if (!value || value.trim().toLowerCase() !== confirmPhrase) {
+          return `Type "${confirmPhrase}" to confirm, or press Ctrl+C to cancel`;
         }
       },
     });
