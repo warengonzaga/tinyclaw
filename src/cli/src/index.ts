@@ -29,6 +29,7 @@ function showHelp(): void {
   console.log(`    ${theme.cmd('setup')}    Interactive setup wizard - configure your provider`);
   console.log(`    ${theme.cmd('start')}    Start the TinyClaw agent`);
   console.log(`    ${theme.cmd('config')}   Manage models, providers, and settings`);
+  console.log(`    ${theme.cmd('seed')}     Show your TinyClaw's soul seed`);
   console.log(`    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`);
   console.log();
   console.log('  ' + theme.label('Options'));
@@ -71,6 +72,12 @@ async function main(): Promise<void> {
     case 'purge': {
       const { purgeCommand } = await import('./commands/purge.js');
       await purgeCommand(args.slice(1));
+      break;
+    }
+
+    case 'seed': {
+      const { seedCommand } = await import('./commands/seed.js');
+      await seedCommand();
       break;
     }
 
