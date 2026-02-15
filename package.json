@@ -17,7 +17,8 @@
     "build:apps": "bun run --cwd src/web build && bun run --cwd src/cli build",
     "build:ui": "bun run --cwd src/web build",
     "start": "bun run --cwd src/cli start",
-    "test": "bun test"
+    "test": "bun test",
+    "cli": "bun run src/cli/src/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
