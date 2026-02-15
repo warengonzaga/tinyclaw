@@ -27,7 +27,7 @@ import { createHybridMatcher } from '@tinyclaw/matcher';
 import { createSessionQueue } from '@tinyclaw/queue';
 import { logger } from '@tinyclaw/logger';
 import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';
-import { HeartwareManager, createHeartwareTools, loadHeartwareContext, loadShieldContent, type HeartwareConfig } from '@tinyclaw/heartware';
+import { HeartwareManager, createHeartwareTools, loadHeartwareContext, loadShieldContent, parseSeed, type HeartwareConfig } from '@tinyclaw/heartware';
 import { createLearningEngine } from '@tinyclaw/learning';
 import { SecretsManager, createSecretsTools, buildProviderKeyName } from '@tinyclaw/secrets';
 import { ConfigManager, createConfigTools } from '@tinyclaw/config';
@@ -51,6 +51,21 @@ export async function startCommand(): Promise<void> {
 
   const dataDir = process.env.TINYCLAW_DATA_DIR || join(homedir(), '.tinyclaw');
   logger.info('Data directory:', { dataDir }, { emoji: '📂' });
+
+  // --- Load soul seed from config (set during setup wizard) --------------
+
+  let seedOverride: number | undefined;
+  try {
+    const cfgTmp = await ConfigManager.create();
+    const configSeed = cfgTmp.get<number>('heartware.seed');
+    if (configSeed !== undefined) {
+      seedOverride = parseSeed(configSeed);
+      logger.info('Soul seed loaded from config', { seed: seedOverride }, { emoji: '🧬' });
+    }
+    cfgTmp.close();
+  } catch {
+    // Config not available yet — will be created during setup
+  }
 
   // --- Initialize secrets engine ----------------------------------------
 
@@ -140,6 +155,7 @@ export async function startCommand(): Promise<void> {
     auditDir: join(dataDir, 'audit'),
     backupDir: join(dataDir, 'heartware', '.backups'),
     maxFileSize: 1_048_576, // 1 MB
+    seed: seedOverride,
   };
 
   const heartwareManager = new HeartwareManager(heartwareConfig);
@@ -427,7 +443,7 @@ export async function startCommand(): Promise<void> {
       type: 'object',
       properties: {
         code: { type: 'string', description: 'The JavaScript/TypeScript code to execute' },
-        input: { description: 'Optional data to pass as the `input` variable in the sandbox' },
+        input: { type: 'string', description: 'Optional data to pass as the `input` variable in the sandbox (use JSON string for complex data)' },
         timeout: { type: 'number', description: 'Override timeout in ms (max 30s)' },
       },
       required: ['code'],
