@@ -50,9 +50,18 @@
       fetchBackgroundTasks()
       fetchSubAgents()
     }, 3000)
+
+    // Auto-close panel when crossing from desktop → mobile breakpoint
+    const mql = window.matchMedia('(min-width: 768px)')
+    const handleBreakpoint = (e) => {
+      if (!e.matches) showPanel = false
+    }
+    mql.addEventListener('change', handleBreakpoint)
+
     return () => {
       clearInterval(interval)
       clearInterval(bgInterval)
+      mql.removeEventListener('change', handleBreakpoint)
     }
   })
 
@@ -514,45 +523,48 @@
 
 <div class="h-full flex flex-col bg-bg-tertiary">
   <!-- Title Bar -->
-  <div class="h-9 min-h-9 px-4 flex items-center bg-bg-titlebar border-b border-bg-modifier-active relative">
-    <div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+  <div class="h-9 min-h-9 px-4 flex items-center bg-bg-titlebar border-b border-bg-modifier-active">
+    <div class="flex items-center gap-2 md:absolute md:left-1/2 md:-translate-x-1/2">
       <span class="text-sm font-semibold text-text-normal tracking-wide">TinyClaw</span>
       <span class="text-xs text-text-muted/50 font-medium">Beta</span>
       <span class="text-[10px] text-text-muted/30">v1.0.0</span>
     </div>
-    <div class="ml-auto flex items-center gap-1">
+    <div class="ml-auto flex items-center gap-1 md:gap-2">
       <a
         href="https://github.com/warengonzaga/tinyclaw"
         target="_blank"
         rel="noopener noreferrer"
-        class="titlebar-link p-1.5 rounded hover:bg-bg-modifier-hover"
+        class="titlebar-link flex items-center gap-1.5 p-1.5 md:px-2 md:py-1 rounded hover:bg-bg-modifier-hover text-xs"
         title="Star on GitHub"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
           <path fill-rule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401Z" clip-rule="evenodd" />
         </svg>
+        <span class="hidden md:inline">Star</span>
       </a>
       <a
         href="https://github.com/sponsors/warengonzaga"
         target="_blank"
         rel="noopener noreferrer"
-        class="titlebar-link p-1.5 rounded hover:bg-bg-modifier-hover"
+        class="titlebar-link flex items-center gap-1.5 p-1.5 md:px-2 md:py-1 rounded hover:bg-bg-modifier-hover text-xs"
         title="Sponsor"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
           <path d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.723.723 0 01-.692 0h-.002z" />
         </svg>
+        <span class="hidden md:inline">Sponsor</span>
       </a>
       <a
         href="https://github.com/warengonzaga/tinyclaw/blob/main/CONTRIBUTING.md"
         target="_blank"
         rel="noopener noreferrer"
-        class="titlebar-link p-1.5 rounded hover:bg-bg-modifier-hover"
+        class="titlebar-link flex items-center gap-1.5 p-1.5 md:px-2 md:py-1 rounded hover:bg-bg-modifier-hover text-xs"
         title="Contribute"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3.5 h-3.5">
           <path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z" />
         </svg>
+        <span class="hidden md:inline">Contribute</span>
       </a>
     </div>
   </div>
@@ -584,7 +596,7 @@
   </div>
 
   <!-- Content Area: Chat + Optional Right Sidebar -->
-  <div class="flex-1 flex min-h-0">
+  <div class="flex-1 flex min-h-0 relative">
     <!-- Main Chat Area -->
     <div class="flex-1 flex flex-col min-w-0">
     <!-- Messages Area -->
@@ -596,7 +608,7 @@
         <!-- Welcome State -->
         <div class="flex flex-col items-center justify-center h-full text-center">
           <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-4">
-            <span class="text-4xl">🐾</span>
+            <span class="text-4xl">🐜</span>
           </div>
           <h2 class="text-2xl font-bold text-text-normal mb-2">Welcome to TinyClaw</h2>
           <p class="text-text-muted max-w-md">
@@ -616,7 +628,7 @@
                   </div>
                 {:else}
                   <div class="w-10 h-10 rounded-full bg-green flex items-center justify-center">
-                    <span class="text-lg">🐾</span>
+                    <span class="text-lg">🐜</span>
                   </div>
                 {/if}
               </div>
@@ -819,8 +831,11 @@
   </div>
 
   <!-- Right Sidebar: Profile Panel -->
-  {#if showPanel}
-    <div class="panel-sidebar w-72 min-w-72 border-l border-bg-modifier-active bg-bg-secondary flex flex-col overflow-hidden">
+    {#if showPanel}
+      <div class="panel-overlay md:hidden" onclick={() => showPanel = false} role="presentation"></div>
+    {/if}
+    <div class="panel-sidebar {showPanel ? 'panel-open' : ''} border-bg-modifier-active bg-bg-secondary overflow-hidden">
+      <div class="w-72 flex flex-col h-full">
       <!-- Banner -->
       <div class="h-16 min-h-16 bg-brand"></div>
 
@@ -951,6 +966,6 @@
         {/if}
       </div>
     </div>
-  {/if}
+    </div>
   </div>
 </div>
