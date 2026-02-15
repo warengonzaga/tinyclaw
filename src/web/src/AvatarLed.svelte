@@ -7,14 +7,14 @@
    *
    * @prop {number}  size   - Avatar diameter in px (default: 64)
    * @prop {'online'|'offline'|'checking'} status - LED state
-   * @prop {string}  emoji  - Emoji shown inside the avatar (default: 🐾)
+   * @prop {string}  emoji  - Emoji shown inside the avatar (default: �)
    * @prop {string}  ringColor - CSS color for the avatar outer ring (optional)
    * @prop {string}  cutoutColor - CSS color for the dot cutout ring matching parent bg
    */
   let {
     size = 64,
     status = 'offline',
-    emoji = '🐾',
+    emoji = '🐜',
     ringColor = '',
     cutoutColor = ''
   } = $props()
@@ -84,7 +84,7 @@
 
   .avatar-led-circle {
     border-radius: 50%;
-    background: var(--color-green);
+    background: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
