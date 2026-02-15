@@ -71,7 +71,10 @@ export async function supervisedStart(): Promise<void> {
     const execPath = process.argv[0]!;
     const scriptPath = process.argv[1]!;
 
-    const child = spawn(execPath, [scriptPath, '--supervised-start'], {
+    // Forward --verbose flag to the supervised child process
+    const extraArgs = process.argv.includes('--verbose') ? ['--verbose'] : [];
+
+    const child = spawn(execPath, [scriptPath, '--supervised-start', ...extraArgs], {
       stdio: 'inherit',
       env: { ...process.env, TINYCLAW_SUPERVISED: '1' },
     });

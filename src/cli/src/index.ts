@@ -33,6 +33,7 @@ function showHelp(): void {
   console.log(`    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`);
   console.log();
   console.log('  ' + theme.label('Options'));
+  console.log(`    ${theme.dim('--verbose')}       Show debug-level logs during start`);
   console.log(`    ${theme.dim('--version, -v')}   Show version number`);
   console.log(`    ${theme.dim('--help, -h')}      Show this help message`);
   console.log();
@@ -52,6 +53,7 @@ async function main(): Promise<void> {
     }
 
     case 'start': {
+      // Pass --verbose through to supervised child process
       const { supervisedStart } = await import('./supervisor.js');
       await supervisedStart();
       break;
