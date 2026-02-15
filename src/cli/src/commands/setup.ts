@@ -18,6 +18,7 @@ import * as p from '@clack/prompts';
 import { createOllamaProvider } from '@tinyclaw/core';
 import { SecretsManager, buildProviderKeyName } from '@tinyclaw/secrets';
 import { ConfigManager } from '@tinyclaw/config';
+import { parseSeed, generateRandomSeed, generateSoul } from '@tinyclaw/heartware';
 import {
   DEFAULT_PROVIDER,
   DEFAULT_MODEL,
@@ -80,15 +81,27 @@ export async function setupCommand(): Promise<void> {
 
   // --- Check existing configuration -----------------------------------
 
-  const alreadyConfigured = await isAlreadyConfigured(secretsManager);
+  const hasApiKey = await isAlreadyConfigured(secretsManager);
+  const savedSeed = configManager.get('heartware.seed') as number | undefined;
+  const hasSoulSeed = savedSeed !== undefined;
+  const fullyConfigured = hasApiKey && hasSoulSeed;
+  const partiallyConfigured = hasApiKey && !hasSoulSeed;
 
-  if (alreadyConfigured) {
+  if (fullyConfigured) {
+    // Build existing config summary with soul info
+    const soul = generateSoul(savedSeed!);
+    const st = soul.traits;
+
     p.log.info(
       `Existing configuration found:\n` +
       `  Provider : ${theme.label('Ollama Cloud')}\n` +
       `  Model    : ${theme.label(DEFAULT_MODEL)}\n` +
       `  Base URL : ${theme.label(DEFAULT_BASE_URL)}\n` +
-      `  API Key  : ${theme.dim('••••••••  (stored in secrets-engine)')}`
+      `  API Key  : ${theme.dim('••••••••  (stored in secrets-engine)')}\n\n` +
+      `  Soul seed:\n` +
+      `  Seed     : ${theme.label(String(savedSeed))}\n` +
+      `  Name     : ${theme.label(st.character.suggestedName)}\n` +
+      `  Values   : ${theme.label(st.values.join(', '))}`
     );
 
     const reconfigure = await p.confirm({
@@ -102,6 +115,17 @@ export async function setupCommand(): Promise<void> {
       return;
     }
   }
+
+  if (partiallyConfigured) {
+    p.log.warn(
+      `Incomplete setup detected — API key is stored but no soul seed was set.\n` +
+      `Resuming setup from the soul seed step.`
+    );
+  }
+
+  // --- Steps 1-3: API key, validation, model (skip if partially configured) ---
+
+  if (!partiallyConfigured) {
 
   // --- Step 1: API key ------------------------------------------------
 
@@ -192,7 +216,104 @@ export async function setupCommand(): Promise<void> {
     return;
   }
 
-  // --- Step 4: Persist ------------------------------------------------
+  } // end skip for partial setup
+
+  // --- Step 4: Soul seed ------------------------------------------------
+
+  p.note(
+    'Your TinyClaw\'s personality is generated from a ' + theme.label('soul seed') + ',\n' +
+    'just like Minecraft\'s world generation. The same seed always\n' +
+    'produces the same personality — unique traits, quirks, and values.\n\n' +
+    theme.label('Options:') + '\n' +
+    '  • Enter a specific number to get a personality you can reproduce.\n' +
+    '  • Leave blank to let TinyClaw pick a random seed.\n\n' +
+    theme.dim('Once set, the soul seed is permanent and cannot be changed.\n' +
+    'Share your seed with others so they can create a companion just like yours!'),
+    'Soul Seed',
+  );
+
+  const seedInput = await p.text({
+    message: 'Enter a soul seed (leave blank for random)',
+    placeholder: 'e.g. 8675309',
+    validate: (value) => {
+      if (!value || value.trim().length === 0) return; // blank is fine
+      try {
+        parseSeed(value.trim());
+      } catch {
+        return 'Seed must be a valid integer';
+      }
+    },
+  });
+
+  if (p.isCancel(seedInput)) {
+    p.outro(theme.dim('Setup cancelled.'));
+    await cleanup(secretsManager, configManager);
+    return;
+  }
+
+  let soulSeed: number;
+  if (seedInput && seedInput.trim().length > 0) {
+    soulSeed = parseSeed(seedInput.trim());
+  } else {
+    soulSeed = generateRandomSeed();
+  }
+
+  // Preview loop — let user regenerate until happy
+  let settled = false;
+  while (!settled) {
+    const preview = generateSoul(soulSeed);
+    const t = preview.traits;
+
+    p.log.info(
+      `${theme.label('Seed')}     : ${soulSeed}\n` +
+      `${theme.label('Name')}     : ${t.character.suggestedName}\n` +
+      `${theme.label('Values')}   : ${t.values.join(', ')}`
+    );
+
+    const soulAction = await p.select({
+      message: 'What would you like to do?',
+      options: [
+        { value: 'keep', label: 'Keep this personality', hint: 'proceed with setup' },
+        { value: 'regenerate', label: 'Regenerate', hint: 'roll a new random seed' },
+        { value: 'custom', label: 'Enter a different seed', hint: 'type a specific number' },
+      ],
+    });
+
+    if (p.isCancel(soulAction)) {
+      p.outro(theme.dim('Setup cancelled.'));
+      await cleanup(secretsManager, configManager);
+      return;
+    }
+
+    if (soulAction === 'keep') {
+      settled = true;
+    } else if (soulAction === 'regenerate') {
+      soulSeed = generateRandomSeed();
+    } else if (soulAction === 'custom') {
+      const newSeedInput = await p.text({
+        message: 'Enter a soul seed',
+        placeholder: 'e.g. 8675309',
+        validate: (value) => {
+          if (!value || value.trim().length === 0) return 'Please enter a number';
+          try {
+            parseSeed(value.trim());
+          } catch {
+            return 'Seed must be a valid integer';
+          }
+        },
+      });
+
+      if (p.isCancel(newSeedInput)) {
+        p.outro(theme.dim('Setup cancelled.'));
+        await cleanup(secretsManager, configManager);
+        return;
+      }
+
+      soulSeed = parseSeed((newSeedInput as string).trim());
+    }
+  }
+
+  // --- Step 5: Persist ------------------------------------------------
 
   const persistSpinner = p.spinner();
   persistSpinner.start('Saving configuration');
@@ -204,6 +325,9 @@ export async function setupCommand(): Promise<void> {
       baseUrl: DEFAULT_BASE_URL,
       apiKeyRef: buildProviderKeyName(DEFAULT_PROVIDER),
     });
+
+    // Store soul seed in config-engine
+    configManager.set('heartware.seed', soulSeed);
 
     persistSpinner.stop(theme.success('Configuration saved'));
   } catch (err) {
@@ -220,7 +344,8 @@ export async function setupCommand(): Promise<void> {
     `${theme.label('Provider')}  : Ollama Cloud\n` +
     `${theme.label('Model')}     : ${DEFAULT_MODEL}\n` +
     `${theme.label('Base URL')}  : ${DEFAULT_BASE_URL}\n` +
-    `${theme.label('API Key')}   : ${theme.dim('••••••••  (encrypted)')}`
+    `${theme.label('API Key')}   : ${theme.dim('••••••••  (encrypted)')}\n` +
+    `${theme.label('Soul Seed')} : ${soulSeed}`
   );
 
   p.outro(
