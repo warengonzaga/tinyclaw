@@ -14,6 +14,11 @@
  */
 
 import type { HeartwareManager } from './manager.js';
+import { generateSoul } from './soul-generator.js';
+import { loadCachedCreatorMeta } from './meta.js';
+
+/** Label used for creator meta in heartware context */
+const META_CACHE_LABEL = 'CREATOR.md — About My Creator';
 
 /**
  * Load heartware context for injection into agent system prompt
@@ -35,6 +40,17 @@ export async function loadHeartwareContext(
 
   let context = '\n\n=== HEARTWARE CONFIGURATION ===\n';
 
+  // Add soul seed immutability notice
+  try {
+    const seed = await manager.getSeed();
+    if (seed !== undefined) {
+      context += `\n> SOUL.md is immutable — permanently generated from soul seed \`${seed}\`.`;
+      context += '\n> Your personality traits, preferences, and quirks are permanent. Embrace them.\n';
+    }
+  } catch {
+    // Seed might not exist yet
+  }
+
   // Load configuration files in priority order
   for (const file of loadOrder) {
     try {
@@ -54,6 +70,16 @@ export async function loadHeartwareContext(
     }
   } catch (err) {
     // No recent memories - this is fine
+  }
+
+  // Load creator metadata (cached from remote)
+  try {
+    const creatorMeta = await loadCachedCreatorMeta(manager.getBaseDir());
+    if (creatorMeta) {
+      context += `\n\n--- ${META_CACHE_LABEL} ---\n${creatorMeta}`;
+    }
+  } catch {
+    // Creator meta not available - this is fine
   }
 
   context += '\n\n=== END HEARTWARE CONFIGURATION ===\n';

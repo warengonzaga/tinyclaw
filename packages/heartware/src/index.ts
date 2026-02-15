@@ -31,6 +31,24 @@ export { HeartwareManager } from './manager.js';
 export { createHeartwareTools } from './tools.js';
 export { loadHeartwareContext, loadShieldContent, loadMemoryByDate, loadMemoryRange } from './loader.js';
 
+// Soul Generator
+export {
+  generateSoul,
+  generateSoulTraits,
+  renderSoulMarkdown,
+  generateRandomSeed,
+  parseSeed
+} from './soul-generator.js';
+
+// Creator Meta
+export {
+  fetchCreatorMeta,
+  loadCachedCreatorMeta,
+  DEFAULT_META_URL,
+  META_CACHE_FILE,
+} from './meta.js';
+export type { MetaFetchOptions } from './meta.js';
+
 // Security components (for advanced usage/testing)
 export { AuditLogger, computeContentHash, verifyContentHash } from './audit.js';
 export { BackupManager } from './backup.js';
@@ -40,6 +58,8 @@ export {
   validateContent,
   validateFileSize,
   isAllowedFile,
+  isImmutableFile,
+  getImmutableFiles,
   getAllowedFiles,
   getMemoryFilePattern
 } from './sandbox.js';
@@ -65,5 +85,15 @@ export type {
   RateLimitConfig,
   AllowedFile,
   SecurityErrorCode,
-  SearchResult
+  SearchResult,
+  // Soul types
+  BigFiveTraits,
+  CommunicationStyle,
+  HumorType,
+  SoulPreferences,
+  CharacterFlavor,
+  InteractionStyle,
+  OriginStory,
+  SoulTraits,
+  SoulGenerationResult
 } from './types.js';

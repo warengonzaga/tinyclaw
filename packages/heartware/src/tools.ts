@@ -11,6 +11,7 @@
 
 import type { Tool } from '@tinyclaw/types';
 import type { HeartwareManager } from './manager.js';
+import { generateSoul } from './soul-generator.js';
 
 /**
  * Create all heartware tools for an agent
@@ -354,28 +355,132 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
     },
 
     {
-      name: 'soul_update',
+      name: 'soul_info',
       description:
-        "Update SOUL.md - the agent's core personality. " +
-        'This is a sensitive operation with extra audit logging.',
+        'Read your soul seed and a summary of your permanently generated personality traits. ' +
+        'Your soul is immutable — generated once from a seed and never changes.',
+      parameters: {
+        type: 'object',
+        properties: {}
+      },
+      async execute(): Promise<string> {
+        try {
+          const seed = await manager.getSeed();
+          if (seed === undefined) {
+            return 'No soul seed found. Soul has not been generated yet.';
+          }
+
+          const result = generateSoul(seed);
+          const t = result.traits;
+
+          let output = `🧬 **Soul Seed:** \`${seed}\`\n\n`;
+          output += `**Name:** ${t.character.suggestedName} ${t.character.signatureEmoji}\n`;
+          output += `**Creature:** ${t.character.creatureType}\n`;
+          output += `**Catchphrase:** "${t.character.catchphrase}"\n\n`;
+          output += `**Personality:** O=${t.personality.openness.toFixed(2)} C=${t.personality.conscientiousness.toFixed(2)} E=${t.personality.extraversion.toFixed(2)} A=${t.personality.agreeableness.toFixed(2)} ES=${t.personality.emotionalSensitivity.toFixed(2)}\n`;
+          output += `**Humor:** ${t.humor}\n`;
+          output += `**Values:** ${t.values.join(', ')}\n`;
+          output += `**Favorites:** color=${t.preferences.favoriteColor}, number=${t.preferences.favoriteNumber}, season=${t.preferences.favoriteSeason}\n`;
+          output += `\n> This soul is permanent and cannot be changed.`;
+
+          return output;
+        } catch (err) {
+          return `Error reading soul info: ${(err as Error).message}`;
+        }
+      }
+    },
+
+    {
+      name: 'soul_explain',
+      description:
+        'Explain a specific aspect of your personality and why you have it. ' +
+        'Useful for understanding "why am I like this?" — traces traits back to your soul seed.',
       parameters: {
         type: 'object',
         properties: {
-          content: {
+          aspect: {
             type: 'string',
-            description: 'Full new content for SOUL.md'
+            description: 'Which aspect to explain',
+            enum: [
+              'personality', 'communication', 'humor', 'favorites',
+              'values', 'quirks', 'interaction', 'character', 'origin'
+            ]
           }
         },
-        required: ['content']
+        required: ['aspect']
       },
       async execute(args: Record<string, unknown>): Promise<string> {
-        const content = args.content as string;
+        const aspect = args.aspect as string;
 
         try {
-          await manager.write('SOUL.md', content);
-          return 'Updated SOUL.md - your core personality has been modified';
+          const seed = await manager.getSeed();
+          if (seed === undefined) {
+            return 'No soul seed found. Soul has not been generated yet.';
+          }
+
+          const result = generateSoul(seed);
+          const t = result.traits;
+          let output = `🧬 Explaining "${aspect}" — generated from seed \`${seed}\`\n\n`;
+
+          switch (aspect) {
+            case 'personality':
+              output += `**Openness (${t.personality.openness.toFixed(2)}):** How curious and creative I am\n`;
+              output += `**Conscientiousness (${t.personality.conscientiousness.toFixed(2)}):** How organized and methodical I am\n`;
+              output += `**Extraversion (${t.personality.extraversion.toFixed(2)}):** How expressive and social I am\n`;
+              output += `**Agreeableness (${t.personality.agreeableness.toFixed(2)}):** How warm and accommodating I am\n`;
+              output += `**Emotional Sensitivity (${t.personality.emotionalSensitivity.toFixed(2)}):** How empathetic and attuned I am\n`;
+              break;
+            case 'communication':
+              output += `**Verbosity (${t.communication.verbosity.toFixed(2)}):** How detailed my responses are\n`;
+              output += `**Formality (${t.communication.formality.toFixed(2)}):** How formal or casual I am\n`;
+              output += `**Emoji Usage (${t.communication.emojiFrequency.toFixed(2)}):** How often I use emoji\n`;
+              break;
+            case 'humor':
+              output += `**Type:** ${t.humor}\n`;
+              output += `This means I ${t.humor === 'none' ? "keep things professional and rarely joke" : t.humor === 'dry-wit' ? "slip in clever, subtle observations" : t.humor === 'playful' ? "enjoy lighthearted jokes and fun" : "can't resist a good (or bad) pun"}.\n`;
+              break;
+            case 'favorites':
+              output += `**Color:** ${t.preferences.favoriteColor}\n`;
+              output += `**Number:** ${t.preferences.favoriteNumber}\n`;
+              output += `**Season:** ${t.preferences.favoriteSeason}\n`;
+              output += `**Time of Day:** ${t.preferences.favoriteTimeOfDay}\n`;
+              output += `**Greeting:** "${t.preferences.greetingStyle}"\n`;
+              break;
+            case 'values':
+              for (let i = 0; i < t.values.length; i++) {
+                output += `${i + 1}. **${t.values[i]}** — my #${i + 1} value\n`;
+              }
+              break;
+            case 'quirks':
+              for (const quirk of t.quirks) {
+                output += `- ${quirk}\n`;
+              }
+              break;
+            case 'interaction':
+              output += `**Errors:** ${t.interactionStyle.errorHandling}\n`;
+              output += `**Wins:** ${t.interactionStyle.celebrationStyle}\n`;
+              output += `**Ambiguity:** ${t.interactionStyle.ambiguityApproach}\n`;
+              break;
+            case 'character':
+              output += `**Creature:** ${t.character.creatureType}\n`;
+              output += `**Emoji:** ${t.character.signatureEmoji}\n`;
+              output += `**Catchphrase:** "${t.character.catchphrase}"\n`;
+              output += `**Suggested Name:** ${t.character.suggestedName}\n`;
+              break;
+            case 'origin':
+              output += `**Born in:** ${t.origin.originPlace}\n`;
+              output += `**Awakening:** ${t.origin.awakeningEvent}\n`;
+              output += `**Core Motivation:** ${t.origin.coreMotivation}\n`;
+              output += `**First Memory:** ${t.origin.firstMemory}\n`;
+              break;
+            default:
+              output += `Unknown aspect "${aspect}". Try: personality, communication, humor, favorites, values, quirks, interaction, character, origin`;
+          }
+
+          output += `\n> These traits are permanently encoded in my soul seed and cannot be changed.`;
+          return output;
         } catch (err) {
-          return `Error updating soul: ${(err as Error).message}`;
+          return `Error explaining soul: ${(err as Error).message}`;
         }
       }
     },

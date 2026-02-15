@@ -31,7 +31,18 @@ const ALLOWED_FILES: readonly string[] = [
   'AGENTS.md',
   'TOOLS.md',
   'MEMORY.md',
-  'BOOTSTRAP.md'
+  'BOOTSTRAP.md',
+  'SHIELD.md',
+  'SEED.txt'
+] as const;
+
+/**
+ * Files that cannot be written to by the agent.
+ * These are generated once and remain permanent — like a real soul.
+ */
+const IMMUTABLE_FILES: readonly string[] = [
+  'SOUL.md',
+  'SEED.txt'
 ] as const;
 
 /**
@@ -114,12 +125,17 @@ const SUSPICIOUS_PATTERNS: readonly ContentValidationRule[] = [
  * 1. Resolves to within the heartware directory (no traversal)
  * 2. Is in the whitelist or matches allowed patterns
  * 3. Uses normalized paths (no weird characters)
+ * 4. Blocks writes to immutable files (SOUL.md, SEED)
  *
- * @throws HeartwareSecurityError if path is invalid
+ * @param heartwareDir - Base heartware directory
+ * @param requestedPath - Path requested by the agent
+ * @param operation - The operation being performed (default: 'read')
+ * @throws HeartwareSecurityError if path is invalid or file is immutable
  */
 export function validatePath(
   heartwareDir: string,
-  requestedPath: string
+  requestedPath: string,
+  operation: 'read' | 'write' = 'read'
 ): PathValidationResult {
   // 1. Normalize path (removes .., ., converts slashes)
   const normalized = normalize(requestedPath);
@@ -154,6 +170,18 @@ export function validatePath(
     throw new HeartwareSecurityError(
       'INVALID_FILE',
       `File not in whitelist: ${normalizedRelative}`,
+      {
+        relativePath: normalizedRelative,
+        requestedPath
+      }
+    );
+  }
+
+  // 7. CRITICAL: Block writes to immutable files
+  if (operation === 'write' && isImmutableFile(normalizedRelative)) {
+    throw new HeartwareSecurityError(
+      'IMMUTABLE_FILE',
+      `Cannot modify immutable file: ${normalizedRelative}. This file is permanently locked.`,
       {
         relativePath: normalizedRelative,
         requestedPath
@@ -234,6 +262,20 @@ export function validateFileSize(
  */
 export function isAllowedFile(filename: string): boolean {
   return ALLOWED_FILES.includes(filename) || MEMORY_FILE_PATTERN.test(filename);
+}
+
+/**
+ * Check if a file is immutable (cannot be written to)
+ */
+export function isImmutableFile(filename: string): boolean {
+  return IMMUTABLE_FILES.includes(filename);
+}
+
+/**
+ * Get list of immutable files
+ */
+export function getImmutableFiles(): readonly string[] {
+  return IMMUTABLE_FILES;
 }
 
 /**

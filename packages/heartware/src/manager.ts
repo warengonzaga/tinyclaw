@@ -18,6 +18,8 @@ import { AuditLogger, computeContentHash } from './audit.js';
 import { RateLimiter } from './rate-limiter.js';
 import { BackupManager } from './backup.js';
 import { getTemplate } from './templates.js';
+import { generateSoul, generateRandomSeed, parseSeed } from './soul-generator.js';
+import { fetchCreatorMeta } from './meta.js';
 import { logger } from '@tinyclaw/logger';
 import type { HeartwareConfig, SearchResult } from './types.js';
 
@@ -52,6 +54,7 @@ export class HeartwareManager {
    * - Backup directory (via BackupManager)
    * - Audit directory (via AuditLogger)
    * - Template files on first run
+   * - Seed-based SOUL.md on first run
    */
   async initialize(): Promise<void> {
     try {
@@ -68,8 +71,15 @@ export class HeartwareManager {
       if (!existsSync(identityPath)) {
         // Create template files for first run
         await this.createTemplateFiles();
-        logger.info('First run detected - created template files', undefined, { emoji: '📝' });
+
+        // Generate soul from seed
+        await this.generateSoulFromSeed();
+
+        logger.info('First run detected - created template files and generated soul', undefined, { emoji: '📝' });
       }
+
+      // Fetch/refresh creator metadata (non-blocking — uses cache when offline)
+      this.fetchCreatorMetaBackground();
     } catch (err) {
       logger.error('Failed to initialize heartware:', err, { emoji: '❌' });
       throw err;
@@ -139,10 +149,8 @@ export class HeartwareManager {
       // Layer 5: Rate limiting (FIRST - fail fast)
       this.rateLimiter.check(this.config.userId, 'write');
 
-      // Layer 1: Path sandboxing
-      const validation = validatePath(this.config.baseDir, filename);
-
-      // Layer 2: File size validation (before content validation for performance)
+      // Layer 1: Path sandboxing (with write operation check)
+      const validation = validatePath(this.config.baseDir, filename, 'write');
       validateFileSize(content.length, this.config.maxFileSize);
 
       // Layer 2: Content validation (CRITICAL - blocks suspicious content)
@@ -264,6 +272,98 @@ export class HeartwareManager {
       this.auditLogger.logFailure(this.config.userId, 'search', query, err as Error);
       throw err;
     }
+  }
+
+  /**
+   * Generate SOUL.md from a seed.
+   * If config.seed is provided, uses that. Otherwise generates a random seed.
+   * Writes both the SEED file and the generated SOUL.md.
+   */
+  private async generateSoulFromSeed(): Promise<void> {
+    const seedPath = join(this.config.baseDir, 'SEED.txt');
+    const soulPath = join(this.config.baseDir, 'SOUL.md');
+
+    // Determine seed: config > existing SEED file > random
+    let seed: number;
+
+    if (this.config.seed !== undefined) {
+      seed = parseSeed(this.config.seed);
+    } else if (existsSync(seedPath)) {
+      const raw = await readFile(seedPath, 'utf-8');
+      seed = parseSeed(raw.trim());
+    } else {
+      seed = generateRandomSeed();
+    }
+
+    // Generate soul
+    const result = generateSoul(seed);
+
+    // Write SEED file (plain text, just the number)
+    await writeFile(seedPath, String(result.seed), 'utf-8');
+
+    // Write SOUL.md
+    await writeFile(soulPath, result.content, 'utf-8');
+
+    // Update IDENTITY.md defaults from soul character traits
+    const identityPath = join(this.config.baseDir, 'IDENTITY.md');
+    if (existsSync(identityPath)) {
+      let identity = await readFile(identityPath, 'utf-8');
+      identity = identity.replace(
+        /\*\*Name:\*\*.*/,
+        `**Name:** ${result.traits.character.suggestedName}`
+      );
+      identity = identity.replace(
+        /\*\*Emoji:\*\*.*/,
+        `**Emoji:** ${result.traits.character.signatureEmoji}`
+      );
+      identity = identity.replace(
+        /\*\*Creature:\*\*.*/,
+        `**Creature:** ${result.traits.character.creatureType}`
+      );
+      await writeFile(identityPath, identity, 'utf-8');
+    }
+
+    logger.info('Soul generated from seed', {
+      seed: result.seed,
+      name: result.traits.character.suggestedName,
+      emoji: result.traits.character.signatureEmoji,
+    }, { emoji: '🧬' });
+  }
+
+  /**
+   * Read the stored soul seed.
+   * Returns undefined if no seed file exists.
+   */
+  async getSeed(): Promise<number | undefined> {
+    const seedPath = join(this.config.baseDir, 'SEED.txt');
+    if (!existsSync(seedPath)) return undefined;
+
+    try {
+      const raw = await readFile(seedPath, 'utf-8');
+      return parseSeed(raw.trim());
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Get base directory path
+   */
+  getBaseDir(): string {
+    return this.config.baseDir;
+  }
+
+  /**
+   * Fetch creator metadata in the background.
+   * Non-blocking — failures are logged but don't prevent startup.
+   */
+  private fetchCreatorMetaBackground(): void {
+    fetchCreatorMeta({
+      url: this.config.metaUrl,
+      baseDir: this.config.baseDir,
+    }).catch((err) => {
+      logger.warn('Creator meta fetch failed (non-critical)', { error: String(err) }, { emoji: '⚠️' });
+    });
   }
 
   /**
