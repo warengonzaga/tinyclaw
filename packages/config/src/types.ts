@@ -32,6 +32,16 @@ const ProviderEntrySchema = z.object({
  * Validated on every `.set()` call via config-engine's built-in Zod support.
  */
 export const TinyClawConfigSchema = z.object({
+  /** Owner authority — set during first-time claim flow */
+  owner: z.object({
+    /** The userId of the instance owner */
+    ownerId: z.string().optional(),
+    /** SHA-256 hash of the persistent session token */
+    sessionTokenHash: z.string().optional(),
+    /** Timestamp when ownership was claimed */
+    claimedAt: z.number().optional(),
+  }).optional(),
+
   /** Provider configurations keyed by provider name */
   providers: z.object({
     starterBrain: ProviderEntrySchema.optional(),
