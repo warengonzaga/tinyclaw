@@ -51,9 +51,9 @@ describe('showBanner', () => {
   test('prints the TinyClaw logo', () => {
     showBanner();
     const fullOutput = output.join('\n');
-    // ASCII art contains distinctive box-drawing characters from the logo
-    expect(fullOutput).toContain('|___/');
-    expect(fullOutput).toContain('_____');
+    // ANSI Shadow font uses distinctive block characters
+    expect(fullOutput).toContain('██');
+    expect(fullOutput).toContain('╗');
   });
 
   test('prints the version', () => {
@@ -66,7 +66,13 @@ describe('showBanner', () => {
   test('prints the tagline', () => {
     showBanner();
     const fullOutput = output.join('\n');
-    expect(fullOutput).toContain('Small agent, mighty friend');
+    expect(fullOutput).toContain('Your Personal Autonomous AI Companion');
+  });
+
+  test('prints the inspiration line', () => {
+    showBanner();
+    const fullOutput = output.join('\n');
+    expect(fullOutput).toContain('inspired by OpenClaw');
   });
 
   test('produces multiple lines of output', () => {
