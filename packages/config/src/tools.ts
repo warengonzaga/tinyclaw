@@ -62,8 +62,10 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
               'Dot-notation key to set (e.g., "agent.name", "learning.minConfidence")'
           },
           value: {
+            type: 'string',
             description:
-              'The value to set. Can be a string, number, boolean, or object depending on the key.'
+              'The value to set. For objects, pass a JSON string (e.g. \'{"key": "val"}\').' +
+              ' Booleans and numbers will be auto-detected from the string.'
           }
         },
         required: ['key', 'value']
@@ -74,10 +76,22 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
         }
 
         const key = args.key.trim();
-        const value = args.value;
+        const raw = args.value;
 
-        if (value === undefined) {
+        if (raw === undefined) {
           return 'Invalid config value: value is required';
+        }
+
+        // Auto-parse string values into native types
+        let value: unknown = raw;
+        if (typeof raw === 'string') {
+          const trimmed = raw.trim();
+          if (trimmed === 'true') value = true;
+          else if (trimmed === 'false') value = false;
+          else if (trimmed !== '' && !isNaN(Number(trimmed))) value = Number(trimmed);
+          else {
+            try { value = JSON.parse(trimmed); } catch { value = raw; }
+          }
         }
 
         try {
