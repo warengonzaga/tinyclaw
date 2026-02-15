@@ -364,7 +364,7 @@ describe('Soul Generator — SOUL.md Immutability', () => {
     const result = validatePath(dir, 'IDENTITY.md', 'write');
     expect(result.safe).toBe(true);
 
-    const result2 = validatePath(dir, 'USER.md', 'write');
+    const result2 = validatePath(dir, 'FRIEND.md', 'write');
     expect(result2.safe).toBe(true);
 
     // Memory files should also be writable
