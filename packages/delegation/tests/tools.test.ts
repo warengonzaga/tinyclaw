@@ -1,5 +1,5 @@
 /**
- * Tests for the 6 delegation tools factory.
+ * Tests for the 7 delegation tools factory.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -125,9 +125,9 @@ function findTool(tools: Tool[], name: string): Tool {
 // ---------------------------------------------------------------------------
 
 describe('createDelegationTools', () => {
-  test('returns 6 tools', () => {
+  test('returns 7 tools', () => {
     const { result } = setup();
-    expect(result.tools.length).toBe(6);
+    expect(result.tools.length).toBe(7);
 
     const names = result.tools.map((t) => t.name);
     expect(names).toContain('delegate_task');
@@ -136,6 +136,7 @@ describe('createDelegationTools', () => {
     expect(names).toContain('list_sub_agents');
     expect(names).toContain('manage_sub_agent');
     expect(names).toContain('manage_template');
+    expect(names).toContain('confirm_task');
 
     result.db?.close?.();
   });
@@ -198,10 +199,7 @@ describe('delegate_task', () => {
       user_id: 'user-1',
     });
 
-    // Wait for first background task to complete (serialized per agent)
-    await Bun.sleep(200);
-
-    // Second delegation with similar role should reuse
+    // Second delegation with similar role should reuse (agent still active)
     const output = await tool.execute({
       task: 'Research topic B',
       role: 'Research Analyst',
@@ -214,8 +212,8 @@ describe('delegate_task', () => {
     const agents = result.lifecycle.listActive('user-1');
     expect(agents.length).toBe(1);
 
-    // Wait for second background task to complete
-    await Bun.sleep(200);
+    // Wait for both background tasks to complete (serialized per agent)
+    await Bun.sleep(400);
 
     const updated = result.lifecycle.get(agents[0].id);
     expect(updated!.totalTasks).toBe(2);
@@ -274,7 +272,7 @@ describe('list_sub_agents', () => {
     await delegateTool.execute({ task: 'Write poetry about nature', role: 'Creative Poetry Writer', user_id: 'u1' });
 
     const listTool = findTool(result.tools, 'list_sub_agents');
-    const output = await listTool.execute({ user_id: 'u1' });
+    const output = await listTool.execute({ user_id: 'u1', include_deleted: true });
 
     expect(output).toContain('Sub-agents (2)');
     expect(output).toContain('Quantum Physics Researcher');
@@ -420,11 +418,15 @@ describe('delegate_to_existing', () => {
     const delegateTool = findTool(result.tools, 'delegate_task');
     await delegateTool.execute({ task: 'Initial task', role: 'Worker', user_id: 'u1' });
 
-    // Wait for first background task to complete
-    await Bun.sleep(200);
-
+    // Get agent ID while still active (before auto-suspension)
     const agents = result.lifecycle.listActive('u1');
     const agentId = agents[0].id;
+
+    // Wait for first background task to complete (agent auto-suspends)
+    await Bun.sleep(200);
+
+    // Revive agent so delegate_to_existing can work
+    result.lifecycle.revive(agentId);
 
     // Send follow-up (non-blocking)
     const followupTool = findTool(result.tools, 'delegate_to_existing');
