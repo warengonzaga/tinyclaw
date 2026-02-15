@@ -10,7 +10,7 @@
  */
 
 import { join, resolve } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, statSync, readdirSync } from 'fs';
 import { homedir } from 'os';
 import {
   createDatabase,
@@ -796,6 +796,9 @@ export async function startCommand(): Promise<void> {
 
   // --- Create agent context ---------------------------------------------
 
+  // Load persisted owner ID (if already claimed)
+  const persistedOwnerId = configManager.get<string>('owner.ownerId');
+
   const context = {
     db,
     provider: routerDefaultProvider,
@@ -814,6 +817,7 @@ export async function startCommand(): Promise<void> {
     memory: memoryEngine,
     shield,
     compactor,
+    ownerId: persistedOwnerId || undefined,
   };
 
   // --- Initialize pulse scheduler -----------------------------------------
@@ -887,8 +891,34 @@ export async function startCommand(): Promise<void> {
   }
   const webDistIndex = join(webRoot, 'dist', 'index.html');
 
-  if (!existsSync(webDistIndex)) {
-    logger.info('Web UI not built — building now...', undefined, { emoji: '🔨' });
+  // Check if build is missing OR stale (source newer than dist)
+  let needsBuild = !existsSync(webDistIndex);
+  if (!needsBuild) {
+    try {
+      const distMtime = statSync(webDistIndex).mtimeMs;
+      const srcDir = join(webRoot, 'src');
+      // Check if any source file is newer than the dist output
+      const checkDir = (dir: string): boolean => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const fullPath = join(dir, entry.name);
+          if (entry.isDirectory()) {
+            if (checkDir(fullPath)) return true;
+          } else if (statSync(fullPath).mtimeMs > distMtime) {
+            return true;
+          }
+        }
+        return false;
+      };
+      if (existsSync(srcDir)) {
+        needsBuild = checkDir(srcDir);
+      }
+    } catch {
+      // If stat check fails, skip stale detection
+    }
+  }
+
+  if (needsBuild) {
+    logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
     try {
       const buildResult = Bun.spawnSync(['bun', 'run', 'build'], {
         cwd: webRoot,
@@ -912,6 +942,12 @@ export async function startCommand(): Promise<void> {
   const port = parseInt(process.env.PORT || '3000', 10);
   const webUI = createWebUI({
     port,
+    configManager,
+    onOwnerClaimed: (ownerId: string) => {
+      // Update context at runtime when ownership is claimed
+      (context as { ownerId?: string }).ownerId = ownerId;
+      logger.info('Owner claimed via web UI', { ownerId }, { emoji: '🔑' });
+    },
     onMessage: async (message: string, userId: string) => {
       const { provider, classification, failedOver } =
         await orchestrator.routeWithHealth(message);
