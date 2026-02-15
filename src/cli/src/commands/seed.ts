@@ -26,8 +26,7 @@ export async function seedCommand(): Promise<void> {
     console.log();
     console.log(theme.error('  ✖ No soul seed found.'));
     console.log();
-    console.log(`    Run ${theme.cmd('tinyclaw start')} to initialize your TinyClaw.`);
-    console.log(`    Use ${theme.cmd('tinyclaw start --seed <number>')} to set a specific seed.`);
+    console.log(`    Run ${theme.cmd('tinyclaw setup')} to initialize your TinyClaw.`);
     console.log();
     return;
   }
