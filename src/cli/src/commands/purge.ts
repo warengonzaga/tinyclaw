@@ -20,6 +20,7 @@ import { rm, access, readFile } from 'fs/promises';
 import * as p from '@clack/prompts';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
+import { setLogMode } from '@tinyclaw/logger';
 import { parseSeed, generateSoul } from '@tinyclaw/heartware';
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,7 @@ function parseFlags(args: string[]): PurgeFlags {
  * Run the purge command — wipe all TinyClaw data for a fresh install.
  */
 export async function purgeCommand(args: string[] = []): Promise<void> {
+  setLogMode('error');
   showBanner();
 
   const flags = parseFlags(args);

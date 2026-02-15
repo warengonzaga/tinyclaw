@@ -24,6 +24,7 @@ import {
   DEFAULT_MODEL,
   DEFAULT_BASE_URL,
 } from '@tinyclaw/core';
+import { setLogMode } from '@tinyclaw/logger';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
 
@@ -40,6 +41,9 @@ async function isAlreadyConfigured(
  * Run the interactive setup wizard
  */
 export async function setupCommand(): Promise<void> {
+  // Suppress debug/info noise during interactive setup
+  setLogMode('error');
+
   showBanner();
 
   const secretsManager = await SecretsManager.create();

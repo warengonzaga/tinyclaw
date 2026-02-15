@@ -25,7 +25,7 @@ import { createPulseScheduler } from '@tinyclaw/pulse';
 import { createIntercom } from '@tinyclaw/intercom';
 import { createHybridMatcher } from '@tinyclaw/matcher';
 import { createSessionQueue } from '@tinyclaw/queue';
-import { logger } from '@tinyclaw/logger';
+import { logger, setLogMode, type LogModeName } from '@tinyclaw/logger';
 import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';
 import { HeartwareManager, createHeartwareTools, loadHeartwareContext, loadShieldContent, parseSeed, type HeartwareConfig } from '@tinyclaw/heartware';
 import { createLearningEngine } from '@tinyclaw/learning';
@@ -45,6 +45,15 @@ import { RESTART_EXIT_CODE } from '../supervisor.js';
  * Run the agent start flow
  */
 export async function startCommand(): Promise<void> {
+  // Apply --verbose flag (overrides stored config level)
+  const isVerbose = process.argv.includes('--verbose');
+  if (!isVerbose) {
+    // Default to info; config override is applied below after config loads
+    setLogMode('info');
+  } else {
+    setLogMode('debug');
+  }
+
   logger.log('TinyClaw — Small agent, mighty friend', undefined, { emoji: '🐜' });
 
   // --- Data directory ---------------------------------------------------
@@ -128,6 +137,14 @@ export async function startCommand(): Promise<void> {
 
   const configManager = await ConfigManager.create();
   logger.info('Config engine initialized', { configPath: configManager.path }, { emoji: '✅' });
+
+  // Apply log level from config (unless --verbose overrides)
+  if (!isVerbose) {
+    const configLogLevel = configManager.get<string>('logging.level');
+    if (configLogLevel) {
+      setLogMode(configLogLevel as LogModeName);
+    }
+  }
 
   // Read provider settings from config (fallback to defaults)
   const providerModel =
