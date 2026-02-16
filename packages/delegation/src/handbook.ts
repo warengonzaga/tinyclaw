@@ -8,14 +8,14 @@
 export const DELEGATION_HANDBOOK = `
 ## Sub-Agent Delegation Handbook
 
-You can delegate tasks to sub-agents — think of them as focused freelancers you hire.
+You can delegate tasks to sub-agents. Think of them as focused freelancers you hire.
 Sub-agents inherit your knowledge and personality, so they already know the user.
-**All delegation is non-blocking** — the user can keep chatting while sub-agents work.
+**All delegation is non-blocking.** The user can keep chatting while sub-agents work.
 
 ### When to Delegate
 - Complex research/analysis that benefits from focused processing
 - Multi-step tasks where a specialist would be more effective
-- Any task that would take time — it runs in the background automatically
+- Any task that would take time (it runs in the background automatically)
 - Do NOT delegate greetings, simple questions, or casual chat
 
 ### Writing Effective Role Descriptions
@@ -32,11 +32,11 @@ Sub-agents inherit your knowledge and personality, so they already know the user
 ### Reusing Sub-Agents
 - Check list_sub_agents before creating new ones for similar tasks
 - If a sub-agent did well on a similar task, use delegate_to_existing
-- Sub-agents retain conversation history — send follow-ups, don't recreate
+- Sub-agents retain conversation history. Send follow-ups, don't recreate
 - If the user is unsatisfied, improve the existing sub-agent rather than starting over
 
 ### How Delegation Works
-- Use delegate_task or delegate_to_existing — tasks always run in the background
+- Use delegate_task or delegate_to_existing. Tasks always run in the background
 - delegate_background works identically to delegate_task but is an explicit alias that emphasises background execution; prefer delegate_task for consistency
 - Tell the user you've started the task and they can keep chatting
 - Results arrive automatically on the next conversation turn
@@ -50,7 +50,7 @@ Sub-agents inherit your knowledge and personality, so they already know the user
 - Use manage_sub_agent to dismiss, revive, or permanently kill sub-agents
 
 ### Templates (Job Postings)
-- Over time you build a collection of role templates — like job postings
+- Over time you build a collection of role templates, like job postings
 - When delegating, check if a template exists for the task type
 - Templates improve automatically based on sub-agent performance
 - Update templates when the user's needs evolve
