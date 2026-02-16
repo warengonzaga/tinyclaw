@@ -9,7 +9,7 @@ Thank you for your interest in contributing to **Tiny Claw** (the "Project"), ma
 
 Tiny Claw is built on the belief that AI should be accessible to everyone. To keep the project **open source forever** while also making it **sustainable long-term**, the Maintainer offers a dual-licensing model - free under GPL-3.0, with an optional commercial license for companies that need it. Revenue from commercial licenses goes directly into funding development, infrastructure, and keeping Tiny Claw free for the community.
 
-The CLA ensures the Maintainer has the necessary rights to offer both licenses without legal ambiguity. It also signals that you're a **serious contributor** who understands and supports the project's mission. This isn't red tape - it's how we protect both the project and its contributors while building something that can grow and thrive for years to come.
+The CLA ensures the Maintainer has the necessary rights to offer both licenses without legal ambiguity. Without a CLA, open source projects can find themselves legally unable to evolve their licensing to meet sustainability needs - as seen with projects like OpenClaw, where the lack of contributor agreements made it impossible to offer a commercial license later. We don't want to repeat that mistake. The CLA also signals that you're a **serious contributor** who understands and supports the project's mission. This isn't red tape - it's how we protect both the project and its contributors while building something that can grow and thrive for years to come.
 
 ## 1. Definitions
 
