@@ -99,6 +99,16 @@ const TIER_DEFAULTS: Record<string, { timeoutMs: number; iterations: number }> =
 /** Fallback for unknown tiers. */
 const FALLBACK_TIMEOUT = { timeoutMs: 60_000, iterations: 10 };
 
+/** Map task types to a sensible tier for timeout estimation.
+ *  Used when the caller passes tier 'auto' and there's no historical data. */
+const TASK_TYPE_TO_TIER: Record<string, string> = {
+  research: 'complex',
+  code: 'complex',
+  analysis: 'moderate',
+  writing: 'moderate',
+  simple_lookup: 'simple',
+};
+
 /**
  * Task type classification keywords.
  * Each task type has a list of keywords that, when found in the description,
@@ -171,6 +181,21 @@ export function createTimeoutEstimator(db: DelegationStore): TimeoutEstimator {
           basedOn: 'tier_default',
           estimatedIterations: tierDefault.iterations,
         };
+      }
+
+      // 'auto' or unknown tier — infer from task classification
+      const inferredType = this.classifyTask(taskDescription);
+      const inferredTier = TASK_TYPE_TO_TIER[inferredType];
+      if (inferredTier) {
+        const inferred = TIER_DEFAULTS[inferredTier];
+        if (inferred) {
+          return {
+            timeoutMs: inferred.timeoutMs,
+            confidence: 0,
+            basedOn: 'tier_default',
+            estimatedIterations: inferred.iterations,
+          };
+        }
       }
 
       // Absolute fallback
