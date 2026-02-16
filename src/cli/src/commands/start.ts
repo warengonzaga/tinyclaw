@@ -37,7 +37,7 @@ import { createSandbox } from '@tinyclaw/sandbox';
 import { createShieldEngine } from '@tinyclaw/shield';
 import { createCompactor } from '@tinyclaw/compactor';
 import { createShellEngine, createShellTools } from '@tinyclaw/shell';
-import type { ChannelPlugin, Provider, Tool } from '@tinyclaw/types';
+import type { ChannelPlugin, Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/ui';
 import { theme } from '../ui/theme.js';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
@@ -981,7 +981,7 @@ export async function startCommand(): Promise<void> {
       // Include soft_deleted agents so the sidebar can show history
       return db.getAllSubAgents(userId, true);
     },
-    onMessageStream: async (message: string, userId: string, callback) => {
+    onMessageStream: async (message: string, userId: string, callback: StreamCallback) => {
       const { provider, classification, failedOver } =
         await orchestrator.routeWithHealth(message);
       logger.debug('Routed query (stream)', {
