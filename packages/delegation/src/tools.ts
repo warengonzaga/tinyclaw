@@ -174,6 +174,10 @@ export function createDelegationTools(config: DelegationToolsConfig): {
 
         if (agent) {
           isReuse = true;
+          // Auto-revive archived/suspended agents so they become active
+          if (agent.status === 'suspended' || agent.status === 'soft_deleted') {
+            agent = lifecycle.revive(agent.id) ?? agent;
+          }
           logger.info('Reusing sub-agent', { agentId: agent.id, role: agent.role });
         } else {
           agent = lifecycle.create({
@@ -261,7 +265,12 @@ export function createDelegationTools(config: DelegationToolsConfig): {
         // Check for reusable or create new
         let agent = lifecycle.findReusable(userId, role);
 
-        if (!agent) {
+        if (agent) {
+          // Auto-revive archived/suspended agents so they become active
+          if (agent.status === 'suspended' || agent.status === 'soft_deleted') {
+            agent = lifecycle.revive(agent.id) ?? agent;
+          }
+        } else {
           agent = lifecycle.create({
             userId,
             role,
@@ -320,8 +329,14 @@ export function createDelegationTools(config: DelegationToolsConfig): {
       if (!agentId) return 'Error: agent_id is required.';
       if (!task) return 'Error: task is required.';
 
-      const agent = lifecycle.get(agentId);
+      let agent = lifecycle.get(agentId);
       if (!agent) return `Error: Sub-agent ${agentId} not found.`;
+
+      // Auto-revive suspended or archived agents so follow-ups "just work"
+      if (agent.status === 'suspended' || agent.status === 'soft_deleted') {
+        agent = lifecycle.revive(agentId) ?? agent;
+      }
+
       if (agent.status !== 'active') return `Error: Sub-agent ${agentId} is ${agent.status}. Revive it first.`;
 
       try {
@@ -378,7 +393,12 @@ export function createDelegationTools(config: DelegationToolsConfig): {
         const perf = `${(a.performanceScore * 100).toFixed(0)}%`;
         const tasks = `${a.successfulTasks}/${a.totalTasks} tasks`;
         const lastActive = new Date(a.lastActiveAt).toISOString().slice(0, 16);
-        return `- [${a.status}] ${a.role} (${a.id})\n  Performance: ${perf} | ${tasks} | Last active: ${lastActive}`;
+        // Map internal status to user-friendly labels
+        const statusLabel =
+          a.status === 'suspended' ? 'idle'
+          : a.status === 'soft_deleted' ? 'archived'
+          : a.status; // 'active' stays as-is
+        return `- [${statusLabel}] ${a.role} (${a.id})\n  Performance: ${perf} | ${tasks} | Last active: ${lastActive}`;
       });
 
       return `Sub-agents (${agents.length}):\n${lines.join('\n')}`;
@@ -417,7 +437,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
 
       switch (action) {
         case 'dismiss': {
-          lifecycle.suspend(agentId);
+          lifecycle.dismiss(agentId);
           return `Sub-agent "${agent.role}" (${agentId}) dismissed. Can be revived within 14 days.`;
         }
         case 'revive': {
