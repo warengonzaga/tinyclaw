@@ -145,6 +145,7 @@ export interface LifecycleManager {
 
   recordTaskResult(agentId: string, success: boolean): void;
   suspend(agentId: string): void;
+  dismiss(agentId: string): void;
   revive(agentId: string): SubAgentRecord | null;
   kill(agentId: string): void;
 
