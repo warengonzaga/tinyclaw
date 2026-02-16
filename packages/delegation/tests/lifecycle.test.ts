@@ -59,7 +59,7 @@ describe('Lifecycle Manager', () => {
     db.close();
   });
 
-  test('listActive returns only active agents', () => {
+  test('listActive returns active and suspended agents', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
@@ -70,7 +70,8 @@ describe('Lifecycle Manager', () => {
     lm.suspend(agentC.id);
 
     const active = lm.listActive('u1');
-    expect(active.length).toBe(2);
+    expect(active.length).toBe(3); // All 3 still listed (suspended is visible)
+    expect(active.some(a => a.status === 'suspended')).toBe(true);
 
     db.close();
   });
@@ -121,8 +122,7 @@ describe('Lifecycle Manager', () => {
     // Suspend
     lm.suspend(agent.id);
     const suspended = lm.get(agent.id);
-    expect(suspended!.status).toBe('soft_deleted');
-    expect(suspended!.deletedAt).not.toBeNull();
+    expect(suspended!.status).toBe('suspended');
 
     // Revive
     const revived = lm.revive(agent.id);
@@ -133,13 +133,43 @@ describe('Lifecycle Manager', () => {
     db.close();
   });
 
-  test('revive returns null for non-deleted agent', () => {
+  test('revive returns null for active agent', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
     const agent = lm.create({ userId: 'u1', role: 'Agent', toolsGranted: [], orientation: ORIENTATION });
     const result = lm.revive(agent.id);
     expect(result).toBeNull();
+
+    db.close();
+  });
+
+  test('findReusable matches suspended agents', () => {
+    const db = createTestDb();
+    const lm = createLifecycleManager(db);
+
+    const agent = lm.create({ userId: 'u1', role: 'Technical Research Analyst', toolsGranted: [], orientation: ORIENTATION });
+    lm.suspend(agent.id);
+
+    const match = lm.findReusable('u1', 'Research Analyst');
+    expect(match).not.toBeNull();
+    expect(match!.id).toBe(agent.id);
+    expect(match!.status).toBe('suspended');
+
+    db.close();
+  });
+
+  test('findReusable matches archived (soft_deleted) agents', () => {
+    const db = createTestDb();
+    const lm = createLifecycleManager(db);
+
+    const agent = lm.create({ userId: 'u1', role: 'Technical Research Analyst', toolsGranted: [], orientation: ORIENTATION });
+    lm.dismiss(agent.id);
+
+    const match = lm.findReusable('u1', 'Research Analyst');
+    expect(match).not.toBeNull();
+    expect(match!.id).toBe(agent.id);
+    expect(match!.status).toBe('soft_deleted');
 
     db.close();
   });

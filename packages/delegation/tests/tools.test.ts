@@ -425,8 +425,7 @@ describe('delegate_to_existing', () => {
     // Wait for first background task to complete (agent auto-suspends)
     await Bun.sleep(200);
 
-    // Revive agent so delegate_to_existing can work
-    result.lifecycle.revive(agentId);
+    // delegate_to_existing auto-revives suspended agents, no manual revive needed
 
     // Send follow-up (non-blocking)
     const followupTool = findTool(result.tools, 'delegate_to_existing');

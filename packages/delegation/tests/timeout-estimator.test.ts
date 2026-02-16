@@ -114,11 +114,20 @@ describe('TimeoutEstimator', () => {
       expect(result.timeoutMs).toBe(180_000);
     });
 
-    it('returns fallback for unknown tier', () => {
+    it('returns inferred tier default for unknown tier based on task classification', () => {
       const result = estimator.estimate('Some task', 'unknown-tier');
 
-      expect(result.basedOn).toBe('fallback');
-      expect(result.timeoutMs).toBe(60_000);
+      // 'Some task' classifies as 'simple_lookup' → tier 'simple' → 30s
+      expect(result.basedOn).toBe('tier_default');
+      expect(result.timeoutMs).toBe(30_000);
+    });
+
+    it('returns inferred complex tier for research task with unknown tier', () => {
+      const result = estimator.estimate('Research comprehensive information about fungi', 'auto');
+
+      // 'research' task type → tier 'complex' → 120s
+      expect(result.basedOn).toBe('tier_default');
+      expect(result.timeoutMs).toBe(120_000);
     });
   });
 

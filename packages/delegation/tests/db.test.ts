@@ -75,10 +75,12 @@ describe('sub_agents table', () => {
     db.saveSubAgent({ ...base, id: 'sa-1', userId: 'user-1', role: 'Agent A', status: 'active' });
     db.saveSubAgent({ ...base, id: 'sa-2', userId: 'user-1', role: 'Agent B', status: 'soft_deleted' });
     db.saveSubAgent({ ...base, id: 'sa-3', userId: 'user-2', role: 'Agent C', status: 'active' });
+    db.saveSubAgent({ ...base, id: 'sa-4', userId: 'user-1', role: 'Agent D', status: 'suspended' });
 
     const active = db.getActiveSubAgents('user-1');
-    expect(active.length).toBe(1);
-    expect(active[0].id).toBe('sa-1');
+    expect(active.length).toBe(2); // active + suspended (not soft_deleted)
+    expect(active.some(a => a.id === 'sa-1')).toBe(true);
+    expect(active.some(a => a.id === 'sa-4')).toBe(true);
 
     db.close();
   });
