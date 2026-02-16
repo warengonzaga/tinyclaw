@@ -27,6 +27,7 @@ export interface DelegationStore {
   getAllSubAgents(userId: string, includeDeleted?: boolean): SubAgentRecord[];
   updateSubAgent(id: string, updates: Partial<SubAgentRecord>): void;
   deleteExpiredSubAgents(beforeTimestamp: number): number;
+  archiveStaleSuspended?(inactiveBefore: number): number;
 
   // Role templates
   saveRoleTemplate(template: RoleTemplate): void;
