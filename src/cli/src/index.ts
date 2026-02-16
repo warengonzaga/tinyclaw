@@ -8,7 +8,9 @@
  * Usage:
  *   tinyclaw              Show banner + help
  *   tinyclaw setup        Interactive first-time setup wizard
+ *   tinyclaw setup --web  Start web onboarding at /setup
  *   tinyclaw start        Boot the agent (requires setup first)
+ *   tinyclaw start --web  Force web onboarding mode at /setup
  *   tinyclaw purge        Wipe all data for a fresh install
  *   tinyclaw --version    Print version
  *   tinyclaw --help       Show help
@@ -26,14 +28,15 @@ function showHelp(): void {
   console.log(`    ${theme.cmd('tinyclaw')} ${theme.dim('<command>')}`);
   console.log();
   console.log('  ' + theme.label('Commands'));
-  console.log(`    ${theme.cmd('setup')}    Interactive setup wizard - configure your provider`);
-    console.log(`    ${theme.cmd('start')}    Start the Tiny Claw agent`);
+  console.log(`    ${theme.cmd('setup')}    Interactive setup wizard (use --web for browser onboarding)`);
+  console.log(`    ${theme.cmd('start')}    Start the Tiny Claw agent`);
   console.log(`    ${theme.cmd('config')}   Manage models, providers, and settings`);
   console.log(`    ${theme.cmd('seed')}     Show your Tiny Claw's soul seed`);
   console.log(`    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`);
   console.log();
   console.log('  ' + theme.label('Options'));
   console.log(`    ${theme.dim('--verbose')}       Show debug-level logs during start`);
+  console.log(`    ${theme.dim('--web')}           Force web onboarding mode at /setup`);
   console.log(`    ${theme.dim('--version, -v')}   Show version number`);
   console.log(`    ${theme.dim('--help, -h')}      Show this help message`);
   console.log();
@@ -47,6 +50,12 @@ async function main(): Promise<void> {
 
   switch (command) {
     case 'setup': {
+      if (args.includes('--web')) {
+        const { supervisedStart } = await import('./supervisor.js');
+        await supervisedStart();
+        break;
+      }
+
       const { setupCommand } = await import('./commands/setup.js');
       await setupCommand();
       break;

@@ -6,7 +6,21 @@
  * to test control-flow logic in isolation.
  */
 
-import { afterEach, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
+
+// ── Mock picocolors (used by local CLI theme) ───────────────────────
+
+mock.module('picocolors', () => ({
+  default: {
+    cyan: (text: string) => text,
+    green: (text: string) => text,
+    yellow: (text: string) => text,
+    red: (text: string) => text,
+    dim: (text: string) => text,
+    bold: (text: string) => text,
+    white: (text: string) => text,
+  },
+}));
 
 // ── Mock @tinyclaw/secrets ───────────────────────────────────────────
 
@@ -197,7 +211,36 @@ mock.module('@tinyclaw/memory', () => ({
 mock.module('@tinyclaw/sandbox', () => ({
   createSandbox: mock(() => ({
     execute: mock(() => Promise.resolve({ stdout: '', stderr: '', exitCode: 0 })),
+    shutdown: mock(() => Promise.resolve()),
   })),
+}));
+
+// ── Mock @tinyclaw/shield ───────────────────────────────────────────
+
+mock.module('@tinyclaw/shield', () => ({
+  createShieldEngine: mock(() => ({
+    getThreats: mock(() => []),
+  })),
+}));
+
+// ── Mock @tinyclaw/compactor ────────────────────────────────────────
+
+mock.module('@tinyclaw/compactor', () => ({
+  createCompactor: mock(() => ({
+    compactIfNeeded: mock(() => Promise.resolve({})),
+    getLatestSummary: mock(() => null),
+    estimateTokens: mock(() => 0),
+  })),
+}));
+
+// ── Mock @tinyclaw/shell ────────────────────────────────────────────
+
+mock.module('@tinyclaw/shell', () => ({
+  createShellEngine: mock(() => ({
+    shutdown: mock(() => Promise.resolve()),
+    clearApprovals: mock(() => {}),
+  })),
+  createShellTools: mock(() => []),
 }));
 
 // ── Mock @tinyclaw/types ────────────────────────────────────────────
@@ -220,18 +263,24 @@ mock.module('@tinyclaw/ui', () => ({
 
 // ── Import after mocks ───────────────────────────────────────────────
 
-import { startCommand } from '../../src/commands/start.js';
+let startCommand: typeof import('../../src/commands/start.js').startCommand;
+
+beforeAll(async () => {
+  ({ startCommand } = await import('../../src/commands/start.js'));
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
 let originalConsoleLog: typeof console.log;
 let originalExit: typeof process.exit;
+let originalArgv: string[];
 let consoleOutput: string[];
 let exitCode: number | undefined;
 
 beforeEach(() => {
   originalConsoleLog = console.log;
   originalExit = process.exit;
+  originalArgv = [...process.argv];
   consoleOutput = [];
   exitCode = undefined;
 
@@ -251,6 +300,7 @@ beforeEach(() => {
 afterEach(() => {
   console.log = originalConsoleLog;
   process.exit = originalExit;
+  process.argv = originalArgv;
 });
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -281,29 +331,32 @@ describe('startCommand', () => {
     await startCommand();
     expect(mockGetStats).toHaveBeenCalled();
   });
+
+  test('forces setup-only web mode with --web flag', async () => {
+    process.argv = [...process.argv, '--web'];
+    await expect(startCommand()).resolves.toBeUndefined();
+    expect(mockWebUIStart).toHaveBeenCalled();
+
+    const fullOutput = consoleOutput.join('\n');
+    expect(fullOutput).toContain('/setup');
+    expect(fullOutput).toContain('tinyclaw setup');
+  });
 });
 
 describe('startCommand — missing API key', () => {
-  test('exits with code 1 when no API key is found', async () => {
+  test('starts setup-only web mode when no API key is found', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(false));
-
-    try {
-      await startCommand();
-    } catch (err: any) {
-      expect(err.message).toContain('process.exit');
-    }
-
-    expect(exitCode).toBe(1);
+    await expect(startCommand()).resolves.toBeUndefined();
+    expect(mockWebUIStart).toHaveBeenCalled();
+    expect(exitCode).toBeUndefined();
   });
 
-  test('prints guidance to run setup when key is missing', async () => {
+  test('prints guidance for both CLI and Web onboarding when key is missing', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(false));
-
-    try {
-      await startCommand();
-    } catch { /* expected process.exit */ }
+    await startCommand();
 
     const fullOutput = consoleOutput.join('\n');
     expect(fullOutput).toContain('tinyclaw setup');
+    expect(fullOutput).toContain('/setup');
   });
 });

@@ -40,6 +40,16 @@ export const TinyClawConfigSchema = z.object({
     sessionTokenHash: z.string().optional(),
     /** Timestamp when ownership was claimed */
     claimedAt: z.number().optional(),
+    /** Base32 TOTP secret used for owner login */
+    totpSecret: z.string().optional(),
+    /** Backup recovery code hashes (SHA-256) */
+    backupCodeHashes: z.array(z.string()).optional(),
+    /** Number of remaining backup codes */
+    backupCodesRemaining: z.number().int().nonnegative().optional(),
+    /** SHA-256 hash of the recovery token (required alongside backup codes) */
+    recoveryTokenHash: z.string().optional(),
+    /** Timestamp when owner MFA was configured */
+    mfaConfiguredAt: z.number().optional(),
   }).optional(),
 
   /** Provider configurations keyed by provider name */

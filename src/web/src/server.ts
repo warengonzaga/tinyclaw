@@ -1,33 +1,150 @@
 import { existsSync, chmodSync, statSync } from 'fs'
 import { join, resolve } from 'path'
 import { timingSafeEqual } from 'crypto'
+import { SecurityDatabase } from './security-db'
 
 const textEncoder = new TextEncoder()
 
 // ---------------------------------------------------------------------------
-// Owner Authority — claim-based token authentication
+// Owner Authority — bootstrap setup + session authentication
 // ---------------------------------------------------------------------------
 
-/** Token expiry — claim & login tokens are valid for 1 hour (per OpenClaw pattern). */
+/** Bootstrap/setup token expiry — valid for 1 hour. */
 const TOKEN_EXPIRY_MS = 60 * 60 * 1000
+const SETUP_SESSION_EXPIRY_MS = 15 * 60 * 1000
 
 /**
- * Human-friendly alphabet for tokens — excludes ambiguous characters
+ * Human-friendly alphabet for secrets/codes — excludes ambiguous characters
  * (0/O, 1/I/L) following the OpenClaw pairing-code pattern.
  */
 const TOKEN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
+const DEFAULT_PROVIDER = 'ollama'
+const DEFAULT_MODEL = 'kimi-k2.5:cloud'
+const DEFAULT_BASE_URL = 'https://ollama.com'
+const BOOTSTRAP_SECRET_LENGTH = 30
+const BACKUP_CODES_COUNT = 10
+const BACKUP_CODE_LENGTH = 30
+const RECOVERY_TOKEN_LENGTH = 200
+
+const TOTP_BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+const TOTP_STEP_SECONDS = 30
+const TOTP_DIGITS = 6
+
+interface SetupSession {
+  expiresAt: number
+  totpSecret: string
+}
+
 /**
- * Generate a cryptographically random claim/login token.
- * Uses 16 characters from a 32-char human-friendly alphabet (~80-bit entropy).
- * This is printed to the console on boot.
+ * Generate a cryptographically random bootstrap secret.
+ * Uses 30 characters from a 32-char human-friendly alphabet (~150-bit entropy).
  */
 function generateClaimToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  const bytes = crypto.getRandomValues(new Uint8Array(BOOTSTRAP_SECRET_LENGTH))
   const chars = Array.from(bytes, b => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length])
-  // Format as tc_XXXX-XXXX-XXXX-XXXX for readability
-  const raw = chars.join('')
-  return `tc_${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}`
+  return chars.join('')
+}
+
+function generateRecoveryToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(RECOVERY_TOKEN_LENGTH))
+  const chars = Array.from(bytes, b => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length])
+  return chars.join('')
+}
+
+function generateBackupCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(BACKUP_CODE_LENGTH))
+  const chars = Array.from(bytes, b => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length])
+  return chars.join('')
+}
+
+function generateBackupCodes(count = BACKUP_CODES_COUNT): string[] {
+  const codes: string[] = []
+  for (let i = 0; i < count; i++) codes.push(generateBackupCode())
+  return codes
+}
+
+function generateTotpSecret(length = 32): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(length))
+  return Array.from(bytes, b => TOTP_BASE32_ALPHABET[b % TOTP_BASE32_ALPHABET.length]).join('')
+}
+
+function base32Decode(input: string): Uint8Array {
+  const cleaned = input.toUpperCase().replace(/=+$/g, '')
+  let bits = 0
+  let value = 0
+  const bytes: number[] = []
+
+  for (const ch of cleaned) {
+    const idx = TOTP_BASE32_ALPHABET.indexOf(ch)
+    if (idx < 0) throw new Error('Invalid Base32')
+    value = (value << 5) | idx
+    bits += 5
+    if (bits >= 8) {
+      bytes.push((value >>> (bits - 8)) & 0xff)
+      bits -= 8
+    }
+  }
+
+  return Uint8Array.from(bytes)
+}
+
+function createTotpUri(secret: string, accountName = 'owner', issuer = 'TinyClaw'): string {
+  return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=${TOTP_DIGITS}&period=${TOTP_STEP_SECONDS}`
+}
+
+async function generateTotpCode(secret: string, counter: number): Promise<string> {
+  const keyData = base32Decode(secret)
+  const counterBuffer = new ArrayBuffer(8)
+  const view = new DataView(counterBuffer)
+  view.setUint32(4, counter >>> 0)
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-1' },
+    false,
+    ['sign']
+  )
+
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, counterBuffer)
+  const hmac = new Uint8Array(signature)
+  const offset = hmac[hmac.length - 1] & 0x0f
+  const binary =
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff)
+
+  const otp = binary % (10 ** TOTP_DIGITS)
+  return String(otp).padStart(TOTP_DIGITS, '0')
+}
+
+async function verifyTotpCode(secret: string, code: string): Promise<boolean> {
+  const normalized = String(code || '').replace(/\s+/g, '')
+  if (!/^\d{6}$/.test(normalized)) return false
+
+  const nowCounter = Math.floor(Date.now() / 1000 / TOTP_STEP_SECONDS)
+  for (const drift of [-1, 0, 1]) {
+    const expected = await generateTotpCode(secret, nowCounter + drift)
+    if (timingSafeCompare(normalized, expected)) return true
+  }
+  return false
+}
+
+function buildProviderApiKeyName(providerName: string): string {
+  return `provider.${providerName}.apiKey`
+}
+
+function parseSoulSeed(value?: string): number {
+  const raw = String(value ?? '').trim()
+  if (!raw) {
+    const random = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
+    return random
+  }
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed)) throw new Error('Soul seed must be a valid integer')
+  return parsed
 }
 
 /**
@@ -82,6 +199,26 @@ const RATE_LIMIT_MAX_ATTEMPTS = 5         // max 5 attempts per window
 const RATE_LIMIT_LOCKOUT_MS = 5 * 60_000  // 5-minute lockout after exceeding
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
+// ---------------------------------------------------------------------------
+// Recovery Rate Limiting — persistent, stricter: 3 attempts, exponential backoff
+// Permanent IP block after MAX_TOTAL_RECOVERY_FAILURES total failures
+// ---------------------------------------------------------------------------
+
+const RECOVERY_MAX_ATTEMPTS = 3
+const RECOVERY_BASE_LOCKOUT_MS = 60_000   // 1 minute base
+const MAX_TOTAL_RECOVERY_FAILURES = 10    // permanently block after this many total failures
+
+/**
+ * Security database instance — initialized inside createWebUI when dataDir is available.
+ * Null when no dataDir is provided (e.g. in tests without persistence).
+ */
+let securityDb: SecurityDatabase | null = null
+
+/**
+ * In-memory fallback for environments without a security database (tests, etc.).
+ */
+const recoveryRateLimitStore = new Map<string, { failedAttempts: number; lockedUntil: number }>()
+
 /**
  * Check rate limit for a given key (typically IP address).
  * Returns true if the request should be allowed, false if rate-limited.
@@ -115,6 +252,104 @@ function checkRateLimit(key: string): boolean {
 }
 
 /**
+ * Check recovery rate limit for a given key.
+ * 3 attempts max, then exponential lockout (1min, 2min, 4min, 8min, ...).
+ * Permanently blocked IPs are always denied.
+ * Returns { allowed: true } or { allowed: false, retryAfterMs, permanent }.
+ */
+function checkRecoveryRateLimit(key: string): { allowed: boolean; retryAfterMs?: number; permanent?: boolean } {
+  // Check permanent block first (persistent DB)
+  if (securityDb?.isBlocked(key)) {
+    return { allowed: false, permanent: true }
+  }
+
+  const now = Date.now()
+
+  if (securityDb) {
+    const row = securityDb.getRecoveryAttempts(key)
+    if (!row) return { allowed: true }
+
+    if (row.locked_until > now) {
+      return { allowed: false, retryAfterMs: row.locked_until - now }
+    }
+
+    if (row.failed_attempts >= RECOVERY_MAX_ATTEMPTS) {
+      const lockoutMultiplier = Math.pow(2, Math.floor(row.failed_attempts / RECOVERY_MAX_ATTEMPTS) - 1)
+      const lockoutMs = RECOVERY_BASE_LOCKOUT_MS * lockoutMultiplier
+      securityDb.setLockout(key, now + lockoutMs)
+      return { allowed: false, retryAfterMs: lockoutMs }
+    }
+
+    return { allowed: true }
+  }
+
+  // Fallback: in-memory
+  let entry = recoveryRateLimitStore.get(key)
+  if (!entry) return { allowed: true }
+
+  if (entry.lockedUntil > now) {
+    return { allowed: false, retryAfterMs: entry.lockedUntil - now }
+  }
+
+  if (entry.failedAttempts >= RECOVERY_MAX_ATTEMPTS) {
+    const lockoutMultiplier = Math.pow(2, Math.floor(entry.failedAttempts / RECOVERY_MAX_ATTEMPTS) - 1)
+    const lockoutMs = RECOVERY_BASE_LOCKOUT_MS * lockoutMultiplier
+    entry.lockedUntil = now + lockoutMs
+    return { allowed: false, retryAfterMs: lockoutMs }
+  }
+
+  return { allowed: true }
+}
+
+/**
+ * Record a failed recovery attempt — increments counter.
+ * If total failures exceed MAX_TOTAL_RECOVERY_FAILURES, permanently blocks the IP.
+ */
+function recordRecoveryFailure(key: string): void {
+  if (securityDb) {
+    const row = securityDb.recordFailure(key)
+
+    // Permanent block after reaching the threshold
+    if (row.failed_attempts >= MAX_TOTAL_RECOVERY_FAILURES) {
+      securityDb.blockIP(key, 'max_recovery_attempts', row.failed_attempts)
+      securityDb.resetAttempts(key)
+      return
+    }
+
+    // Start lockout if they hit the attempt limit
+    if (row.failed_attempts >= RECOVERY_MAX_ATTEMPTS) {
+      const lockoutMultiplier = Math.pow(2, Math.floor(row.failed_attempts / RECOVERY_MAX_ATTEMPTS) - 1)
+      securityDb.setLockout(key, Date.now() + (RECOVERY_BASE_LOCKOUT_MS * lockoutMultiplier))
+    }
+    return
+  }
+
+  // Fallback: in-memory
+  let entry = recoveryRateLimitStore.get(key)
+  if (!entry) {
+    entry = { failedAttempts: 0, lockedUntil: 0 }
+    recoveryRateLimitStore.set(key, entry)
+  }
+  entry.failedAttempts++
+
+  if (entry.failedAttempts >= RECOVERY_MAX_ATTEMPTS) {
+    const lockoutMultiplier = Math.pow(2, Math.floor(entry.failedAttempts / RECOVERY_MAX_ATTEMPTS) - 1)
+    entry.lockedUntil = Date.now() + (RECOVERY_BASE_LOCKOUT_MS * lockoutMultiplier)
+  }
+}
+
+/**
+ * Reset recovery rate limit on successful recovery.
+ */
+function resetRecoveryRateLimit(key: string): void {
+  if (securityDb) {
+    securityDb.resetAttempts(key)
+    return
+  }
+  recoveryRateLimitStore.delete(key)
+}
+
+/**
  * Get the IP address from a request.
  */
 function getClientIP(request: Request, server: any): string {
@@ -139,6 +374,14 @@ setInterval(() => {
       rateLimitStore.delete(key)
     }
   }
+  // Clean in-memory fallback store
+  for (const [key, entry] of recoveryRateLimitStore) {
+    if (entry.lockedUntil < now - 30 * 60_000) {
+      recoveryRateLimitStore.delete(key)
+    }
+  }
+  // Clean persistent DB stale attempts (30 min inactive)
+  securityDb?.cleanStaleAttempts(30 * 60_000)
 }, 10 * 60_000).unref?.()
 
 // ---------------------------------------------------------------------------
@@ -288,21 +531,30 @@ export function createWebUI(config) {
     getBackgroundTasks,
     getSubAgents,
     configManager,
+    secretsManager,
     onOwnerClaimed,
     configDbPath,
+    dataDir,
   } = config
 
   const serverStartedAt = Date.now()
   let server = null
 
-  // Claim token — generated once per boot, printed to console
+  // Initialize persistent security database when dataDir is available
+  if (dataDir) {
+    const securityDbPath = join(dataDir, 'data', 'security.db')
+    securityDb = new SecurityDatabase(securityDbPath)
+    hardenFilePermissions(securityDbPath)
+  }
+
+  // Bootstrap secret — generated once per boot for first-time setup claim.
   let claimToken: string | null = null
   let claimTokenCreatedAt: number = 0
+  const setupSessions = new Map<string, SetupSession>()
 
-  // Login token — generated on boot when ownership is already claimed,
-  // allows the owner to re-authenticate from a new browser / cleared cookies.
-  let loginToken: string | null = null
-  let loginTokenCreatedAt: number = 0
+  // Recovery sessions — validated recovery tokens (token hash → expiry)
+  const recoveryValidSessions = new Map<string, number>()
+  const RECOVERY_SESSION_EXPIRY_MS = 10 * 60_000 // 10 minutes
 
   // Harden config database permissions on startup
   if (configDbPath) {
@@ -352,25 +604,25 @@ export function createWebUI(config) {
     return (Date.now() - claimTokenCreatedAt) <= TOKEN_EXPIRY_MS
   }
 
-  /**
-   * Generate (or return existing) login token. Called on boot when
-   * ownership is already claimed. Tokens expire after TOKEN_EXPIRY_MS.
-   */
-  function getOrCreateLoginToken(): string {
-    const now = Date.now()
-    if (!loginToken || (now - loginTokenCreatedAt) > TOKEN_EXPIRY_MS) {
-      loginToken = generateClaimToken() // same format, different purpose
-      loginTokenCreatedAt = now
+  function getOrCreateSetupSession(): { token: string; session: SetupSession } {
+    const token = generateSessionToken()
+    const session: SetupSession = {
+      expiresAt: Date.now() + SETUP_SESSION_EXPIRY_MS,
+      totpSecret: generateTotpSecret(),
     }
-    return loginToken
+    setupSessions.set(token, session)
+    return { token, session }
   }
 
-  /**
-   * Check if the login token is still valid (not expired).
-   */
-  function isLoginTokenValid(): boolean {
-    if (!loginToken) return false
-    return (Date.now() - loginTokenCreatedAt) <= TOKEN_EXPIRY_MS
+  function getSetupSession(token?: string): SetupSession | null {
+    if (!token) return null
+    const existing = setupSessions.get(token)
+    if (!existing) return null
+    if (existing.expiresAt < Date.now()) {
+      setupSessions.delete(token)
+      return null
+    }
+    return existing
   }
 
   return {
@@ -378,34 +630,29 @@ export function createWebUI(config) {
       if (server) return
 
       if (!isOwnerClaimed()) {
-        // First-time: display claim token
+        // First-time: display bootstrap secret
         const token = getOrCreateClaimToken()
         console.log('')
         console.log('  ┌────────────────────────────────────────────────────────┐')
         console.log('  │                                                        │')
-        console.log('  │   🐜 Tiny Claw — Owner Claim Token                     │')
+        console.log('  │   🐜 Tiny Claw — Bootstrap Secret                      │')
         console.log('  │                                                        │')
-        console.log(`  │   Token: ${token}                   │`)
+        console.log(`  │   Secret: ${token}   │`)
         console.log('  │                                                        │')
-        console.log('  │   Enter this on the web UI to claim ownership.         │')
-        console.log('  │   The first person to claim becomes the owner.         │')
+        console.log('  │   Open /setup and enter this to initialize ownership.  │')
         console.log('  │   ⏳ Expires in 1 hour. Restart to generate a new one. │')
         console.log('  │                                                        │')
         console.log('  └────────────────────────────────────────────────────────┘')
         console.log('')
       } else {
-        // Already claimed: display login token for re-authentication
-        const token = getOrCreateLoginToken()
+        // Already claimed: remind owner how to access login
         console.log('')
         console.log('  ┌────────────────────────────────────────────────────────┐')
         console.log('  │                                                        │')
-        console.log('  │   🐜 Tiny Claw — Owner Login Token                     │')
+        console.log('  │   🐜 Tiny Claw — Owner Access                          │')
         console.log('  │                                                        │')
-        console.log(`  │   Token: ${token}                   │`)
-        console.log('  │                                                        │')
-        console.log('  │   Use this at /login to access the dashboard           │')
-        console.log('  │   from a new browser or after clearing cookies.        │')
-        console.log('  │   ⏳ Expires in 1 hour. Restart to generate a new one. │')
+        console.log('  │   Open /login and enter your TOTP code.               │')
+        console.log('  │   Lost access? Use /recovery with your recovery token.│')
         console.log('  │                                                        │')
         console.log('  └────────────────────────────────────────────────────────┘')
         console.log('')
@@ -425,6 +672,11 @@ export function createWebUI(config) {
           const url = new URL(request.url)
           const pathname = url.pathname
 
+          const now = Date.now()
+          for (const [token, session] of setupSessions.entries()) {
+            if (session.expiresAt < now) setupSessions.delete(token)
+          }
+
           // =================================================================
           // Public API endpoints (no auth required)
           // =================================================================
@@ -438,41 +690,184 @@ export function createWebUI(config) {
           if (pathname === '/api/auth/status' && request.method === 'GET') {
             const claimed = isOwnerClaimed()
             const isOwner = claimed ? await isOwnerRequest(request) : false
-            return jsonResponse({ claimed, isOwner })
+            return jsonResponse({
+              claimed,
+              isOwner,
+              setupRequired: !claimed,
+              mfaConfigured: Boolean(configManager?.get('owner.totpSecret')),
+            })
           }
 
-          // Owner login — re-authenticate using a login token from the console
-          if (pathname === '/api/auth/login' && request.method === 'POST') {
+          // Bootstrap verification — first step of /setup flow
+          if (pathname === '/api/setup/bootstrap' && request.method === 'POST') {
             // Rate limit login attempts
             const clientIP = getClientIP(request, server)
             if (!checkRateLimit(clientIP)) {
               return jsonResponse({ error: 'Too many attempts. Try again later.' }, 429)
             }
 
-            if (!isOwnerClaimed()) {
-              return jsonResponse({ error: 'No owner to log in as. Use the claim flow first.' }, 400)
+            if (isOwnerClaimed()) {
+              return jsonResponse({ error: 'Setup already completed.' }, 403)
             }
+
             let body
             try {
               body = await request.json()
             } catch {
               return jsonResponse({ error: 'Invalid JSON' }, 400)
             }
-            const token = body?.token
-            if (!token || !isLoginTokenValid() || !timingSafeCompare(token, loginToken!)) {
-              return jsonResponse({ error: 'Invalid or expired login token. Restart Tiny Claw to generate a new one.' }, 401)
+
+            const secret = String(body?.secret ?? '').trim().toUpperCase()
+            if (!secret || !isClaimTokenValid() || !timingSafeCompare(secret, claimToken!)) {
+              return jsonResponse({ error: 'Invalid or expired bootstrap secret. Restart Tiny Claw to generate a new one.' }, 401)
             }
 
-            // Issue a new session token and update the stored hash
+            const { token: setupToken, session } = getOrCreateSetupSession()
+
+            return jsonResponse({
+              ok: true,
+              setupToken,
+              expiresInMs: SETUP_SESSION_EXPIRY_MS,
+              defaultProvider: 'Ollama Cloud',
+              defaultModel: DEFAULT_MODEL,
+              defaultBaseUrl: DEFAULT_BASE_URL,
+              totpSecret: session.totpSecret,
+              totpUri: createTotpUri(session.totpSecret),
+            })
+          }
+
+          // Setup completion — persist owner, API key, soul seed, TOTP config
+          if (pathname === '/api/setup/complete' && request.method === 'POST') {
+            const clientIP = getClientIP(request, server)
+            if (!checkRateLimit(clientIP)) {
+              return jsonResponse({ error: 'Too many attempts. Try again later.' }, 429)
+            }
+
+            if (isOwnerClaimed()) {
+              return jsonResponse({ error: 'Setup already completed.' }, 403)
+            }
+
+            let body
+            try {
+              body = await request.json()
+            } catch {
+              return jsonResponse({ error: 'Invalid JSON' }, 400)
+            }
+
+            const setupToken = String(body?.setupToken ?? '')
+            const session = getSetupSession(setupToken)
+            if (!session) {
+              return jsonResponse({ error: 'Setup session expired. Re-enter the bootstrap secret.' }, 401)
+            }
+
+            const acceptRisk = Boolean(body?.acceptRisk)
+            if (!acceptRisk) {
+              return jsonResponse({ error: 'You must accept the security warning to continue.' }, 400)
+            }
+
+            const apiKey = String(body?.apiKey ?? '').trim()
+            if (!apiKey) {
+              return jsonResponse({ error: 'API key is required.' }, 400)
+            }
+
+            const totpCode = String(body?.totpCode ?? '').trim()
+            const isValidTotp = await verifyTotpCode(session.totpSecret, totpCode)
+            if (!isValidTotp) {
+              return jsonResponse({ error: 'Invalid TOTP code. Check your authenticator and try again.' }, 400)
+            }
+
+            let soulSeed: number
+            try {
+              soulSeed = parseSoulSeed(body?.soulSeed)
+            } catch (error) {
+              return jsonResponse({ error: (error as Error).message }, 400)
+            }
+
+            const backupCodes = generateBackupCodes(BACKUP_CODES_COUNT)
+            const backupCodeHashes = await Promise.all(backupCodes.map((code) => sha256(code)))
+
+            const recoveryToken = generateRecoveryToken()
+            const recoveryTokenHash = await sha256(recoveryToken)
+
+            const sessionToken = generateSessionToken()
+            const sessionHash = await sha256(sessionToken)
+            const ownerId = 'web:owner'
+
+            if (!configManager || !secretsManager) {
+              return jsonResponse({ error: 'Server setup managers are not available.' }, 500)
+            }
+
+            await secretsManager.store(buildProviderApiKeyName(DEFAULT_PROVIDER), apiKey)
+
+            configManager.set('providers.starterBrain', {
+              model: DEFAULT_MODEL,
+              baseUrl: DEFAULT_BASE_URL,
+              apiKeyRef: buildProviderApiKeyName(DEFAULT_PROVIDER),
+            })
+            configManager.set('heartware.seed', soulSeed)
+            configManager.set('owner.ownerId', ownerId)
+            configManager.set('owner.sessionTokenHash', sessionHash)
+            configManager.set('owner.claimedAt', Date.now())
+            configManager.set('owner.totpSecret', session.totpSecret)
+            configManager.set('owner.backupCodeHashes', backupCodeHashes)
+            configManager.set('owner.backupCodesRemaining', backupCodeHashes.length)
+            configManager.set('owner.recoveryTokenHash', recoveryTokenHash)
+            configManager.set('owner.mfaConfiguredAt', Date.now())
+
+            // Clear one-time setup state after successful claim
+            claimToken = null
+            setupSessions.delete(setupToken)
+
+            if (onOwnerClaimed) {
+              onOwnerClaimed(ownerId)
+            }
+
+            return new Response(JSON.stringify({ ok: true, backupCodes, recoveryToken }), {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Set-Cookie': buildSessionCookie(sessionToken),
+              },
+            })
+          }
+
+          // Owner login — re-authenticate using TOTP
+          if (pathname === '/api/auth/login' && request.method === 'POST') {
+            const clientIP = getClientIP(request, server)
+            if (!checkRateLimit(clientIP)) {
+              return jsonResponse({ error: 'Too many attempts. Try again later.' }, 429)
+            }
+
+            if (!isOwnerClaimed()) {
+              return jsonResponse({ error: 'No owner is configured yet. Complete /setup first.' }, 400)
+            }
+
+            let body
+            try {
+              body = await request.json()
+            } catch {
+              return jsonResponse({ error: 'Invalid JSON' }, 400)
+            }
+
+            const totpSecret = configManager?.get<string>('owner.totpSecret')
+            if (!totpSecret) {
+              return jsonResponse({ error: 'Owner MFA is not configured.' }, 400)
+            }
+
+            const totpCode = String(body?.totpCode ?? '').trim()
+            if (!totpCode) {
+              return jsonResponse({ error: 'Enter your authenticator code.' }, 400)
+            }
+
+            const authenticated = await verifyTotpCode(totpSecret, totpCode)
+
+            if (!authenticated) {
+              return jsonResponse({ error: 'Invalid code.' }, 401)
+            }
+
             const sessionToken = generateSessionToken()
             const hash = await sha256(sessionToken)
-
-            if (configManager) {
-              configManager.set('owner.sessionTokenHash', hash)
-            }
-
-            // Rotate login token after successful use
-            loginToken = null
+            configManager?.set('owner.sessionTokenHash', hash)
 
             return new Response(JSON.stringify({ ok: true }), {
               status: 200,
@@ -483,53 +878,204 @@ export function createWebUI(config) {
             })
           }
 
-          // Claim ownership — first-to-claim flow
-          if (pathname === '/api/auth/claim' && request.method === 'POST') {
-            // Rate limit claim attempts
+          // =================================================================
+          // Recovery endpoints — backup code recovery with token gate
+          // =================================================================
+
+          // Validate recovery token — grants a short-lived recovery session
+          if (pathname === '/api/recovery/validate-token' && request.method === 'POST') {
             const clientIP = getClientIP(request, server)
-            if (!checkRateLimit(clientIP)) {
-              return jsonResponse({ error: 'Too many attempts. Try again later.' }, 429)
+            const rateCheck = checkRecoveryRateLimit(clientIP)
+            if (!rateCheck.allowed) {
+              if (rateCheck.permanent) {
+                return jsonResponse({ error: 'Access permanently blocked.' }, 403)
+              }
+              const retrySeconds = Math.ceil((rateCheck.retryAfterMs || 60_000) / 1000)
+              return jsonResponse({ error: `Too many attempts. Try again in ${retrySeconds} seconds.` }, 429)
             }
 
-            if (isOwnerClaimed()) {
-              return jsonResponse({ error: 'Ownership already claimed' }, 403)
+            if (!isOwnerClaimed()) {
+              return jsonResponse({ error: 'No owner is configured.' }, 400)
             }
+
+            let body
+            try {
+              body = await request.json()
+            } catch {
+              return jsonResponse({ error: 'Invalid request.' }, 400)
+            }
+
+            const token = String(body?.token ?? '').trim().toUpperCase()
+            if (!token) {
+              recordRecoveryFailure(clientIP)
+              return jsonResponse({ error: 'Invalid token.' }, 401)
+            }
+
+            const storedHash = configManager?.get<string>('owner.recoveryTokenHash')
+            if (!storedHash) {
+              recordRecoveryFailure(clientIP)
+              return jsonResponse({ error: 'Invalid token.' }, 401)
+            }
+
+            const submittedHash = await sha256(token)
+            if (!timingSafeCompare(submittedHash, storedHash)) {
+              recordRecoveryFailure(clientIP)
+              return jsonResponse({ error: 'Invalid token.' }, 401)
+            }
+
+            // Token valid — create a recovery session
+            resetRecoveryRateLimit(clientIP)
+            const recoverySessionId = generateSessionToken()
+            recoveryValidSessions.set(recoverySessionId, Date.now() + RECOVERY_SESSION_EXPIRY_MS)
+
+            return jsonResponse({
+              ok: true,
+              recoverySessionId,
+              expiresInMs: RECOVERY_SESSION_EXPIRY_MS,
+            })
+          }
+
+          // Use backup code to regain access — requires valid recovery session
+          if (pathname === '/api/recovery/use-backup' && request.method === 'POST') {
+            const clientIP = getClientIP(request, server)
+            const rateCheck = checkRecoveryRateLimit(clientIP)
+            if (!rateCheck.allowed) {
+              if (rateCheck.permanent) {
+                return jsonResponse({ error: 'Access permanently blocked.' }, 403)
+              }
+              const retrySeconds = Math.ceil((rateCheck.retryAfterMs || 60_000) / 1000)
+              return jsonResponse({ error: `Too many attempts. Try again in ${retrySeconds} seconds.` }, 429)
+            }
+
+            if (!isOwnerClaimed()) {
+              return jsonResponse({ error: 'No owner is configured.' }, 400)
+            }
+
+            let body
+            try {
+              body = await request.json()
+            } catch {
+              return jsonResponse({ error: 'Invalid request.' }, 400)
+            }
+
+            // Verify recovery session
+            const recoverySessionId = String(body?.recoverySessionId ?? '')
+            const sessionExpiry = recoveryValidSessions.get(recoverySessionId)
+            if (!sessionExpiry || sessionExpiry < Date.now()) {
+              recoveryValidSessions.delete(recoverySessionId)
+              recordRecoveryFailure(clientIP)
+              return jsonResponse({ error: 'Recovery session expired. Re-enter your recovery token.' }, 401)
+            }
+
+            const backupCode = String(body?.backupCode ?? '').trim().toUpperCase()
+            if (!backupCode) {
+              recordRecoveryFailure(clientIP)
+              return jsonResponse({ error: 'Invalid code.' }, 401)
+            }
+
+            // Verify backup code
+            const storedHashes = configManager?.get<string[]>('owner.backupCodeHashes') || []
+            const submittedHash = await sha256(backupCode)
+            const matched = storedHashes.find((hash) => timingSafeCompare(hash, submittedHash))
+
+            if (!matched || !configManager) {
+              recordRecoveryFailure(clientIP)
+              return jsonResponse({ error: 'Invalid code.' }, 401)
+            }
+
+            // Consume the backup code
+            const remaining = storedHashes.filter((hash) => !timingSafeCompare(hash, submittedHash))
+            configManager.set('owner.backupCodeHashes', remaining)
+            configManager.set('owner.backupCodesRemaining', remaining.length)
+
+            // Grant owner session
+            const sessionToken = generateSessionToken()
+            const hash = await sha256(sessionToken)
+            configManager.set('owner.sessionTokenHash', hash)
+
+            // Cleanup recovery session
+            recoveryValidSessions.delete(recoverySessionId)
+            resetRecoveryRateLimit(clientIP)
+
+            return new Response(JSON.stringify({
+              ok: true,
+              backupCodesRemaining: remaining.length,
+            }), {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Set-Cookie': buildSessionCookie(sessionToken),
+              },
+            })
+          }
+
+          // =================================================================
+          // TOTP Re-enrollment — for owners recovering via backup codes
+          // =================================================================
+
+          // Start TOTP re-setup — generates a new TOTP secret (owner auth required)
+          if (pathname === '/api/owner/totp-setup' && request.method === 'POST') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized.' }, 401)
+            }
+
+            // Create a new setup session (reuses existing mechanism)
+            const { token: reenrollToken, session } = getOrCreateSetupSession()
+
+            return jsonResponse({
+              ok: true,
+              reenrollToken,
+              totpSecret: session.totpSecret,
+              totpUri: createTotpUri(session.totpSecret),
+            })
+          }
+
+          // Confirm TOTP re-enrollment — verify code, replace TOTP + backup codes + recovery token
+          if (pathname === '/api/owner/totp-confirm' && request.method === 'POST') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized.' }, 401)
+            }
+
             let body
             try {
               body = await request.json()
             } catch {
               return jsonResponse({ error: 'Invalid JSON' }, 400)
             }
-            const token = body?.token
-            if (!token || !isClaimTokenValid() || !timingSafeCompare(token, claimToken!)) {
-              return jsonResponse({ error: 'Invalid or expired claim token. Restart Tiny Claw to generate a new one.' }, 401)
+
+            const reenrollToken = String(body?.reenrollToken ?? '')
+            const session = getSetupSession(reenrollToken)
+            if (!session) {
+              return jsonResponse({ error: 'Session expired. Start TOTP setup again.' }, 401)
             }
 
-            // Claim successful — generate session token and persist owner
-            const sessionToken = generateSessionToken()
-            const hash = await sha256(sessionToken)
-            const ownerId = 'web:owner'
-
-            if (configManager) {
-              configManager.set('owner.ownerId', ownerId)
-              configManager.set('owner.sessionTokenHash', hash)
-              configManager.set('owner.claimedAt', Date.now())
+            const totpCode = String(body?.totpCode ?? '').trim()
+            const isValid = await verifyTotpCode(session.totpSecret, totpCode)
+            if (!isValid) {
+              return jsonResponse({ error: 'Invalid TOTP code. Check your authenticator and try again.' }, 400)
             }
 
-            // Clear claim token — it's single-use
-            claimToken = null
+            // Generate new backup codes and recovery token
+            const backupCodes = generateBackupCodes(BACKUP_CODES_COUNT)
+            const backupCodeHashes = await Promise.all(backupCodes.map((code) => sha256(code)))
+            const recoveryToken = generateRecoveryToken()
+            const recoveryTokenHash = await sha256(recoveryToken)
 
-            // Notify the start command so it can wire ownerId into AgentContext
-            if (onOwnerClaimed) {
-              onOwnerClaimed(ownerId)
-            }
+            // Persist new TOTP, backup codes, and recovery token
+            configManager?.set('owner.totpSecret', session.totpSecret)
+            configManager?.set('owner.backupCodeHashes', backupCodeHashes)
+            configManager?.set('owner.backupCodesRemaining', backupCodeHashes.length)
+            configManager?.set('owner.recoveryTokenHash', recoveryTokenHash)
+            configManager?.set('owner.mfaConfiguredAt', Date.now())
 
-            return new Response(JSON.stringify({ ok: true, ownerId }), {
-              status: 200,
-              headers: {
-                'Content-Type': 'application/json',
-                'Set-Cookie': buildSessionCookie(sessionToken),
-              },
+            // Clear the setup session
+            setupSessions.delete(reenrollToken)
+
+            return jsonResponse({
+              ok: true,
+              backupCodes,
+              recoveryToken,
+              backupCodesRemaining: backupCodeHashes.length,
             })
           }
 
@@ -747,9 +1293,9 @@ export function createWebUI(config) {
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
-              // If ownership not claimed, redirect to claim page
+              // If ownership not claimed, redirect to setup page
               if (!isOwnerClaimed()) {
-                return fileResponse(distIndex) // SPA handles claim flow client-side
+                return Response.redirect(new URL('/setup', request.url).toString(), 302)
               }
               // If owner, serve the admin dashboard
               if (await isOwnerRequest(request)) {
@@ -763,13 +1309,51 @@ export function createWebUI(config) {
             return htmlResponse(buildDevNotice())
           }
 
+          // Setup route — first-time onboarding flow
+          if (pathname === '/setup') {
+            const { distDir } = resolveUiPaths()
+            const distIndex = join(distDir, 'index.html')
+
+            if (existsSync(distIndex)) {
+              return fileResponse(distIndex)
+            }
+
+            return htmlResponse(buildDevNotice())
+          }
+
           // Login route — owner re-authentication page
           if (pathname === '/login') {
+            if (!isOwnerClaimed()) {
+              return Response.redirect(new URL('/setup', request.url).toString(), 302)
+            }
+
             const { distDir } = resolveUiPaths()
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
               return fileResponse(distIndex) // SPA handles login view
+            }
+
+            return htmlResponse(buildDevNotice())
+          }
+
+          // Recovery route — owner account recovery via backup codes
+          // Strip any query parameters to prevent token leakage via URL,
+          // browser history, server logs, or Referer headers.
+          if (pathname === '/recovery') {
+            if (!isOwnerClaimed()) {
+              return Response.redirect(new URL('/setup', request.url).toString(), 302)
+            }
+
+            if (url.search) {
+              return Response.redirect(new URL('/recovery', request.url).toString(), 302)
+            }
+
+            const { distDir } = resolveUiPaths()
+            const distIndex = join(distDir, 'index.html')
+
+            if (existsSync(distIndex)) {
+              return fileResponse(distIndex) // SPA handles recovery view
             }
 
             return htmlResponse(buildDevNotice())

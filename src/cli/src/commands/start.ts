@@ -48,6 +48,7 @@ import { RESTART_EXIT_CODE } from '../supervisor.js';
 export async function startCommand(): Promise<void> {
   // Apply --verbose flag (overrides stored config level)
   const isVerbose = process.argv.includes('--verbose');
+  const forceWebSetup = process.argv.includes('--web');
   if (!isVerbose) {
     // Default to info; config override is applied below after config loads
     setLogMode('info');
@@ -115,25 +116,6 @@ export async function startCommand(): Promise<void> {
     storagePath: secretsManager.storagePath,
   }, { emoji: '✅' });
 
-  // --- Pre-flight: check for provider API key --------------------------
-
-  const hasOllamaKey = await secretsManager.check(
-    buildProviderKeyName('ollama')
-  );
-
-  if (!hasOllamaKey) {
-    console.log();
-    console.log(
-      theme.error('  ✖ No provider API key found.')
-    );
-    console.log(
-      `    Run ${theme.cmd('tinyclaw setup')} to configure your provider.`
-    );
-    console.log();
-    await secretsManager.close();
-    process.exit(1);
-  }
-
   // --- Initialize config engine -----------------------------------------
 
   const configManager = await ConfigManager.create();
@@ -145,6 +127,59 @@ export async function startCommand(): Promise<void> {
     if (configLogLevel) {
       setLogMode(configLogLevel as LogModeName);
     }
+  }
+
+  // --- Pre-flight: check for provider API key --------------------------
+
+  const launchSetupOnlyWebMode = async (reason: string): Promise<void> => {
+    const port = parseInt(process.env.PORT || '3000', 10);
+    const setupOnlyMessage =
+      'Tiny Claw setup is not complete yet. Open /setup to finish onboarding, or run tinyclaw setup in the CLI.';
+
+    console.log();
+    console.log(theme.warn(`  ⚠ ${reason}`));
+    console.log('');
+    console.log(`    ${theme.label('Choose your onboarding path:')}`);
+    console.log(`    1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`);
+    console.log(`    2. ${theme.cmd('tinyclaw start --web')} + open ${theme.cmd(`http://localhost:${port}/setup`)} ${theme.dim('(Web setup)')}`);
+    console.log();
+
+    const setupWebUI = createWebUI({
+      port,
+      configManager,
+      secretsManager,
+      configDbPath: configManager.path,
+      dataDir,
+      onOwnerClaimed: (ownerId: string) => {
+        logger.info('Owner claimed via web setup flow', { ownerId }, { emoji: '🔑' });
+      },
+      onMessage: async () => setupOnlyMessage,
+      onMessageStream: async (_message: string, _userId: string, callback: StreamCallback) => {
+        callback({ type: 'text', content: setupOnlyMessage });
+        callback({ type: 'done' });
+      },
+      getBackgroundTasks: () => [],
+      getSubAgents: () => [],
+    });
+
+    await setupWebUI.start();
+
+    logger.log('Setup-only web server is running', undefined, { emoji: '🛠️' });
+    logger.log(`   Open: http://localhost:${port}/setup`);
+  };
+
+  if (forceWebSetup) {
+    await launchSetupOnlyWebMode('Web setup mode enabled (--web).');
+    return;
+  }
+
+  const hasOllamaKey = await secretsManager.check(
+    buildProviderKeyName('ollama')
+  );
+
+  if (!hasOllamaKey) {
+    await launchSetupOnlyWebMode('Setup not completed yet.');
+    return;
   }
 
   // Read provider settings from config (fallback to defaults)
@@ -954,7 +989,9 @@ export async function startCommand(): Promise<void> {
   const webUI = createWebUI({
     port,
     configManager,
+    secretsManager,
     configDbPath: configManager.path,
+    dataDir,
     onOwnerClaimed: (ownerId: string) => {
       // Update context at runtime when ownership is claimed
       (context as { ownerId?: string }).ownerId = ownerId;

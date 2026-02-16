@@ -101,6 +101,10 @@ bun build    # Build all packages
 bun test     # Run test suite
 ```
 
+## 🔌 Plugin Development
+
+- Channel plugin guide: [`plugins/channel/README.md`](plugins/channel/README.md)
+
 ## 📁 Project Structure
 
 ```

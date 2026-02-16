@@ -21,21 +21,57 @@
   let authChecked = $state(false)
   let ownerClaimed = $state(false)
   let isOwner = $state(false)
-  let claimToken = $state('')
-  let claimError = $state('')
-  let claimLoading = $state(false)
-  let loginToken = $state('')
+  let bootstrapSecret = $state('')
+  let setupToken = $state('')
+  let setupError = $state('')
+  let setupLoading = $state(false)
+  let setupSubmitting = $state(false)
+  let setupPhase = $state('bootstrap')
+  let acceptedRisk = $state(false)
+  let setupApiKey = $state('')
+  let setupSoulSeed = $state('')
+  let setupTotpSecret = $state('')
+  let setupTotpUri = $state('')
+  let setupTotpCode = $state('')
+  let setupBackupCodes = $state([])
+  let setupRecoveryToken = $state('')
+  let totpCode = $state('')
   let loginError = $state('')
   let loginLoading = $state(false)
   let wantsLogin = $state(false) // true when on /login path
+  let wantsRecovery = $state(false) // true when on /recovery path
   let friendName = $state('')
   let friendNameSet = $state(false)
 
-  // View: 'loading' | 'claim' | 'login' | 'owner' | 'friend'
+  // Recovery state
+  let recoveryToken = $state('')
+  let recoverySessionId = $state('')
+  let recoveryBackupCode = $state('')
+  let recoveryError = $state('')
+  let recoveryLoading = $state(false)
+  let recoveryPhase = $state('token') // 'token' | 'backup' | 'totp-setup' | 'totp-confirm' | 'new-codes'
+  let recoverySuccess = $state(false)
+  let recoveryLocked = $state(false)
+  let recoveryLockTimer = $state(null)
+  let recoveryPermanentlyBlocked = $state(false)
+  let recoveryBackupCodesRemaining = $state(0)
+
+  // TOTP re-enrollment state (after recovery)
+  let reenrollToken = $state('')
+  let reenrollTotpSecret = $state('')
+  let reenrollTotpUri = $state('')
+  let reenrollTotpCode = $state('')
+  let reenrollLoading = $state(false)
+  let reenrollError = $state('')
+  let reenrollBackupCodes = $state([])
+  let reenrollRecoveryToken = $state('')
+
+  // View: 'loading' | 'setup' | 'login' | 'recovery' | 'owner' | 'friend'
   let view = $derived(
     !authChecked ? 'loading'
-    : !ownerClaimed ? 'claim'
+    : !ownerClaimed ? 'setup'
     : isOwner ? 'owner'
+    : wantsRecovery ? 'recovery'
     : wantsLogin ? 'login'
     : 'friend'
   )
@@ -80,11 +116,17 @@
 
     // Route detection — determine view based on URL path
     const pathname = window.location.pathname
+    if (!ownerClaimed && pathname !== '/setup') {
+      window.history.replaceState({}, '', '/setup')
+    }
     if (pathname === '/chat' && ownerClaimed) {
       isOwner = false // Force friend view on /chat path
     }
     if (pathname === '/login' && ownerClaimed && !isOwner) {
       wantsLogin = true // Show login form on /login path
+    }
+    if (pathname === '/recovery' && ownerClaimed && !isOwner) {
+      wantsRecovery = true // Show recovery form on /recovery path
     }
 
     checkHealth()
@@ -163,52 +205,98 @@
     authChecked = true
   }
 
-  async function submitClaim() {
-    if (!claimToken.trim() || claimLoading) return
-    claimLoading = true
-    claimError = ''
+  async function submitBootstrap() {
+    if (!bootstrapSecret.trim() || setupLoading) return
+    setupLoading = true
+    setupError = ''
     try {
-      const res = await fetch('/api/auth/claim', {
+      const res = await fetch('/api/setup/bootstrap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: claimToken.trim() })
+        body: JSON.stringify({ secret: bootstrapSecret.trim() })
       })
       const data = await res.json()
       if (res.ok) {
-        ownerClaimed = true
-        isOwner = true
-        claimToken = ''
+        setupToken = data.setupToken
+        setupTotpSecret = data.totpSecret || ''
+        setupTotpUri = data.totpUri || ''
+        setupPhase = 'form'
+        bootstrapSecret = ''
       } else {
-        claimError = data.error || 'Claim failed'
+        setupError = data.error || 'Bootstrap verification failed'
       }
     } catch {
-      claimError = 'Could not reach Tiny Claw server'
+      setupError = 'Could not reach Tiny Claw server'
     }
-    claimLoading = false
+    setupLoading = false
   }
 
-  function handleClaimKeydown(event) {
+  function handleBootstrapKeydown(event) {
     if (event.key === 'Enter') {
       event.preventDefault()
-      submitClaim()
+      submitBootstrap()
+    }
+  }
+
+  async function submitSetup() {
+    if (setupSubmitting) return
+    setupSubmitting = true
+    setupError = ''
+
+    try {
+      const res = await fetch('/api/setup/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setupToken,
+          acceptRisk: acceptedRisk,
+          apiKey: setupApiKey,
+          soulSeed: setupSoulSeed,
+          totpCode: setupTotpCode,
+        })
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setupBackupCodes = data.backupCodes || []
+        setupRecoveryToken = data.recoveryToken || ''
+        setupPhase = 'backup-codes'
+      } else {
+        setupError = data.error || 'Setup failed'
+      }
+    } catch {
+      setupError = 'Could not reach Tiny Claw server'
+    }
+
+    setupSubmitting = false
+  }
+
+  async function finishSetupAndEnter() {
+    await checkAuth()
+    if (ownerClaimed && isOwner) {
+      window.history.replaceState({}, '', '/')
+      fetchBackgroundTasks()
+      fetchSubAgents()
     }
   }
 
   async function submitLogin() {
-    if (!loginToken.trim() || loginLoading) return
+    if (!totpCode.trim() || loginLoading) return
     loginLoading = true
     loginError = ''
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: loginToken.trim() })
+        body: JSON.stringify({
+          totpCode: totpCode.trim(),
+        })
       })
       const data = await res.json()
       if (res.ok) {
         isOwner = true
         wantsLogin = false
-        loginToken = ''
+        totpCode = ''
         // Redirect to dashboard
         window.history.replaceState({}, '', '/')
         // Start polling owner data
@@ -227,6 +315,176 @@
     if (event.key === 'Enter') {
       event.preventDefault()
       submitLogin()
+    }
+  }
+
+  function handleRecoveryLockout(errorMsg) {
+    recoveryLocked = true
+    recoveryError = errorMsg
+    // Extract seconds from error like "Try again in 60 seconds."
+    const match = errorMsg.match(/(\d+)\s*seconds/)
+    if (match) {
+      let remaining = parseInt(match[1], 10)
+      if (recoveryLockTimer) clearInterval(recoveryLockTimer)
+      recoveryLockTimer = setInterval(() => {
+        remaining--
+        if (remaining <= 0) {
+          clearInterval(recoveryLockTimer)
+          recoveryLockTimer = null
+          recoveryLocked = false
+          recoveryError = ''
+        } else {
+          recoveryError = `Too many attempts. Try again in ${remaining} seconds.`
+        }
+      }, 1000)
+    }
+  }
+
+  async function submitRecoveryToken() {
+    if (!recoveryToken.trim() || recoveryLoading || recoveryLocked) return
+    recoveryLoading = true
+    recoveryError = ''
+    try {
+      const res = await fetch('/api/recovery/validate-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: recoveryToken.trim() })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        recoverySessionId = data.recoverySessionId
+        recoveryPhase = 'backup'
+        recoveryToken = ''
+      } else if (res.status === 403) {
+        recoveryPermanentlyBlocked = true
+        recoveryLocked = true
+        recoveryError = 'Access permanently blocked.'
+      } else if (res.status === 429) {
+        handleRecoveryLockout(data.error || 'Too many attempts.')
+      } else {
+        recoveryError = data.error || 'Invalid token.'
+      }
+    } catch {
+      recoveryError = 'Could not reach Tiny Claw server'
+    }
+    recoveryLoading = false
+  }
+
+  async function submitRecoveryBackup() {
+    if (!recoveryBackupCode.trim() || recoveryLoading || recoveryLocked) return
+    recoveryLoading = true
+    recoveryError = ''
+    try {
+      const res = await fetch('/api/recovery/use-backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recoverySessionId,
+          backupCode: recoveryBackupCode.trim(),
+        })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        recoverySuccess = true
+        recoveryBackupCode = ''
+        recoveryBackupCodesRemaining = data.backupCodesRemaining ?? 0
+        // Transition to TOTP re-setup prompt
+        recoveryPhase = 'totp-setup'
+      } else if (res.status === 403) {
+        recoveryPermanentlyBlocked = true
+        recoveryLocked = true
+        recoveryError = 'Access permanently blocked.'
+      } else if (res.status === 429) {
+        handleRecoveryLockout(data.error || 'Too many attempts.')
+      } else {
+        recoveryError = data.error || 'Invalid code.'
+      }
+    } catch {
+      recoveryError = 'Could not reach Tiny Claw server'
+    }
+    recoveryLoading = false
+  }
+
+  function handleRecoveryKeydown(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (recoveryPhase === 'token') submitRecoveryToken()
+      else if (recoveryPhase === 'backup') submitRecoveryBackup()
+      else if (recoveryPhase === 'totp-confirm') submitReenrollTotp()
+    }
+  }
+
+  /** Start TOTP re-enrollment — request a new TOTP secret from the server. */
+  async function startTotpReenroll() {
+    reenrollLoading = true
+    reenrollError = ''
+    try {
+      const res = await fetch('/api/owner/totp-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (res.ok) {
+        reenrollToken = data.reenrollToken
+        reenrollTotpSecret = data.totpSecret
+        reenrollTotpUri = data.totpUri
+        recoveryPhase = 'totp-confirm'
+      } else {
+        reenrollError = data.error || 'Failed to start TOTP setup.'
+      }
+    } catch {
+      reenrollError = 'Could not reach Tiny Claw server.'
+    }
+    reenrollLoading = false
+  }
+
+  /** Confirm TOTP re-enrollment — verify code and get new backup codes + recovery token. */
+  async function submitReenrollTotp() {
+    if (!reenrollTotpCode.trim() || reenrollLoading) return
+    reenrollLoading = true
+    reenrollError = ''
+    try {
+      const res = await fetch('/api/owner/totp-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reenrollToken,
+          totpCode: reenrollTotpCode.trim(),
+        })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        reenrollBackupCodes = data.backupCodes || []
+        reenrollRecoveryToken = data.recoveryToken || ''
+        recoveryPhase = 'new-codes'
+      } else {
+        reenrollError = data.error || 'Invalid code.'
+      }
+    } catch {
+      reenrollError = 'Could not reach Tiny Claw server.'
+    }
+    reenrollLoading = false
+  }
+
+  /** Skip TOTP re-enrollment — go straight to dashboard. */
+  async function skipTotpReenroll() {
+    await checkAuth()
+    if (isOwner) {
+      wantsRecovery = false
+      window.history.replaceState({}, '', '/')
+      fetchBackgroundTasks()
+      fetchSubAgents()
+    }
+  }
+
+  /** Finish TOTP re-enrollment — go to dashboard after saving new codes. */
+  async function finishReenrollAndEnter() {
+    await checkAuth()
+    if (isOwner) {
+      wantsRecovery = false
+      window.history.replaceState({}, '', '/')
+      fetchBackgroundTasks()
+      fetchSubAgents()
     }
   }
 
@@ -731,51 +989,147 @@
     </div>
   </div>
 
-{:else if view === 'claim'}
-  <!-- Claim Ownership Page -->
-  <div class="flex-1 flex items-center justify-center px-4">
-    <div class="w-full max-w-sm flex flex-col items-center text-center">
+
+{:else if view === 'setup'}
+  <!-- Setup Onboarding Page -->
+  <div class="flex-1 flex items-center justify-center px-4 py-6">
+    <div class="w-full max-w-xl flex flex-col items-center text-center">
       <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-6">
-        <span class="text-4xl">🐜</span>
+        <span class="text-4xl">🛡️</span>
       </div>
-      <h1 class="text-2xl font-bold text-text-normal mb-2">Claim Tiny Claw</h1>
-      <p class="text-text-muted text-sm mb-6">
-        Enter the claim token from your terminal to become Tiny Claw's owner.
-      </p>
+      <h1 class="text-2xl font-bold text-text-normal mb-2">Tiny Claw Setup</h1>
 
-      {#if claimError}
-        <div class="w-full mb-4 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm">
-          {claimError}
+      {#if setupPhase === 'bootstrap'}
+        <p class="text-text-muted text-sm mb-6">
+          Enter the 30-character bootstrap secret from the Tiny Claw logs to claim ownership.
+        </p>
+
+        {#if setupError}
+          <div class="w-full mb-4 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm">
+            {setupError}
+          </div>
+        {/if}
+
+        <div class="w-full flex gap-2">
+          <input
+            bind:value={bootstrapSecret}
+            onkeydown={handleBootstrapKeydown}
+            type="text"
+            placeholder="30-character bootstrap secret"
+            class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm font-mono uppercase"
+            disabled={setupLoading}
+          />
+          <button
+            onclick={submitBootstrap}
+            disabled={setupLoading || !bootstrapSecret.trim()}
+            class="px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+          >
+            {setupLoading ? 'Verifying...' : 'Continue'}
+          </button>
         </div>
-      {/if}
 
-      <div class="w-full flex gap-2">
-        <input
-          bind:value={claimToken}
-          onkeydown={handleClaimKeydown}
-          type="text"
-          placeholder="tc_XXXX-XXXX-XXXX-XXXX"
-          class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm font-mono"
-          disabled={claimLoading}
-        />
+        <p class="text-text-muted/50 text-xs mt-4">
+          The bootstrap secret is printed when Tiny Claw starts and expires after 1 hour.
+        </p>
+      {:else if setupPhase === 'form'}
+        <p class="text-text-muted text-sm mb-5 w-full text-left">
+          Complete the owner setup to enable the dashboard and secure access.
+        </p>
+
+        {#if setupError}
+          <div class="w-full mb-4 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm text-left">
+            {setupError}
+          </div>
+        {/if}
+
+        <div class="w-full p-4 rounded-lg bg-yellow/10 border border-yellow/30 text-left mb-4">
+          <p class="text-yellow text-sm font-semibold mb-2">Security Warning</p>
+          <p class="text-text-muted text-sm">
+            Tiny Claw can read files, execute code, and act through tools. Review prompts carefully and operate in a controlled environment.
+          </p>
+          <label class="mt-3 flex items-start gap-2 text-sm text-text-normal">
+            <input type="checkbox" bind:checked={acceptedRisk} class="mt-1" />
+            <span>I understand the risks and want to proceed.</span>
+          </label>
+        </div>
+
+        <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4">
+          <p class="text-text-normal text-sm font-semibold mb-1">Default Built-in Provider</p>
+          <p class="text-text-muted text-sm">Ollama Cloud model: <span class="font-mono text-text-normal">kimi-k2.5:cloud</span></p>
+        </div>
+
+        <div class="w-full grid gap-3">
+          <input
+            bind:value={setupApiKey}
+            type="password"
+            placeholder="Enter your Ollama Cloud API key"
+            class="w-full bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm"
+            disabled={setupSubmitting}
+          />
+          <input
+            bind:value={setupSoulSeed}
+            type="text"
+            placeholder="Soul Seed (optional; leave blank for random)"
+            class="w-full bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm"
+            disabled={setupSubmitting}
+          />
+        </div>
+
+        <div class="w-full mt-4 p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left">
+          <p class="text-text-normal text-sm font-semibold mb-2">Set up TOTP</p>
+          <p class="text-text-muted text-sm mb-2">Add this key in your authenticator app, then enter the code it generates.</p>
+          <p class="text-text-normal text-xs font-mono break-all mb-1">{setupTotpSecret}</p>
+          <p class="text-text-muted/70 text-xs break-all mb-3">{setupTotpUri}</p>
+          <input
+            bind:value={setupTotpCode}
+            type="text"
+            placeholder="Authenticator code"
+            class="w-full bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm"
+            disabled={setupSubmitting}
+          />
+        </div>
+
         <button
-          onclick={submitClaim}
-          disabled={claimLoading || !claimToken.trim()}
-          class="px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+          onclick={submitSetup}
+          disabled={setupSubmitting || !acceptedRisk || !setupApiKey.trim() || !setupTotpCode.trim()}
+          class="w-full mt-4 px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {claimLoading ? 'Claiming...' : 'Claim'}
+          {setupSubmitting ? 'Saving setup...' : 'Complete setup'}
         </button>
-      </div>
+      {:else if setupPhase === 'backup-codes'}
+        <p class="text-text-muted text-sm mb-4">
+          Save these backup codes and your recovery token now. You will need both to recover access if you lose your authenticator.
+        </p>
 
-      <p class="text-text-muted/50 text-xs mt-4">
-        The claim token was printed to the console when Tiny Claw started.<br/>
-        <span class="text-yellow/70">Expires 1 hour after generation. Restart to get a new one.</span>
-      </p>
+        <div class="w-full p-4 rounded-lg bg-bg-secondary border border-brand/30 text-left mb-4">
+          <p class="text-xs text-brand font-semibold uppercase tracking-wider mb-2">Recovery Token</p>
+          <div class="text-sm font-mono text-text-normal break-all select-all bg-bg-primary px-3 py-2 rounded">{setupRecoveryToken}</div>
+          <p class="text-xs text-text-muted mt-2">Go to <span class="text-brand font-mono">/recovery</span> and enter this token to start the recovery process.</p>
+        </div>
+
+        <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4 max-h-72 overflow-y-auto">
+          <p class="text-xs text-text-muted font-semibold uppercase tracking-wider mb-2">Backup Codes</p>
+          {#each setupBackupCodes as code, idx}
+            <div class="text-sm font-mono text-text-normal py-1">{idx + 1}. {code}</div>
+          {/each}
+        </div>
+
+        <p class="text-xs text-text-muted/60 mb-4">
+          Each backup code can only be used once. Keep them in a secure place separate from your authenticator.
+        </p>
+
+        <button
+          onclick={finishSetupAndEnter}
+          class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80"
+        >
+          I stored my recovery token and backup codes
+        </button>
+      {/if}
     </div>
   </div>
 
 {:else if view === 'login'}
-  <!-- Owner Login Page -->
+  <!-- Owner Login Page — TOTP only -->
   <div class="flex-1 flex items-center justify-center px-4">
     <div class="w-full max-w-sm flex flex-col items-center text-center">
       <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-6">
@@ -783,7 +1137,7 @@
       </div>
       <h1 class="text-2xl font-bold text-text-normal mb-2">Owner Login</h1>
       <p class="text-text-muted text-sm mb-6">
-        Enter the login token from your terminal to access the dashboard.
+        Enter your authenticator code.
       </p>
 
       {#if loginError}
@@ -792,28 +1146,24 @@
         </div>
       {/if}
 
-      <div class="w-full flex gap-2">
+      <div class="w-full flex flex-col gap-2">
         <input
-          bind:value={loginToken}
+          bind:value={totpCode}
           onkeydown={handleLoginKeydown}
           type="text"
-          placeholder="tc_XXXX-XXXX-XXXX-XXXX"
+          placeholder="Authenticator code"
           class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm font-mono"
           disabled={loginLoading}
         />
+
         <button
           onclick={submitLogin}
-          disabled={loginLoading || !loginToken.trim()}
+          disabled={loginLoading || !totpCode.trim()}
           class="px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
         >
           {loginLoading ? 'Logging in...' : 'Login'}
         </button>
       </div>
-
-      <p class="text-text-muted/50 text-xs mt-4">
-        The login token is printed to the terminal each time Tiny Claw starts.<br/>
-        <span class="text-yellow/70">Expires 1 hour after generation. Restart to get a new one.</span>
-      </p>
 
       <a
         href="/chat"
@@ -821,6 +1171,192 @@
       >
         or chat as a friend instead
       </a>
+    </div>
+  </div>
+
+{:else if view === 'recovery'}
+  <!-- Recovery Page — token gate + backup code + TOTP re-setup -->
+  <div class="flex-1 flex items-center justify-center px-4">
+    <div class="w-full max-w-sm flex flex-col items-center text-center">
+      <div class="w-20 h-20 rounded-full bg-red/20 flex items-center justify-center mb-6">
+        <span class="text-4xl">{recoveryPhase === 'new-codes' ? '✅' : recoveryPhase === 'totp-setup' || recoveryPhase === 'totp-confirm' ? '🔧' : '🔐'}</span>
+      </div>
+
+      {#if recoveryPhase === 'totp-setup'}
+        <!-- TOTP Re-setup Prompt -->
+        <h1 class="text-2xl font-bold text-text-normal mb-2">Set Up New Authenticator</h1>
+        <p class="text-text-muted text-sm mb-2">
+          You recovered access using a backup code. Set up a new authenticator to secure your account.
+        </p>
+        <p class="text-text-muted text-sm mb-6">
+          {#if recoveryBackupCodesRemaining <= 1}
+            <span class="text-red font-semibold">This was your last backup code. You must set up a new authenticator to continue.</span>
+          {:else}
+            You have <span class="text-brand font-semibold">{recoveryBackupCodesRemaining}</span> backup code{recoveryBackupCodesRemaining === 1 ? '' : 's'} remaining.
+          {/if}
+        </p>
+
+        {#if reenrollError}
+          <div class="w-full mb-4 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm">
+            {reenrollError}
+          </div>
+        {/if}
+
+        <button
+          onclick={startTotpReenroll}
+          disabled={reenrollLoading}
+          class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {reenrollLoading ? 'Generating...' : 'Set up new authenticator'}
+        </button>
+
+        {#if recoveryBackupCodesRemaining > 1}
+          <button
+            onclick={skipTotpReenroll}
+            class="w-full mt-3 px-5 py-3 bg-transparent text-text-muted rounded-lg font-medium text-sm transition-colors hover:text-text-normal hover:bg-bg-secondary border border-bg-modifier-active"
+          >
+            Skip for now
+          </button>
+        {/if}
+
+      {:else if recoveryPhase === 'totp-confirm'}
+        <!-- TOTP verification step -->
+        <h1 class="text-2xl font-bold text-text-normal mb-2">Verify Authenticator</h1>
+        <p class="text-text-muted text-sm mb-4">
+          Add this key to your authenticator app, then enter the code it generates.
+        </p>
+
+        <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4">
+          <p class="text-text-normal text-xs font-mono break-all mb-1">{reenrollTotpSecret}</p>
+          <p class="text-text-muted/70 text-xs break-all">{reenrollTotpUri}</p>
+        </div>
+
+        {#if reenrollError}
+          <div class="w-full mb-4 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm">
+            {reenrollError}
+          </div>
+        {/if}
+
+        <div class="w-full flex flex-col gap-2">
+          <input
+            bind:value={reenrollTotpCode}
+            onkeydown={handleRecoveryKeydown}
+            type="text"
+            placeholder="Authenticator code"
+            class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm font-mono"
+            disabled={reenrollLoading}
+          />
+
+          <button
+            onclick={submitReenrollTotp}
+            disabled={reenrollLoading || !reenrollTotpCode.trim()}
+            class="px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+          >
+            {reenrollLoading ? 'Verifying...' : 'Confirm'}
+          </button>
+        </div>
+
+      {:else if recoveryPhase === 'new-codes'}
+        <!-- New backup codes + recovery token display -->
+        <h1 class="text-2xl font-bold text-text-normal mb-2">New Credentials</h1>
+        <p class="text-text-muted text-sm mb-4">
+          Your authenticator has been updated. Save your new recovery token and backup codes now.
+        </p>
+
+        <div class="w-full p-4 rounded-lg bg-bg-secondary border border-brand/30 text-left mb-4">
+          <p class="text-xs text-brand font-semibold uppercase tracking-wider mb-2">Recovery Token</p>
+          <div class="text-sm font-mono text-text-normal break-all select-all bg-bg-primary px-3 py-2 rounded">{reenrollRecoveryToken}</div>
+          <p class="text-xs text-text-muted mt-2">Go to <span class="text-brand font-mono">/recovery</span> and enter this token to start the recovery process.</p>
+        </div>
+
+        <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4 max-h-72 overflow-y-auto">
+          <p class="text-xs text-text-muted font-semibold uppercase tracking-wider mb-2">Backup Codes</p>
+          {#each reenrollBackupCodes as code, idx}
+            <div class="text-sm font-mono text-text-normal py-1">{idx + 1}. {code}</div>
+          {/each}
+        </div>
+
+        <p class="text-xs text-text-muted/60 mb-4">
+          Each backup code can only be used once. Your old codes are no longer valid.
+        </p>
+
+        <button
+          onclick={finishReenrollAndEnter}
+          class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80"
+        >
+          I stored my recovery token and backup codes
+        </button>
+
+      {:else if recoveryPhase === 'token'}
+        <h1 class="text-2xl font-bold text-text-normal mb-2">Account Recovery</h1>
+        <p class="text-text-muted text-sm mb-6">
+          Enter your recovery token to continue.
+        </p>
+
+        {#if recoveryError}
+          <div class="w-full mb-4 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm">
+            {recoveryError}
+          </div>
+        {/if}
+
+        <div class="w-full flex flex-col gap-2">
+          <input
+            bind:value={recoveryToken}
+            onkeydown={handleRecoveryKeydown}
+            type="text"
+            placeholder="Recovery token"
+            class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm font-mono uppercase"
+            disabled={recoveryLoading || recoveryLocked}
+          />
+
+          <button
+            onclick={submitRecoveryToken}
+            disabled={recoveryLoading || recoveryLocked || !recoveryToken.trim()}
+            class="px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+          >
+            {recoveryLoading ? 'Verifying...' : 'Continue'}
+          </button>
+        </div>
+      {:else if recoveryPhase === 'backup'}
+        <h1 class="text-2xl font-bold text-text-normal mb-2">Enter Backup Code</h1>
+        <p class="text-text-muted text-sm mb-6">
+          Enter one of your backup codes to regain access.
+        </p>
+
+        {#if recoveryError}
+          <div class="w-full mb-4 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm">
+            {recoveryError}
+          </div>
+        {/if}
+
+        <div class="w-full flex flex-col gap-2">
+          <input
+            bind:value={recoveryBackupCode}
+            onkeydown={handleRecoveryKeydown}
+            type="text"
+            placeholder="Backup code"
+            class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm font-mono uppercase"
+            disabled={recoveryLoading || recoveryLocked}
+          />
+
+          <button
+            onclick={submitRecoveryBackup}
+            disabled={recoveryLoading || recoveryLocked || !recoveryBackupCode.trim()}
+            class="px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+          >
+            {recoveryLoading ? 'Recovering...' : 'Recover Access'}
+          </button>
+        </div>
+      {/if}
+
+      {#if recoveryPhase === 'token' || recoveryPhase === 'backup'}
+        <a
+          href="/login"
+          class="mt-6 text-sm text-text-muted hover:text-text-normal"
+        >
+          Back to login
+        </a>
+      {/if}
     </div>
   </div>
 

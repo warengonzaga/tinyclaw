@@ -71,8 +71,10 @@ export async function supervisedStart(): Promise<void> {
     const execPath = process.argv[0]!;
     const scriptPath = process.argv[1]!;
 
-    // Forward --verbose flag to the supervised child process
-    const extraArgs = process.argv.includes('--verbose') ? ['--verbose'] : [];
+    // Forward start flags to the supervised child process
+    const extraArgs: string[] = [];
+    if (process.argv.includes('--verbose')) extraArgs.push('--verbose');
+    if (process.argv.includes('--web')) extraArgs.push('--web');
 
     const child = spawn(execPath, [scriptPath, '--supervised-start', ...extraArgs], {
       stdio: 'inherit',
