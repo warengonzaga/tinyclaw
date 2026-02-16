@@ -25,6 +25,9 @@ const MAX_ACTIVE_PER_USER = 10;
 /** Default soft-delete retention: 14 days. */
 const DEFAULT_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 
+/** Suspended agents transition to soft_deleted after 7 days of inactivity. */
+const SUSPENDED_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** Max messages to load per sub-agent (oldest truncated). */
 const MAX_SUB_AGENT_MESSAGES = 100;
 
@@ -125,8 +128,10 @@ export function createLifecycleManager(db: DelegationStore): LifecycleManager {
     },
 
     findReusable(userId, role) {
-      const active = db.getActiveSubAgents(userId);
-      if (active.length === 0) return null;
+      // Check active, suspended, and soft_deleted agents for reuse
+      const all = db.getAllSubAgents(userId, true);
+      const candidates = all.filter(a => a.status === 'active' || a.status === 'suspended' || a.status === 'soft_deleted');
+      if (candidates.length === 0) return null;
 
       const requestTokens = tokenize(role);
       if (requestTokens.size === 0) return null;
@@ -134,7 +139,7 @@ export function createLifecycleManager(db: DelegationStore): LifecycleManager {
       let bestMatch: SubAgentRecord | null = null;
       let bestScore = 0;
 
-      for (const agent of active) {
+      for (const agent of candidates) {
         const agentTokens = tokenize(agent.role);
         const score = keywordOverlap(requestTokens, agentTokens);
         if (score > bestScore && score >= REUSE_THRESHOLD) {
@@ -164,6 +169,13 @@ export function createLifecycleManager(db: DelegationStore): LifecycleManager {
 
     suspend(agentId) {
       db.updateSubAgent(agentId, {
+        status: 'suspended',
+        lastActiveAt: Date.now(),
+      });
+    },
+
+    dismiss(agentId) {
+      db.updateSubAgent(agentId, {
         status: 'soft_deleted',
         deletedAt: Date.now(),
       });
@@ -172,7 +184,7 @@ export function createLifecycleManager(db: DelegationStore): LifecycleManager {
     revive(agentId) {
       const agent = db.getSubAgent(agentId);
       if (!agent) return null;
-      if (agent.status !== 'soft_deleted') return null;
+      if (agent.status !== 'soft_deleted' && agent.status !== 'suspended') return null;
 
       db.updateSubAgent(agentId, {
         status: 'active',
@@ -197,15 +209,12 @@ export function createLifecycleManager(db: DelegationStore): LifecycleManager {
     cleanup(retentionMs = DEFAULT_RETENTION_MS) {
       const cutoff = Date.now() - retentionMs;
 
-      // Get agents that will be deleted so we can clean up their messages
-      // deleteExpiredSubAgents handles the SQL, but we need to clean messages too
-      // First, get all soft-deleted agents that are expired
-      // We'll use a pragmatic approach: get all users, check their agents
-      const expired = db.deleteExpiredSubAgents(cutoff);
+      // Transition long-idle suspended agents to soft_deleted
+      const suspendedCutoff = Date.now() - SUSPENDED_RETENTION_MS;
+      db.archiveStaleSuspended?.(suspendedCutoff);
 
-      // Note: ideally we'd collect agent IDs before deletion to clean messages.
-      // For now, orphaned subagent messages are harmless. A future optimization
-      // could add a pre-delete hook.
+      // Delete expired soft_deleted agents
+      const expired = db.deleteExpiredSubAgents(cutoff);
 
       return expired;
     },
