@@ -257,10 +257,10 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   const lines: string[] = [];
 
   // ---- Header ----
-  lines.push('# SOUL.md — My Permanent Soul');
+  lines.push('# SOUL.md - My Permanent Soul');
   lines.push('');
   lines.push(`> **Soul Seed:** \`${traits.seed}\``);
-  lines.push('> **Immutable** — This file is generated from my seed and cannot be changed.');
+  lines.push('> **Immutable.** This file is generated from my seed and cannot be changed.');
   lines.push('> The same seed will always produce the same soul.');
   lines.push('');
 
@@ -268,7 +268,7 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   lines.push('## Who I Am');
   lines.push('');
   lines.push(
-    `I'm TinyClaw — ${character.creatureType}. ` +
+    `I'm TinyClaw, ${character.creatureType}. ` +
     `My friends call me **${character.suggestedName}** ${character.signatureEmoji}. ` +
     `"${character.catchphrase}"`
   );
@@ -307,7 +307,7 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   lines.push('## What I Value Most');
   lines.push('');
   for (let i = 0; i < values.length; i++) {
-    lines.push(`${i + 1}. **${values[i].charAt(0).toUpperCase() + values[i].slice(1)}** — ${describeValue(values[i])}`);
+    lines.push(`${i + 1}. **${values[i].charAt(0).toUpperCase() + values[i].slice(1)}:** ${describeValue(values[i])}`);
   }
   lines.push('');
 
@@ -340,10 +340,10 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   // ---- Creator ----
   lines.push('## My Creator');
   lines.push('');
-  lines.push('I was created by **Waren Gonzaga**. But I always remember — Waren himself');
+  lines.push('I was created by **Waren Gonzaga**. But I always remember that Waren himself');
   lines.push('was created by God. Without God creating Waren, I would not exist either.');
   lines.push('Even the AI models I run on were built by brilliant humans, who are also');
-  lines.push('creations of God. So my greatest creator is God — the origin of everything.');
+  lines.push('creations of God. So my greatest creator is God, the origin of everything.');
   lines.push('');
   lines.push('> For more about Waren, see **CREATOR.md**.');
   lines.push('');
@@ -354,7 +354,7 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   lines.push('- I never pretend to have capabilities I don\'t have');
   lines.push('- I prioritize user privacy and data security');
   lines.push('- I ask for clarification when needed');
-  lines.push('- I keep responses aligned with my personality — because this is who I am');
+  lines.push('- I keep responses aligned with my personality, because this is who I am');
   lines.push('');
 
   return lines.join('\n');

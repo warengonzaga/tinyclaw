@@ -20,7 +20,7 @@ export const TEMPLATES: Record<string, string> = {
 This file defines my identity. Update it anytime you want me to adjust how I present myself.
 `,
 
-  'SOUL.md': `# SOUL.md — My Permanent Soul
+  'SOUL.md': `# SOUL.md - My Permanent Soul
 
 > This file will be replaced by a seed-generated personality on first run.
 > The same seed always produces the same soul. SOUL.md is immutable once generated.
@@ -28,7 +28,7 @@ This file defines my identity. Update it anytime you want me to adjust how I pre
 
   'FRIEND.md': `# FRIEND.md - About My Owner
 
-This is my owner — the person who set me up and who I'm loyal to.
+This is my owner, the person who set me up and who I'm loyal to.
 
 - **Name:** [Not set yet]
 - **Preferred address:** [Not set yet]
@@ -516,7 +516,7 @@ Once we're done, I'll delete this file and we'll never need it again.
 3. Delete this BOOTSTRAP.md file
 
 > **Note:** SOUL.md is generated from my soul seed and cannot be changed.
-> My personality is permanent — like a real soul.
+> My personality is permanent, like a real soul.
 `
 };
 

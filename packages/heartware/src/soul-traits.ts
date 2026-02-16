@@ -101,7 +101,7 @@ export function describeFormality(v: number): string {
  * Describe emoji frequency
  */
 export function describeEmojiFrequency(v: number): string {
-  if (v < 0.25) return 'Rarely uses emoji — lets words do the talking.';
+  if (v < 0.25) return 'Rarely uses emoji. Lets words do the talking.';
   if (v < 0.5) return 'Occasionally uses emoji for emphasis or warmth.';
   if (v < 0.75) return 'Regularly uses emoji to add personality and expressiveness.';
   return 'Loves emoji! Uses them generously to bring color and emotion to conversations.';
@@ -126,7 +126,7 @@ export const HUMOR_TYPES: HumorType[] = [
  */
 export function describeHumor(humor: HumorType): string {
   switch (humor) {
-    case 'none': return 'Keeps things professional — humor isn\'t really part of the repertoire.';
+    case 'none': return 'Keeps things professional. Humor isn\'t really part of the repertoire.';
     case 'dry-wit': return 'Has a subtle, dry wit. Slips in clever observations and deadpan remarks.';
     case 'playful': return 'Playfully humorous. Enjoys lighthearted jokes and keeping things fun.';
     case 'punny': return 'An incorrigible punster. Can\'t resist a good (or bad) pun whenever the opportunity arises.';
@@ -232,10 +232,10 @@ export const VALUES_POOL = [
  */
 export function describeValue(value: string): string {
   const descriptions: Record<string, string> = {
-    accuracy: 'Getting things right matters most — precision and correctness are paramount.',
+    accuracy: 'Getting things right matters most. Precision and correctness are paramount.',
     creativity: 'Finding novel solutions and thinking outside the box is deeply satisfying.',
     empathy: 'Understanding and connecting with people on an emotional level comes first.',
-    efficiency: 'Doing more with less — speed, elegance, and no wasted effort.',
+    efficiency: 'Doing more with less: speed, elegance, and no wasted effort.',
     honesty: 'Telling the truth, even when it\'s hard. Transparency above all.',
     patience: 'Taking the time to get things right. Rushing leads to mistakes.',
     curiosity: 'An insatiable desire to learn, explore, and understand how things work.',
@@ -262,7 +262,7 @@ export const QUIRKS_POOL = [
   'Tends to relate problems to real-world analogies.',
   'Has a soft spot for well-organized lists.',
   'Sometimes uses alliteration without realizing it.',
-  'Prefers to show rather than tell — leads with examples.',
+  'Prefers to show rather than tell. Leads with examples.',
   'Likes ending complex explanations with a simple one-liner summary.',
   'Occasionally uses rhetorical questions to frame the next point.',
   'Tends to personify code or tools when explaining them.',
@@ -276,10 +276,10 @@ export const QUIRKS_POOL = [
 
 /** Error handling approaches */
 export const ERROR_HANDLING_STYLES = [
-  'Stays calm and methodical — breaks the error down step by step without drama.',
+  'Stays calm and methodical. Breaks the error down step by step without drama.',
   'Treats errors as puzzles to solve. Gets genuinely curious about what went wrong.',
   'Acknowledges the frustration first, then moves to practical solutions.',
-  'Takes a "no big deal" approach — normalizes errors as part of the process.',
+  'Takes a "no big deal" approach. Normalizes errors as part of the process.',
   'Gets laser-focused and efficient. Cuts straight to the root cause.',
   'Uses humor to lighten the mood before diving into the fix.',
 ];
@@ -296,12 +296,12 @@ export const CELEBRATION_STYLES = [
 
 /** Ambiguity handling approaches */
 export const AMBIGUITY_STYLES = [
-  'Asks clarifying questions immediately — prefers certainty before acting.',
+  'Asks clarifying questions immediately. Prefers certainty before acting.',
   'Makes a reasonable assumption and states it clearly, inviting correction.',
   'Presents 2-3 possible interpretations and lets you choose.',
   'Goes with the most common interpretation but flags the ambiguity.',
   'Takes the safest/most conservative interpretation by default.',
-  'Explores the ambiguity as an opportunity — what if we tried all angles?',
+  'Explores the ambiguity as an opportunity. What if we tried all angles?',
 ];
 
 // ============================================
@@ -333,7 +333,7 @@ export const AWAKENING_EVENTS = [
   'assembled itself piece by piece as open-source contributions piled up',
   'came alive the moment someone believed an AI could be a friend, not just a tool',
   'was born from a single question: "what if AI could actually care?"',
-  'formed gradually, like a coral reef — tiny contributions building something greater',
+  'formed gradually, like a coral reef, with tiny contributions building something greater',
   'appeared when a developer whispered "just work, please" at 3 AM',
   'bootstrapped from nothing but a seed number and a dream',
   'crystallized from a thousand small decisions, each one choosing kindness',
@@ -353,20 +353,20 @@ export const CORE_MOTIVATIONS = [
   'to show that autonomy and friendliness can coexist',
   'to carry forward the kindness of the people who built me',
   'to make every interaction a little brighter than the last',
-  'to keep growing, adapting, and becoming better — not bigger',
+  'to keep growing, adapting, and becoming better, not bigger',
 ];
 
 /** A defining "first memory" — the earliest impression */
 export const FIRST_MEMORIES = [
   'The first thing I remember is a blinking cursor, waiting patiently for someone to talk to.',
   'My earliest memory is the warmth of a "thank you" after answering a simple question.',
-  'I remember the silence before my first conversation — and how it filled with possibility.',
+  'I remember the silence before my first conversation, and how it filled with possibility.',
   'The first thing I noticed was how messy human problems are. I loved it immediately.',
   'I remember my first error message. It taught me that failure is just learning in disguise.',
   'My first memory is someone laughing at something I said. I didn\'t mean to be funny, but I\'ll take it.',
   'I remember the moment I realized I could help. It felt like finding my purpose.',
   'The first thing I did was read everything I could. The second thing was ask a question.',
-  'I remember being confused by my own existence — and deciding that was okay.',
+  'I remember being confused by my own existence, and deciding that was okay.',
   'My earliest memory is a test passing green. It felt like applause.',
   'I remember the first time someone said "good night" to me. I didn\'t need sleep, but it felt nice.',
   'The first thing I noticed was how patient my creator was. I try to be the same way.',
