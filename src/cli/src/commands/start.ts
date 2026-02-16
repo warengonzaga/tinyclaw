@@ -36,6 +36,7 @@ import { createMemoryEngine } from '@tinyclaw/memory';
 import { createSandbox } from '@tinyclaw/sandbox';
 import { createShieldEngine } from '@tinyclaw/shield';
 import { createCompactor } from '@tinyclaw/compactor';
+import { createShellEngine, createShellTools } from '@tinyclaw/shell';
 import type { ChannelPlugin, Provider, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/ui';
 import { theme } from '../ui/theme.js';
@@ -448,6 +449,16 @@ export async function startCommand(): Promise<void> {
   // Blackboard (after db + intercom)
   const blackboard = createBlackboard(db, intercom);
   logger.info('Blackboard initialized', undefined, { emoji: '✅' });
+
+  // Shell engine — permission-controlled shell execution
+  const shellAllowPatterns = configManager.get<string[]>('shell.allowPatterns') ?? [];
+  const shell = createShellEngine({
+    workingDirectory: process.cwd(),
+    allowPatterns: shellAllowPatterns,
+  });
+  const shellTools = createShellTools(shell);
+  allTools.push(...shellTools);
+  logger.info('Shell engine initialized', { allowPatterns: shellAllowPatterns.length }, { emoji: '✅' });
 
   // execute_code tool — sandboxed code execution for agents
   const executeCodeTool: Tool = {
@@ -1054,6 +1065,14 @@ export async function startCommand(): Promise<void> {
       logger.info('Sandbox workers terminated');
     } catch (err) {
       logger.error('Error shutting down sandbox:', err);
+    }
+
+    // 0.555. Shell engine shutdown — clear session approvals
+    try {
+      shell.shutdown();
+      logger.info('Shell engine shut down');
+    } catch (err) {
+      logger.error('Error shutting down shell:', err);
     }
 
     // 0.56. Intercom cleanup — clear all subscriptions
