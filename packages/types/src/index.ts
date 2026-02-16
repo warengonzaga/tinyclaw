@@ -116,6 +116,10 @@ export const OWNER_ONLY_TOOLS: ReadonlySet<string> = new Set([
   'manage_sub_agent',
   'confirm_task',
   'list_sub_agents',
+  // Shell execution
+  'run_shell',
+  'shell_approve',
+  'shell_allow',
   // Config & secrets (pairing tools are dynamically added)
   'config_get',
   'config_set',
