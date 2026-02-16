@@ -22,9 +22,9 @@ describe('main.js bootstrap contract', () => {
 
     expect(() => {
       if (!target) {
-        throw new Error('TinyClaw UI failed to find #app root element.');
+        throw new Error('Tiny Claw UI failed to find #app root element.');
       }
-    }).toThrow('TinyClaw UI failed to find #app root element.');
+    }).toThrow('Tiny Claw UI failed to find #app root element.');
   });
 
   test('error message format matches expected pattern', () => {

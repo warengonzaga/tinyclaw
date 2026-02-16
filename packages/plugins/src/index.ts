@@ -1,7 +1,7 @@
 /**
  * Plugin Loader
  *
- * Discovers installed TinyClaw plugins by dynamically importing package names
+ * Discovers installed Tiny Claw plugins by dynamically importing package names
  * from the `plugins.enabled` config array, validates them, and returns them
  * grouped by type.
  *

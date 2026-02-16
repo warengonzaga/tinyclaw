@@ -6,7 +6,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "description": "OpenAI provider plugin for TinyClaw",
+  "description": "OpenAI provider plugin for Tiny Claw",
   "keywords": ["tinyclaw", "plugin", "provider", "openai"],
   "dependencies": {
     "@tinyclaw/logger": "workspace:*",

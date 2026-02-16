@@ -1,7 +1,7 @@
 /**
  * TUI Banner
  *
- * ASCII art logo and version display for TinyClaw CLI.
+ * ASCII art logo and version display for Tiny Claw CLI.
  * Uses figlet with ANSI Shadow font for a modern look.
  * Displayed at the top of setup wizard and help output.
  */
@@ -29,7 +29,7 @@ function getVersion(): string {
 // Generate the logo at module load time (synchronous, fast)
 let LOGO: string;
 try {
-  LOGO = figlet.textSync('TinyClaw', { font: 'ANSI Shadow' });
+  LOGO = figlet.textSync('Tiny Claw', { font: 'ANSI Shadow' });
 } catch {
   // Fallback if figlet font not available
   LOGO =
@@ -50,7 +50,7 @@ export function showBanner(): void {
     `  ${theme.dim('v' + getVersion())} ${theme.dim('—')} ${theme.dim('Your Personal Autonomous AI Companion 🐜')}`
   );
   console.log(
-    `  ${theme.dim('The original TinyClaw written from scratch, inspired by OpenClaw 🦞')}`
+    `  ${theme.dim('The original Tiny Claw — an alternative to OpenClaw, written from scratch 🐜')}`
   );
   console.log();
 }

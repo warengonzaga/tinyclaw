@@ -1,7 +1,7 @@
 /**
  * TUI Theme
  *
- * Shared colors and styling constants for the TinyClaw CLI.
+ * Shared colors and styling constants for the Tiny Claw CLI.
  * Uses picocolors for zero-dep, fast terminal color output.
  */
 

@@ -48,7 +48,7 @@ describe('showBanner', () => {
     console.log = originalLog;
   });
 
-  test('prints the TinyClaw logo', () => {
+  test('prints the Tiny Claw logo', () => {
     showBanner();
     const fullOutput = output.join('\n');
     // ANSI Shadow font uses distinctive block characters
@@ -72,7 +72,7 @@ describe('showBanner', () => {
   test('prints the inspiration line', () => {
     showBanner();
     const fullOutput = output.join('\n');
-    expect(fullOutput).toContain('inspired by OpenClaw');
+    expect(fullOutput).toContain('an alternative to OpenClaw');
   });
 
   test('produces multiple lines of output', () => {

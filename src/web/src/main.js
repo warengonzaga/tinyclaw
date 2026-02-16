@@ -5,10 +5,10 @@ import App from './App.svelte'
 const target = document.getElementById('app')
 
 if (!target) {
-  throw new Error('TinyClaw UI failed to find #app root element.')
+  throw new Error('Tiny Claw UI failed to find #app root element.')
 }
 
-target.textContent = 'Booting TinyClaw UI...'
+target.textContent = 'Booting Tiny Claw UI...'
 
 let app
 
@@ -17,7 +17,7 @@ try {
   app = mount(App, { target })
 } catch (error) {
   const message = error instanceof Error ? error.message : 'Unknown error.'
-  target.textContent = `TinyClaw UI failed to start: ${message}`
+  target.textContent = `Tiny Claw UI failed to start: ${message}`
   console.error(error)
 }
 

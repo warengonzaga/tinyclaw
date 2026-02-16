@@ -27,7 +27,7 @@ export function createDiscordPairingTools(
     {
       name: 'discord_pair',
       description:
-        'Pair TinyClaw with a Discord bot. ' +
+        'Pair Tiny Claw with a Discord bot. ' +
         'Stores the bot token securely and enables the Discord channel plugin. ' +
         'After pairing, call tinyclaw_restart to connect the bot. ' +
         'To get a token: go to https://discord.com/developers/applications, ' +

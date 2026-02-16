@@ -39,7 +39,7 @@ describe('CONFIG_DEFAULTS', () => {
   });
 
   test('defaults have correct agent name', () => {
-    expect(CONFIG_DEFAULTS.agent?.name).toBe('TinyClaw');
+    expect(CONFIG_DEFAULTS.agent?.name).toBe('Tiny Claw');
   });
 });
 

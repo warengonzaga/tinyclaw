@@ -6,7 +6,7 @@
  *
  * Inspired by Minecraft's world generation: the same seed always produces
  * the exact same personality. Users can save and share their seed to
- * reproduce a personality on any TinyClaw instance.
+ * reproduce a personality on any Tiny Claw instance.
  *
  * PRNG: Uses SHA-256 hash splitting — zero external dependencies.
  * The seed is hashed into a 256-bit state, split into 32-bit unsigned
@@ -268,7 +268,7 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   lines.push('## Who I Am');
   lines.push('');
   lines.push(
-    `I'm TinyClaw, ${character.creatureType}. ` +
+    `I'm Tiny Claw, ${character.creatureType}. ` +
     `My friends call me **${character.suggestedName}** ${character.signatureEmoji}. ` +
     `"${character.catchphrase}"`
   );

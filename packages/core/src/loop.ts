@@ -385,7 +385,7 @@ function summarizeToolResults(
 }
 
 function getBaseSystemPrompt(heartwareContext?: string, modelInfo?: { model: string; provider: string }, ownerId?: string): string {
-  let prompt = `You are TinyClaw 🐜, a helpful AI companion.
+  let prompt = `You are Tiny Claw 🐜, a helpful AI companion.
 
 You are small but mighty, focused, efficient, and always learning.
 
@@ -413,7 +413,7 @@ If the user asks to switch models, use the builtin_model_switch tool.
 
 ## Provider Management
 
-TinyClaw has a two-tier provider system:
+Tiny Claw has a two-tier provider system:
 - **Built-in** (Ollama Cloud) - always available as a free fallback
 - **Primary** (plugin provider) - overrides the built-in as the default provider
 
@@ -452,7 +452,7 @@ To switch to a different built-in model:
 - primary_model_list (list installed provider plugins and primary status)
 - primary_model_set (set an installed provider as the primary default)
 - primary_model_clear (revert to built-in as default)
-- tinyclaw_restart (restart TinyClaw after configuration changes)
+- tinyclaw_restart (restart Tiny Claw after configuration changes)
 - ${DELEGATION_TOOL_NAMES.join(', ')}
 
 ## CRITICAL: When to Use Tools

@@ -171,7 +171,7 @@ describe('tinyclaw config model primary', () => {
 
   test('shows conversational setup guidance when no primary set', async () => {
     const { stdout } = await runCLI(['config', 'model', 'primary']);
-    expect(stdout).toContain('ask TinyClaw');
+    expect(stdout).toContain('ask Tiny Claw');
   });
 });
 

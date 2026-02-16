@@ -1,7 +1,7 @@
 /**
  * Config Module - Type Definitions
  *
- * Types for the TinyClaw configuration management system powered by
+ * Types for the Tiny Claw configuration management system powered by
  * @wgtechlabs/config-engine. Provides persistent, Zod-validated
  * SQLite-backed storage for agent configuration.
  */
@@ -28,7 +28,7 @@ const ProviderEntrySchema = z.object({
 });
 
 /**
- * Full TinyClaw configuration schema.
+ * Full Tiny Claw configuration schema.
  * Validated on every `.set()` call via config-engine's built-in Zod support.
  */
 export const TinyClawConfigSchema = z.object({
@@ -175,7 +175,7 @@ export const CONFIG_DEFAULTS: Partial<TinyClawConfigData> = {
     autoLoad: true,
   },
   agent: {
-    name: 'TinyClaw',
+    name: 'Tiny Claw',
   },
   plugins: {
     enabled: [],

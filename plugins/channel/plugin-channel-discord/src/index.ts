@@ -1,13 +1,13 @@
 /**
  * Discord Channel Plugin
  *
- * Connects a Discord bot to the TinyClaw agent.
+ * Connects a Discord bot to the Tiny Claw agent.
  * Responds to Direct Messages and @mentions in guild channels.
  *
  * Setup:
  *   1. Create a Discord bot at https://discord.com/developers/applications
  *   2. Enable: Message Content Intent (under Privileged Gateway Intents)
- *   3. Run TinyClaw and ask it to pair the Discord channel
+ *   3. Run Tiny Claw and ask it to pair the Discord channel
  *   4. Provide the bot token when prompted
  *   5. Agent auto-restarts — the bot will connect automatically
  *
@@ -41,7 +41,7 @@ let client: Client | null = null;
 const discordPlugin: ChannelPlugin = {
   id: '@tinyclaw/plugin-channel-discord',
   name: 'Discord',
-  description: 'Connect TinyClaw to a Discord bot',
+  description: 'Connect Tiny Claw to a Discord bot',
   type: 'channel',
   version: '0.1.0',
 

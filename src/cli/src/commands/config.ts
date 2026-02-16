@@ -1,7 +1,7 @@
 /**
  * Config Command
  *
- * CLI interface for managing TinyClaw configuration - models, providers,
+ * CLI interface for managing Tiny Claw configuration - models, providers,
  * logging, and routing settings.
  *
  * Usage:
@@ -89,7 +89,7 @@ async function showModelConfig(configManager: ConfigManager): Promise<void> {
     console.log(`    No primary provider set. Built-in is used as the default.`);
     console.log();
     console.log(`  ${theme.dim('To add a primary provider, install a provider plugin and')}`);
-    console.log(`  ${theme.dim('ask TinyClaw to set it as primary. You can also tell TinyClaw:')}`);
+    console.log(`  ${theme.dim('ask Tiny Claw to set it as primary. You can also tell Tiny Claw:')}`);
     console.log(`  ${theme.dim('"list my providers" or "set OpenAI as my primary provider"')}`);
   }
 
@@ -152,7 +152,7 @@ async function switchBuiltinModel(configManager: ConfigManager, tag: string): Pr
   console.log();
   console.log(`  ${theme.success('✔')} Built-in model switched to ${theme.brand(tag)}`);
   console.log();
-  console.log(`  ${theme.dim('Restart TinyClaw for changes to take effect.')}`);
+  console.log(`  ${theme.dim('Restart Tiny Claw for changes to take effect.')}`);
   console.log();
 }
 
@@ -177,7 +177,7 @@ async function handlePrimary(configManager: ConfigManager, action?: string): Pro
     console.log(`  ${theme.success('✔')} Primary provider cleared`);
     console.log(`  ${theme.dim('Built-in will be used as the default provider.')}`);
     console.log();
-    console.log(`  ${theme.dim('Restart TinyClaw for changes to take effect.')}`);
+    console.log(`  ${theme.dim('Restart Tiny Claw for changes to take effect.')}`);
     console.log();
     return;
   }
@@ -207,7 +207,7 @@ async function handlePrimary(configManager: ConfigManager, action?: string): Pro
     console.log(`  is used as the default for the smart router.`);
     console.log();
     console.log(`  To add a primary provider, install a provider plugin and`);
-    console.log(`  ask TinyClaw to set it as primary. You can also tell TinyClaw:`);
+    console.log(`  ask Tiny Claw to set it as primary. You can also tell Tiny Claw:`);
     console.log(`  "list my providers" or "set OpenAI as my primary provider"`);
   }
   console.log();
@@ -270,7 +270,7 @@ async function setLogLevel(configManager: ConfigManager, level: string): Promise
   console.log();
   console.log(`  ${theme.success('✔')} Log level set to ${theme.brand(level)}`);
   console.log();
-  console.log(`  ${theme.dim('Restart TinyClaw for changes to take effect.')}`);
+  console.log(`  ${theme.dim('Restart Tiny Claw for changes to take effect.')}`);
   console.log();
 }
 

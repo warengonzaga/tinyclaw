@@ -86,11 +86,11 @@ describe('Sandbox', () => {
     it('passes input data to sandbox', async () => {
       const result = await sandbox.executeWithInput(
         'return input.name + " is " + input.age',
-        { name: 'TinyClaw', age: 1 },
+        { name: 'Tiny Claw', age: 1 },
       );
 
       expect(result.success).toBe(true);
-      expect(result.output).toBe('TinyClaw is 1');
+      expect(result.output).toBe('Tiny Claw is 1');
     });
 
     it('handles array input', async () => {

@@ -1,7 +1,7 @@
 /**
  * Process Supervisor
  *
- * Wraps the TinyClaw agent in a restart-aware loop. When the agent
+ * Wraps the Tiny Claw agent in a restart-aware loop. When the agent
  * process exits with exit code 75 (RESTART_EXIT_CODE), the supervisor
  * automatically respawns it. Any other exit code is treated as final.
  *

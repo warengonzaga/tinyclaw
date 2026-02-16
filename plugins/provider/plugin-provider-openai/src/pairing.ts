@@ -31,7 +31,7 @@ export function createOpenAIPairingTools(
     {
       name: 'openai_pair',
       description:
-        'Pair TinyClaw with OpenAI as a provider. ' +
+        'Pair Tiny Claw with OpenAI as a provider. ' +
         'Stores the API key securely, configures the model, enables the plugin, ' +
         'and routes complex/reasoning queries to OpenAI. ' +
         'After pairing, call tinyclaw_restart to apply the changes. ' +

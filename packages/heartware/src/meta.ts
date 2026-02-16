@@ -2,7 +2,7 @@
  * Creator Meta Fetcher
  *
  * Fetches creator/author metadata from a remote URL and caches it locally
- * as CREATOR.md in the heartware directory. This lets TinyClaw know about
+ * as CREATOR.md in the heartware directory. This lets Tiny Claw know about
  * its creator without hardcoding info into the codebase.
  *
  * The remote URL is configurable via HeartwareConfig.metaUrl.
@@ -68,7 +68,7 @@ async function fetchRemoteContent(url: string, timeout: number): Promise<string>
       signal: controller.signal,
       headers: {
         'Accept': 'text/markdown, text/plain, */*',
-        'User-Agent': 'TinyClaw/1.0 (heartware-meta-fetcher)',
+        'User-Agent': 'Tiny Claw/1.0 (heartware-meta-fetcher)',
       },
     });
 

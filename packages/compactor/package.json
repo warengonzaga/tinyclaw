@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/compactor",
   "version": "0.0.1",
-  "description": "Context compaction engine for TinyClaw",
+  "description": "Context compaction engine for Tiny Claw",
   "license": "MIT",
   "private": true,
   "main": "src/index.ts",

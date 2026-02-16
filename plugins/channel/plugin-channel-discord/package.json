@@ -6,7 +6,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "description": "Discord channel plugin for TinyClaw",
+  "description": "Discord channel plugin for Tiny Claw",
   "keywords": ["tinyclaw", "plugin", "channel", "discord"],
   "dependencies": {
     "@tinyclaw/logger": "workspace:*",

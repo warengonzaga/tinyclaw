@@ -13,7 +13,7 @@ function createTestDb() {
 }
 
 const ORIENTATION: OrientationContext = {
-  identity: 'I am TinyClaw, a helpful AI companion.',
+  identity: 'I am Tiny Claw, a helpful AI companion.',
   preferences: 'User prefers concise responses.',
   memories: '- timezone: UTC+08:00',
 };

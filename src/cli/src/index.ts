@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * TinyClaw CLI — Entry Point
+ * Tiny Claw CLI — Entry Point
  *
  * Lightweight argument router. No framework — just process.argv.
  *
@@ -27,9 +27,9 @@ function showHelp(): void {
   console.log();
   console.log('  ' + theme.label('Commands'));
   console.log(`    ${theme.cmd('setup')}    Interactive setup wizard - configure your provider`);
-  console.log(`    ${theme.cmd('start')}    Start the TinyClaw agent`);
+    console.log(`    ${theme.cmd('start')}    Start the Tiny Claw agent`);
   console.log(`    ${theme.cmd('config')}   Manage models, providers, and settings`);
-  console.log(`    ${theme.cmd('seed')}     Show your TinyClaw's soul seed`);
+  console.log(`    ${theme.cmd('seed')}     Show your Tiny Claw's soul seed`);
   console.log(`    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`);
   console.log();
   console.log('  ' + theme.label('Options'));

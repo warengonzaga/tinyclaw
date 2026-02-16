@@ -73,7 +73,7 @@ describe('config_get tool', () => {
   test('retrieves an existing default value', async () => {
     const tool = findTool('config_get');
     const result = await tool.execute({ key: 'agent.name' });
-    expect(result).toBe('"TinyClaw"');
+    expect(result).toBe('"Tiny Claw"');
   });
 
   test('retrieves a nested default value', async () => {
@@ -181,7 +181,7 @@ describe('config_list tool', () => {
     const tool = findTool('config_list');
     const result = await tool.execute({});
     expect(result).toContain('Configuration');
-    expect(result).toContain('TinyClaw');
+    expect(result).toContain('Tiny Claw');
     expect(result).toContain('entries');
   });
 
@@ -189,7 +189,7 @@ describe('config_list tool', () => {
     const tool = findTool('config_list');
     const result = await tool.execute({});
     // Should contain default agent name
-    expect(result).toContain('TinyClaw');
+    expect(result).toContain('Tiny Claw');
     // Should contain learning defaults
     expect(result).toContain('minConfidence');
   });

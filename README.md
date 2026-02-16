@@ -1,6 +1,9 @@
-# TinyClaw 🐜
+# Tiny Claw (Mandibles) 🐜
 
-![GitHub Repo Banner](https://ghrb.waren.build/banner?header=%F0%9F%90%9CTinyClaw&subheader=Your+autonomous+AI+companion.&bg=F3F4F6&color=31373D&subheadercolor=31373D&headerfont=Caveat+Brush&subheaderfont=Schoolbell&watermarkpos=bottom-right)
+> [!NOTE]
+> **Tiny Claw is NOT a smaller version of OpenClaw.** It is a completely independent product and an alternative to OpenClaw. While the original idea and inspiration came from OpenClaw (the lobster 🦞), Tiny Claw (the ant 🐜) has its own mission, architecture, and identity built from the ground up.
+
+![GitHub Repo Banner](https://ghrb.waren.build/banner?header=%F0%9F%90%9CTiny+Claw&subheader=Your+autonomous+AI+companion.&bg=F3F4F6&color=31373D&subheadercolor=31373D&headerfont=Caveat+Brush&subheaderfont=Schoolbell&watermarkpos=bottom-right)
 <!-- Created with GitHub Repo Banner by Waren Gonzaga: https://ghrb.waren.build -->
 
 **Your autonomous AI companion.**
@@ -8,15 +11,15 @@
 > [!WARNING]
 > **🚧 Under Active Development** - This project is in heavy development and things will break. Running it now may spoil the experience we're building for you. Please wait for the first official release before trying it out. Follow [@TinyClawAI](https://x.com/TinyClawAI) and [@warengonzaga](https://x.com/warengonzaga) on X for launch updates.
 
-AI agents today are powerful but complex, expensive to run, and heavy to set up. TinyClaw believes AI should be **simple, affordable, and truly personal**, like having your own Codsworth or AYLA as a helpful friend. It achieves this by being a **native framework built from scratch** with a tiny core, plugin architecture, self-improving memory, and smart routing that tiers queries to cut costs. The result is an **autonomous, self-improving, self-learning, and self-configuring personal AI companion** that grows with you over time.
+AI agents today are powerful but complex, expensive to run, and heavy to set up. Tiny Claw believes AI should be **simple, affordable, and truly personal**, like having your own Codsworth or AYLA as a helpful friend. It achieves this by being a **native framework built from scratch** with a tiny core, plugin architecture, self-improving memory, and smart routing that tiers queries to cut costs. The result is an **autonomous, self-improving, self-learning, and self-configuring personal AI companion** that grows with you over time.
 
-Think of the **personal computer revolution**. Computers were once reserved for governments, military, and large corporations. Having one meant building it yourself or spending serious money. Then Apple came along and made them personal and accessible to everyone. TinyClaw does the same for AI agents.
+Think of the **personal computer revolution**. Computers were once reserved for governments, military, and large corporations. Having one meant building it yourself or spending serious money. Then Apple came along and made them personal and accessible to everyone. Tiny Claw does the same for AI agents.
 
-## ❓ Why TinyClaw?
+## ❓ Why Tiny Claw?
 
-Most AI agent frameworks are powerful but heavy. They require expensive subscriptions, complex setup, and are built on top of other frameworks. TinyClaw takes a different approach. It's built from scratch, cheap to run, and treats you as a friend, not just a user to be served.
+Most AI agent frameworks are powerful but heavy. They require expensive subscriptions, complex setup, and are built on top of other frameworks. Tiny Claw takes a different approach. It's built from scratch, cheap to run, and treats you as a friend, not just a user to be served.
 
-| | TinyClaw 🐜 | Other AI Agent Frameworks |
+| | Tiny Claw 🐜 | Other AI Agent Frameworks |
 |---|---|---|
 | **Architecture** | Native framework, built from scratch | Built on existing frameworks (Pi, Claude Code, Codex) |
 | **Philosophy** | Personal companion with its own personality | Configurable assistant you shape from scratch |
@@ -34,9 +37,9 @@ Most AI agent frameworks are powerful but heavy. They require expensive subscrip
 
 ## 💡 Philosophy
 
-TinyClaw is inspired by personal AI companions from science fiction like **Codsworth** from Fallout (the loyal robot butler) and **AYLA** from Deliver Us Mars (the autonomous drone companion). It's not designed to be your employee or your robot slave. It's designed to be your **helpful friend** that can assist with your work, your projects, and your daily life, but on its own terms.
+Tiny Claw is inspired by personal AI companions from science fiction like **Codsworth** from Fallout (the loyal robot butler) and **AYLA** from Deliver Us Mars (the autonomous drone companion). It's not designed to be your employee or your robot slave. It's designed to be your **helpful friend** that can assist with your work, your projects, and your daily life, but on its own terms.
 
-**The ant metaphor is intentional.** A single ant is tiny, but it's autonomous, it learns, it adapts, and it builds something greater over time. That's TinyClaw. Small by design, mighty by nature.
+**The ant metaphor is intentional.** A single ant is tiny, but it's autonomous, it learns, it adapts, and it builds something greater over time. That's Tiny Claw. Small by design, mighty by nature. The name "Mandibles" refers to the ant's powerful jaws — tiny but capable of carrying many times their own weight.
 
 ### Core Principles
 
@@ -88,7 +91,7 @@ bun install
 bun start
 ```
 
-Open [http://localhost:3000](http://localhost:3000). TinyClaw will walk you through the rest. No config files needed.
+Open [http://localhost:3000](http://localhost:3000). Tiny Claw will walk you through the rest. No config files needed.
 
 ### Development
 
@@ -154,7 +157,7 @@ This project is licensed under [MIT License](https://opensource.org/license/MIT)
 
 ## 🙏 Credits
 
-- [OpenClaw](https://github.com/openclaw/openclaw) — project inspiration
+- [OpenClaw](https://github.com/openclaw/openclaw) — original idea and inspiration
 - [ClawRouter](https://github.com/BlockRunAI/ClawRouter) — smart routing inspiration
 - [Claw Compactor](https://github.com/aeromomo/claw-compactor) — compactor inspiration
 - [Nader Dabit](https://x.com/dabit3) — learnings from [You Could've Invented OpenClaw](https://x.com/dabit3/status/2021387483364151451)

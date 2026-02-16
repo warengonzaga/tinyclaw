@@ -1,7 +1,7 @@
 /**
  * Heartware Public API
  *
- * TinyClaw's self-configuration workspace with security-first architecture.
+ * Tiny Claw's self-configuration workspace with security-first architecture.
  *
  * @example
  * ```typescript

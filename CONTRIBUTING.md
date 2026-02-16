@@ -1,4 +1,4 @@
-# Contributing to TinyClaw 🐜
+# Contributing to Tiny Claw 🐜
 
 Thanks for contributing! Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before getting started.
 
@@ -50,4 +50,4 @@ This project follows the **[Clean Commit](https://github.com/wgtechlabs/clean-co
 
 ---
 
-💻💖☕ Made with ❤️ by the TinyClaw community
+💻💖☕ Made with ❤️ by the Tiny Claw community

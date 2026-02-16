@@ -5,7 +5,7 @@
  * with a permission guard layer.
  *
  * Why Bun Workers beat Docker:
- *   | Feature          | Docker (mrcloudchase)  | Bun Workers (TinyClaw) |
+ *   | Feature          | Docker (mrcloudchase)  | Bun Workers (Tiny Claw) |
  *   |------------------|------------------------|------------------------|
  *   | Boot time        | 1-3 seconds            | <1ms                   |
  *   | Memory overhead  | ~50MB per container     | ~1MB per worker        |

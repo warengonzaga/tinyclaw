@@ -182,7 +182,7 @@
         claimError = data.error || 'Claim failed'
       }
     } catch {
-      claimError = 'Could not reach TinyClaw server'
+      claimError = 'Could not reach Tiny Claw server'
     }
     claimLoading = false
   }
@@ -218,7 +218,7 @@
         loginError = data.error || 'Login failed'
       }
     } catch {
-      loginError = 'Could not reach TinyClaw server'
+      loginError = 'Could not reach Tiny Claw server'
     }
     loginLoading = false
   }
@@ -727,7 +727,7 @@
   <div class="flex-1 flex items-center justify-center">
     <div class="flex flex-col items-center gap-4">
       <div class="delegation-spinner w-10 h-10 border-3 border-brand/30 border-t-brand rounded-full"></div>
-      <span class="text-text-muted text-sm">Connecting to TinyClaw...</span>
+      <span class="text-text-muted text-sm">Connecting to Tiny Claw...</span>
     </div>
   </div>
 
@@ -738,9 +738,9 @@
       <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-6">
         <span class="text-4xl">🐜</span>
       </div>
-      <h1 class="text-2xl font-bold text-text-normal mb-2">Claim TinyClaw</h1>
+      <h1 class="text-2xl font-bold text-text-normal mb-2">Claim Tiny Claw</h1>
       <p class="text-text-muted text-sm mb-6">
-        Enter the claim token from your terminal to become TinyClaw's owner.
+        Enter the claim token from your terminal to become Tiny Claw's owner.
       </p>
 
       {#if claimError}
@@ -768,7 +768,7 @@
       </div>
 
       <p class="text-text-muted/50 text-xs mt-4">
-        The claim token was printed to the console when TinyClaw started.<br/>
+        The claim token was printed to the console when Tiny Claw started.<br/>
         <span class="text-yellow/70">Expires 1 hour after generation. Restart to get a new one.</span>
       </p>
     </div>
@@ -811,7 +811,7 @@
       </div>
 
       <p class="text-text-muted/50 text-xs mt-4">
-        The login token is printed to the terminal each time TinyClaw starts.<br/>
+        The login token is printed to the terminal each time Tiny Claw starts.<br/>
         <span class="text-yellow/70">Expires 1 hour after generation. Restart to get a new one.</span>
       </p>
 
@@ -829,7 +829,7 @@
   <!-- Title Bar -->
   <div class="h-9 min-h-9 px-4 flex items-center bg-bg-titlebar border-b border-bg-modifier-active">
     <div class="flex items-center gap-2 md:absolute md:left-1/2 md:-translate-x-1/2">
-      <span class="text-sm font-semibold text-text-normal tracking-wide">TinyClaw</span>
+      <span class="text-sm font-semibold text-text-normal tracking-wide">Tiny Claw</span>
       <span class="text-xs text-text-muted/50 font-medium">Chat</span>
     </div>
   </div>
@@ -839,7 +839,7 @@
     <div class="flex items-center gap-2.5">
       <AvatarLed size={32} {status} />
       <div class="flex flex-col">
-        <span class="text-sm font-semibold text-text-normal leading-tight">TinyClaw</span>
+        <span class="text-sm font-semibold text-text-normal leading-tight">Tiny Claw</span>
         <span class="text-[11px] {status === 'offline' ? 'text-text-muted/50' : 'text-text-muted'} leading-tight capitalize">{status}</span>
       </div>
     </div>
@@ -853,7 +853,7 @@
           <span class="text-3xl">👋</span>
         </div>
         <h2 class="text-xl font-bold text-text-normal mb-2">Hey there!</h2>
-        <p class="text-text-muted text-sm mb-5">What's your name? TinyClaw would love to know who it's chatting with.</p>
+        <p class="text-text-muted text-sm mb-5">What's your name? Tiny Claw would love to know who it's chatting with.</p>
         <div class="w-full flex gap-2">
           <input
             bind:value={friendName}
@@ -886,7 +886,7 @@
             </div>
             <h2 class="text-2xl font-bold text-text-normal mb-2">Hey, {friendName}!</h2>
             <p class="text-text-muted max-w-md">
-              TinyClaw is happy to chat with you. Say hello!
+              Tiny Claw is happy to chat with you. Say hello!
             </p>
           </div>
         {:else}
@@ -907,7 +907,7 @@
                 <div class="flex-1 min-w-0">
                   <div class="flex items-baseline gap-2">
                     <span class={`font-medium ${message.role === 'user' ? 'text-brand' : 'text-green'}`}>
-                      {message.role === 'user' ? friendName : 'TinyClaw'}
+                      {message.role === 'user' ? friendName : 'Tiny Claw'}
                     </span>
                     <span class="text-xs text-text-muted">{message.timestamp}</span>
                     {#if message.streaming}
@@ -963,7 +963,7 @@
           <div class="flex items-center justify-between mt-2 text-xs text-text-muted px-1">
             <span>Press <kbd class="px-1.5 py-0.5 bg-bg-secondary rounded text-[10px]">Enter</kbd> to send, <kbd class="px-1.5 py-0.5 bg-bg-secondary rounded text-[10px]">Shift+Enter</kbd> for new line</span>
             {#if isStreaming}
-              <span class="text-text-muted/70">TinyClaw is thinking...</span>
+              <span class="text-text-muted/70">Tiny Claw is thinking...</span>
             {/if}
           </div>
         </form>
@@ -976,7 +976,7 @@
   <!-- Title Bar -->
   <div class="h-9 min-h-9 px-4 flex items-center bg-bg-titlebar border-b border-bg-modifier-active">
     <div class="flex items-center gap-2 md:absolute md:left-1/2 md:-translate-x-1/2">
-      <span class="text-sm font-semibold text-text-normal tracking-wide">TinyClaw</span>
+      <span class="text-sm font-semibold text-text-normal tracking-wide">Tiny Claw</span>
       <span class="text-xs text-text-muted/50 font-medium">Beta</span>
       <span class="text-[10px] text-text-muted/30">v1.0.0</span>
     </div>
@@ -1025,7 +1025,7 @@
     <div class="flex items-center gap-2.5">
       <AvatarLed size={32} {status} />
       <div class="flex flex-col">
-        <span class="text-sm font-semibold text-text-normal leading-tight">TinyClaw</span>
+        <span class="text-sm font-semibold text-text-normal leading-tight">Tiny Claw</span>
         <span class="text-[11px] {status === 'offline' ? 'text-text-muted/50' : 'text-text-muted'} leading-tight capitalize">{status}</span>
       </div>
     </div>
@@ -1061,7 +1061,7 @@
           <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-4">
             <span class="text-4xl">🐜</span>
           </div>
-          <h2 class="text-2xl font-bold text-text-normal mb-2">Welcome to TinyClaw</h2>
+          <h2 class="text-2xl font-bold text-text-normal mb-2">Welcome to Tiny Claw</h2>
           <p class="text-text-muted max-w-md">
             This is the start of your conversation. Ask me anything and I'll do my best to help!
           </p>
@@ -1088,7 +1088,7 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-baseline gap-2">
                   <span class={`font-medium ${message.role === 'user' ? 'text-brand' : 'text-green'}`}>
-                    {message.role === 'user' ? 'You' : 'TinyClaw'}
+                    {message.role === 'user' ? 'You' : 'Tiny Claw'}
                   </span>
                   <span class="text-xs text-text-muted">{message.timestamp}</span>
                   {#if message.streaming}
@@ -1270,9 +1270,9 @@
               {#if activeDelegation}
                 Sub-agent working...
               {:else if isUsingTools}
-                TinyClaw is working...
+                Tiny Claw is working...
               {:else}
-                TinyClaw is thinking...
+                Tiny Claw is thinking...
               {/if}
             </span>
           {/if}
@@ -1297,7 +1297,7 @@
 
       <!-- Name -->
       <div class="px-4 mb-3">
-        <h2 class="text-lg font-bold text-text-normal">TinyClaw</h2>
+        <h2 class="text-lg font-bold text-text-normal">Tiny Claw</h2>
       </div>
 
       <!-- Info Card -->

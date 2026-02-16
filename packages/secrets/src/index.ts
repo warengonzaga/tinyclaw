@@ -1,7 +1,7 @@
 /**
  * Secrets Public API
  *
- * TinyClaw's encrypted secrets management powered by @wgtechlabs/secrets-engine.
+ * Tiny Claw's encrypted secrets management powered by @wgtechlabs/secrets-engine.
  * Provides machine-bound AES-256-GCM encryption for API keys and other secrets.
  */
 

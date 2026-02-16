@@ -1,7 +1,7 @@
 /**
  * @tinyclaw/plugin-provider-openai
  *
- * OpenAI provider plugin for TinyClaw. Adds GPT-4.1, GPT-4o, and other
+ * OpenAI provider plugin for Tiny Claw. Adds GPT-4.1, GPT-4o, and other
  * OpenAI models as a provider option. Routes via the smart provider
  * routing system based on query complexity tiers.
  *

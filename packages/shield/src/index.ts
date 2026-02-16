@@ -1,7 +1,7 @@
 /**
  * Shield Public API
  *
- * Runtime SHIELD.md enforcement for TinyClaw AI agents.
+ * Runtime SHIELD.md enforcement for Tiny Claw AI agents.
  * Parses the SHIELD.md threat feed and provides a deterministic decision
  * engine that evaluates events against active threats.
  *

@@ -1,7 +1,7 @@
 /**
- * Pulse Scheduler — TinyClaw's cron-like recurring task system.
+ * Pulse Scheduler — Tiny Claw's cron-like recurring task system.
  *
- * "Pulse" is TinyClaw's version of OpenClaw's "Heartbeat" scheduler.
+ * "Pulse" is Tiny Claw's version of OpenClaw's "Heartbeat" scheduler.
  * Lightweight interval-based scheduler that supports simple
  * interval strings ('30m', '1h', '24h') and runs handlers
  * through the session queue to prevent conflicts.

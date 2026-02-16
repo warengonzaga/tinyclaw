@@ -1,7 +1,7 @@
 /**
  * Start Command
  *
- * Boots the TinyClaw agent: initializes all subsystems, verifies provider
+ * Boots the Tiny Claw agent: initializes all subsystems, verifies provider
  * connectivity, and starts the Web UI / API server.
  *
  * Pre-flight check: ensures at least one provider API key is configured
@@ -54,7 +54,7 @@ export async function startCommand(): Promise<void> {
     setLogMode('debug');
   }
 
-  logger.log('TinyClaw — Small agent, mighty friend', undefined, { emoji: '🐜' });
+  logger.log('Tiny Claw — Small agent, mighty friend', undefined, { emoji: '🐜' });
 
   // --- Data directory ---------------------------------------------------
 
@@ -490,7 +490,7 @@ export async function startCommand(): Promise<void> {
   const restartTool: Tool = {
     name: 'tinyclaw_restart',
     description:
-      'Gracefully restart TinyClaw. Use this after configuration changes that ' +
+      'Gracefully restart Tiny Claw. Use this after configuration changes that ' +
       'require a restart (e.g., pairing a new provider or channel plugin). ' +
       'The process supervisor will automatically respawn the agent with the ' +
       'updated configuration. Tell the user a restart is happening before calling this.',
@@ -514,7 +514,7 @@ export async function startCommand(): Promise<void> {
       }, 500);
 
       return (
-        'Restart initiated. TinyClaw will shut down and automatically respawn ' +
+        'Restart initiated. Tiny Claw will shut down and automatically respawn ' +
         'with the updated configuration in a few seconds.'
       );
     },
@@ -566,7 +566,7 @@ export async function startCommand(): Promise<void> {
 
       return (
         `Switching from ${providerModel} to ${model}. ` +
-        'TinyClaw will restart in a few seconds with the new model.'
+        'Tiny Claw will restart in a few seconds with the new model.'
       );
     },
   };
@@ -711,7 +711,7 @@ export async function startCommand(): Promise<void> {
 
       return (
         `Primary provider set to "${target.name}" (${target.id}). ` +
-        'TinyClaw will restart in a few seconds. ' +
+        'Tiny Claw will restart in a few seconds. ' +
         'The smart router will use this provider as the default instead of the built-in.'
       );
     },
@@ -749,7 +749,7 @@ export async function startCommand(): Promise<void> {
       }, 500);
 
       return (
-        'Primary provider cleared. TinyClaw will restart in a few seconds ' +
+        'Primary provider cleared. Tiny Claw will restart in a few seconds ' +
         'and use the built-in Ollama Cloud provider as the default.'
       );
     },
@@ -1014,7 +1014,7 @@ export async function startCommand(): Promise<void> {
   const stats = learning.getStats();
   logger.log(`Learning: ${stats.totalPatterns} patterns learned`, undefined, { emoji: '🧠' });
   logger.log('');
-  logger.log('TinyClaw is ready!', undefined, { emoji: '🎉' });
+  logger.log('Tiny Claw is ready!', undefined, { emoji: '🎉' });
   logger.log(`   API server: http://localhost:${port}`);
   logger.log('   Web UI: Run "bun run dev:ui" then open http://localhost:5173');
   logger.log('');
@@ -1029,7 +1029,7 @@ export async function startCommand(): Promise<void> {
       return;
     }
     isShuttingDown = true;
-    logger.info('Shutting down TinyClaw...', undefined, { emoji: '👋' });
+    logger.info('Shutting down Tiny Claw...', undefined, { emoji: '👋' });
 
     // 0. Pulse scheduler + session queue
     try {

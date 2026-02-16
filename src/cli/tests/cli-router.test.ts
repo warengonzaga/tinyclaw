@@ -110,9 +110,9 @@ describe('help text content', () => {
     expect(stdout).toContain('--help');
   });
 
-  test('shows the TinyClaw banner', async () => {
+  test('shows the Tiny Claw banner', async () => {
     const { stdout } = await runCLI(['--help']);
-    expect(stdout).toContain('TinyClaw');
+    expect(stdout).toContain('Tiny Claw');
   });
 });
 

@@ -2,7 +2,7 @@
  * Setup Command
  *
  * Interactive TUI wizard that walks the user through first-time
- * TinyClaw configuration:
+ * Tiny Claw configuration:
  *   1. API key entry (masked)
  *   2. Persist to secrets-engine + config-engine
  *   3. Verify provider connectivity
@@ -49,13 +49,13 @@ export async function setupCommand(): Promise<void> {
   const secretsManager = await SecretsManager.create();
   const configManager = await ConfigManager.create();
 
-  p.intro(theme.brand('Let\'s set up TinyClaw'));
+  p.intro(theme.brand('Let\'s set up Tiny Claw'));
 
   // --- Security warning -----------------------------------------------
 
   p.note(
     theme.warn('Security warning - please read carefully.') + '\n\n' +
-    'TinyClaw is an open-source AI agent that runs on your machine.\n' +
+    'Tiny Claw is an open-source AI agent that runs on your machine.\n' +
     'It can read files, execute code, and perform actions when tools are enabled.\n' +
     'A malicious or poorly crafted prompt could trick the agent into\n' +
     'performing unintended or harmful operations.\n\n' +
@@ -64,11 +64,11 @@ export async function setupCommand(): Promise<void> {
     'or security incidents arising from its use. You assume all risks.\n\n' +
     theme.label('Recommended safety practices:') + '\n' +
     '  • Run in a sandboxed or isolated environment when possible.\n' +
-    '  • Never expose TinyClaw to the public internet without access control.\n' +
+    '  • Never expose Tiny Claw to the public internet without access control.\n' +
     '  • Keep secrets and sensitive files out of the agent\'s reachable paths.\n' +
     '  • Review enabled tools and permissions regularly.\n' +
     '  • Use the strongest available model for any bot with tool access.\n' +
-    '  • Keep TinyClaw up to date for the latest security patches.',
+    '  • Keep Tiny Claw up to date for the latest security patches.',
     'Security',
   );
 
@@ -134,15 +134,15 @@ export async function setupCommand(): Promise<void> {
   // --- Step 1: API key ------------------------------------------------
 
   p.note(
-    `${theme.label('Ollama Cloud')} is the default provider that powers TinyClaw.\n` +
+    `${theme.label('Ollama Cloud')} is the default provider that powers Tiny Claw.\n` +
     'It\'s free to sign up and comes with a generous free tier,\n' +
-    'so you can take your time exploring what TinyClaw can do.\n\n' +
+    'so you can take your time exploring what Tiny Claw can do.\n\n' +
     theme.label('How to get your API key:') + '\n' +
     `  1. Go to ${theme.label('https://ollama.com')} and create a free account.\n` +
-    '  2. Navigate to your account settings → API keys.\n' +
+    '  2. Navigate to your account settings \u2192 API keys.\n' +
     '  3. Generate a new key and paste it below.\n\n' +
     theme.dim('Shout-out to the Ollama team for their generosity, making it\n' +
-    'possible for anyone to try TinyClaw at zero cost. Thank you! 🙏'),
+    'possible for anyone to try Tiny Claw at zero cost. Thank you! \ud83d\ude4f'),
     'Default Provider',
   );
 
@@ -202,7 +202,7 @@ export async function setupCommand(): Promise<void> {
   p.note(
     `Your default built-in model is ${theme.label(DEFAULT_MODEL)}.\n\n` +
     'This model is always available as your fallback. If your primary\n' +
-    'model is down or hits a rate limit, TinyClaw automatically falls\n' +
+    'model is down or hits a rate limit, Tiny Claw automatically falls\n' +
     'back to this one so you\'re never left without a brain.\n\n' +
     'You can switch the default model anytime by asking the AI agent\n' +
     'during a conversation (e.g. "switch to gpt-oss:120b-cloud").',
@@ -225,12 +225,12 @@ export async function setupCommand(): Promise<void> {
   // --- Step 4: Soul seed ------------------------------------------------
 
   p.note(
-    'Your TinyClaw\'s personality is generated from a ' + theme.label('soul seed') + ',\n' +
+    'Your Tiny Claw\'s personality is generated from a ' + theme.label('soul seed') + ',\n' +
     'just like Minecraft\'s world generation. The same seed always\n' +
-    'produces the same personality — unique traits, quirks, and values.\n\n' +
+    'produces the same personality \u2014 unique traits, quirks, and values.\n\n' +
     theme.label('Options:') + '\n' +
-    '  • Enter a specific number to get a personality you can reproduce.\n' +
-    '  • Leave blank to let TinyClaw pick a random seed.\n\n' +
+    '  \u2022 Enter a specific number to get a personality you can reproduce.\n' +
+    '  \u2022 Leave blank to let Tiny Claw pick a random seed.\n\n' +
     theme.dim('Once set, the soul seed is permanent and cannot be changed.\n' +
     'Share your seed with others so they can create a companion just like yours!'),
     'Soul Seed',

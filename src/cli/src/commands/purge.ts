@@ -1,11 +1,11 @@
 /**
  * Purge Command
  *
- * Wipes all persisted TinyClaw state for a fresh install:
+ * Wipes all persisted Tiny Claw state for a fresh install:
  *   - ~/.tinyclaw/ (config DB, agent DB, learning, heartware, audit)
  *   - Optionally ~/.secrets-engine/ when --force is used
  *
- * Safety: requires the user to type "goodbye <soul name> my tinyclaw friend" to confirm.
+ * Safety: requires the user to type "goodbye <soul name> my tiny claw friend" to confirm.
  *
  * Flags:
  *   --force   Also delete the secrets store (~/.secrets-engine/)
@@ -86,7 +86,7 @@ function parseFlags(args: string[]): PurgeFlags {
 // ---------------------------------------------------------------------------
 
 /**
- * Run the purge command — wipe all TinyClaw data for a fresh install.
+ * Run the purge command — wipe all Tiny Claw data for a fresh install.
  */
 export async function purgeCommand(args: string[] = []): Promise<void> {
   setLogMode('error');
@@ -103,7 +103,7 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
 
   if (!dataExists && (!flags.force || !secretsExist)) {
     p.intro(theme.brand('Purge'));
-    p.log.info('Nothing to purge — TinyClaw hasn\'t been set up yet.');
+    p.log.info('Nothing to purge — Tiny Claw hasn\'t been set up yet.');
     p.outro(
       'Run ' + theme.cmd('tinyclaw setup') + ' to get started.'
     );
@@ -149,8 +149,8 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
   // Build dynamic confirmation phrase using soul name
   const soulName = await getSoulName(dataDir);
   const confirmPhrase = soulName
-    ? `goodbye ${soulName.toLowerCase()} my tinyclaw friend`
-    : 'goodbye my tinyclaw friend';
+    ? `goodbye ${soulName.toLowerCase()} my tiny claw friend`
+    : 'goodbye my tiny claw friend';
 
   if (flags.yes) {
     p.log.info(theme.dim('Skipping confirmation (--yes)'));
@@ -174,7 +174,7 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
   // --- Purge ----------------------------------------------------------
 
   const purgeSpinner = p.spinner();
-  purgeSpinner.start('Purging TinyClaw data');
+  purgeSpinner.start('Purging Tiny Claw data');
 
   const deleted: string[] = [];
   const errors: string[] = [];

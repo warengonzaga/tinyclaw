@@ -247,7 +247,7 @@ function buildDevNotice() {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TinyClaw</title>
+    <title>Tiny Claw</title>
     <style>
       body { font-family: ui-sans-serif, system-ui, sans-serif; background: #0b0d12; color: #e7edf4; display: grid; place-items: center; height: 100vh; margin: 0; }
       .card { max-width: 520px; background: #151c28; padding: 32px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); text-align: center; }
@@ -263,7 +263,7 @@ function buildDevNotice() {
   </head>
   <body>
     <div class="card">
-      <h1>🐾 TinyClaw</h1>
+      <h1>🐾 Tiny Claw</h1>
       <p>The UI needs to be started or built.</p>
       <div class="divider"></div>
       <div class="steps">
@@ -383,7 +383,7 @@ export function createWebUI(config) {
         console.log('')
         console.log('  ┌────────────────────────────────────────────────────────┐')
         console.log('  │                                                        │')
-        console.log('  │   🐜 TinyClaw — Owner Claim Token                      │')
+        console.log('  │   🐜 Tiny Claw — Owner Claim Token                     │')
         console.log('  │                                                        │')
         console.log(`  │   Token: ${token}                   │`)
         console.log('  │                                                        │')
@@ -399,7 +399,7 @@ export function createWebUI(config) {
         console.log('')
         console.log('  ┌────────────────────────────────────────────────────────┐')
         console.log('  │                                                        │')
-        console.log('  │   🐜 TinyClaw — Owner Login Token                      │')
+        console.log('  │   🐜 Tiny Claw — Owner Login Token                     │')
         console.log('  │                                                        │')
         console.log(`  │   Token: ${token}                   │`)
         console.log('  │                                                        │')
@@ -460,7 +460,7 @@ export function createWebUI(config) {
             }
             const token = body?.token
             if (!token || !isLoginTokenValid() || !timingSafeCompare(token, loginToken!)) {
-              return jsonResponse({ error: 'Invalid or expired login token. Restart TinyClaw to generate a new one.' }, 401)
+              return jsonResponse({ error: 'Invalid or expired login token. Restart Tiny Claw to generate a new one.' }, 401)
             }
 
             // Issue a new session token and update the stored hash
@@ -502,7 +502,7 @@ export function createWebUI(config) {
             }
             const token = body?.token
             if (!token || !isClaimTokenValid() || !timingSafeCompare(token, claimToken!)) {
-              return jsonResponse({ error: 'Invalid or expired claim token. Restart TinyClaw to generate a new one.' }, 401)
+              return jsonResponse({ error: 'Invalid or expired claim token. Restart Tiny Claw to generate a new one.' }, 401)
             }
 
             // Claim successful — generate session token and persist owner

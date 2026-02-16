@@ -1,7 +1,7 @@
 /**
  * Seed Command
  *
- * Displays the current soul seed for this TinyClaw instance.
+ * Displays the current soul seed for this Tiny Claw instance.
  * The seed deterministically generates the agent's personality.
  *
  * Usage:
@@ -26,7 +26,7 @@ export async function seedCommand(): Promise<void> {
     console.log();
     console.log(theme.error('  ✖ No soul seed found.'));
     console.log();
-    console.log(`    Run ${theme.cmd('tinyclaw setup')} to initialize your TinyClaw.`);
+    console.log(`    Run ${theme.cmd('tinyclaw setup')} to initialize your Tiny Claw.`);
     console.log();
     return;
   }

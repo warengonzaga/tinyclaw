@@ -1,7 +1,7 @@
 /**
  * Config Public API
  *
- * TinyClaw's persistent configuration management powered by @wgtechlabs/config-engine.
+ * Tiny Claw's persistent configuration management powered by @wgtechlabs/config-engine.
  * Provides SQLite-backed, Zod-validated storage for agent settings, provider
  * preferences, channel configurations, and more.
  *

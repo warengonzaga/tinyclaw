@@ -2,7 +2,7 @@
  * Config Manager
  *
  * Wraps @wgtechlabs/config-engine to provide persistent configuration
- * storage for TinyClaw. Configuration is stored as a SQLite database
+ * storage for Tiny Claw. Configuration is stored as a SQLite database
  * at ~/.tinyclaw/data/config.db by default.
  *
  * Non-sensitive settings only — API keys and tokens belong in

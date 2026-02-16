@@ -258,7 +258,7 @@ describe('static file serving', () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     // Should serve either the dist index.html or the dev notice
-    expect(html).toContain('TinyClaw');
+    expect(html).toContain('Tiny Claw');
   });
 
   test('/index.html returns same content as /', async () => {

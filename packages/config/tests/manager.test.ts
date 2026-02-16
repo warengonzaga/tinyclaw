@@ -47,7 +47,7 @@ describe('ConfigManager — factory', () => {
   });
 
   test('defaults are populated on first open', () => {
-    expect(manager.get('agent.name')).toBe('TinyClaw');
+    expect(manager.get('agent.name')).toBe('Tiny Claw');
     expect(manager.get('learning.enabled')).toBe(true);
     expect(manager.get('learning.minConfidence')).toBe(0.7);
     expect(manager.get('security.rateLimit.maxRequests')).toBe(20);
@@ -227,7 +227,7 @@ describe('ConfigManager — change events', () => {
 
     expect(fired).toBe(true);
     expect(newVal).toBe('EventBot');
-    expect(oldVal).toBe('TinyClaw');
+    expect(oldVal).toBe('Tiny Claw');
   });
 
   test('onDidAnyChange fires on any change', () => {

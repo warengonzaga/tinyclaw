@@ -6,7 +6,7 @@
  * to the appropriate provider.
  *
  * Inspired by ClawRouter's 14-dimension weighted scoring, simplified to
- * 8 dimensions for TinyClaw's lightweight architecture. Pure function,
+ * 8 dimensions for Tiny Claw's lightweight architecture. Pure function,
  * zero dependencies, sub-millisecond execution.
  */
 

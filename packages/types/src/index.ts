@@ -1,4 +1,4 @@
-// Core type definitions for TinyClaw
+// Core type definitions for Tiny Claw
 
 // ---------------------------------------------------------------------------
 // Core Primitives
@@ -67,8 +67,8 @@ export interface Tool {
  * Authority tier determines what a user is allowed to do.
  *
  * - **owner**: Full control — config, secrets, heartware, delegation, model switching, tools.
- *   There is exactly one owner per TinyClaw instance (the "assigned human").
- * - **friend**: Chat only — TinyClaw is friendly and remembers preferences,
+ *   There is exactly one owner per Tiny Claw instance (the "assigned human").
+ * - **friend**: Chat only — Tiny Claw is friendly and remembers preferences,
  *   but refuses commands that modify its internals or take action on the owner's behalf.
  */
 export type AuthorityTier = 'owner' | 'friend';
@@ -76,7 +76,7 @@ export type AuthorityTier = 'owner' | 'friend';
 /**
  * Owner authority configuration stored in config.
  *
- * Set during first-time claim flow: TinyClaw generates a claim token on boot,
+ * Set during first-time claim flow: Tiny Claw generates a claim token on boot,
  * the first person to enter it in the web UI becomes the owner.
  */
 export interface OwnerAuthority {
@@ -407,7 +407,7 @@ export interface LearnedContext {
 }
 
 // ---------------------------------------------------------------------------
-// Pulse (TinyClaw's version of OpenClaw's Heartbeat — cron-like task scheduler)
+// Pulse (Tiny Claw's version of OpenClaw's Heartbeat — cron-like task scheduler)
 // ---------------------------------------------------------------------------
 
 export interface PulseJob {

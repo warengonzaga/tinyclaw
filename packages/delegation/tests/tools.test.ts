@@ -106,7 +106,7 @@ function setup(responses: LLMResponse[] = [{ type: 'text', content: 'Done.' }]) 
     orchestrator,
     allTools,
     db,
-    heartwareContext: '## Identity\nI am TinyClaw.',
+    heartwareContext: '## Identity\nI am Tiny Claw.',
     learning,
     queue,
   });

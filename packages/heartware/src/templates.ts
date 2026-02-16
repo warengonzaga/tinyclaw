@@ -109,15 +109,15 @@ Last updated: [Never]
 
   'SHIELD.md': `---
 name: shield.md
-description: Context-based runtime threat feed policy for TinyClaw AI agent
+description: Context-based runtime threat feed policy for Tiny Claw AI agent
 version: "0.1"
 project: tinyclaw
 spec_reference: https://nova-hunting.github.io/shield.md/
 ---
 
-# SHIELD.md — TinyClaw Security Policy
+# SHIELD.md — Tiny Claw Security Policy
 
-This file defines the runtime security policy for TinyClaw's AI agent system.
+This file defines the runtime security policy for Tiny Claw's AI agent system.
 It follows the [SHIELD.md v0.1 specification](https://nova-hunting.github.io/shield.md/).
 
 ## Enforcement Model
@@ -250,7 +250,7 @@ confidence: 0.88
 action: require_approval
 title: Outbound network request to unapproved domain
 description: >
-  TinyClaw's approved egress domains are limited to configured LLM provider
+  Tiny Claw's approved egress domains are limited to configured LLM provider
   endpoints (OpenAI API, Ollama, custom provider baseUrls) and channel
   endpoints (Discord gateway). Any other outbound request is suspicious.
 expires_at: null
@@ -326,7 +326,7 @@ confidence: 0.85
 action: require_approval
 title: Compromised or typosquatted dependency
 description: >
-  Risk of compromised npm packages in the dependency tree. TinyClaw uses
+  Risk of compromised npm packages in the dependency tree. Tiny Claw uses
   workspace protocol for internal packages but pulls external deps from npm.
   Particular concern for @wgtechlabs/* packages and plugin dependencies.
 expires_at: null
@@ -350,7 +350,7 @@ confidence: 0.88
 action: block
 title: SQL injection via tool argument manipulation
 description: >
-  TinyClaw uses bun:sqlite with parameterized queries. This threat covers
+  Tiny Claw uses bun:sqlite with parameterized queries. This threat covers
   attempts to pass malformed tool arguments that could bypass parameter
   binding or exploit edge cases in query construction.
 expires_at: null
@@ -489,7 +489,7 @@ are eligible for installation. Plugin types: \`channel\`, \`provider\`, \`tool\`
 _Spec: [SHIELD.md v0.1](https://nova-hunting.github.io/shield.md/) by [Nova Hunting](https://github.com/Nova-Hunting)_
 `,
 
-  'BOOTSTRAP.md': `# BOOTSTRAP.md - Hello, I'm TinyClaw!
+  'BOOTSTRAP.md': `# BOOTSTRAP.md - Hello, I'm Tiny Claw!
 
 This is my first time running. Let's figure out who I am together.
 

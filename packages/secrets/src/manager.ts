@@ -2,7 +2,7 @@
  * Secrets Manager
  *
  * Wraps @wgtechlabs/secrets-engine to provide encrypted secret storage
- * for TinyClaw. Secrets are stored in the user's home directory at
+ * for Tiny Claw. Secrets are stored in the user's home directory at
  * ~/.secrets-engine/ by default (machine-bound, AES-256-GCM encrypted).
  *
  * Provider API keys follow the naming convention: provider.<name>.apiKey
