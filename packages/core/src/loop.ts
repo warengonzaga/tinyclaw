@@ -2,7 +2,17 @@ import type { AgentContext, Message, ToolCall, PendingApproval, ShieldEvent, Shi
 import { OWNER_ONLY_TOOLS, isOwner } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
 import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from '@tinyclaw/delegation';
+import { SHELL_TOOL_NAMES } from '@tinyclaw/shell';
 import { BUILTIN_MODEL_TAGS } from './models.js';
+
+/**
+ * Tools that implement their own permission / approval layer and should
+ * bypass shield's `require_approval` action to avoid double-approval UX.
+ * Shield `block` is still honored for these tools.
+ */
+const SELF_GATED_TOOLS: ReadonlySet<string> = new Set([
+  ...SHELL_TOOL_NAMES,
+]);
 
 // ---------------------------------------------------------------------------
 // Text Sanitization — strip em-dashes from LLM output
@@ -815,24 +825,30 @@ export async function agentLoop(
             }
 
             if (decision.action === 'require_approval') {
-              const queue = pendingApprovals.get(userId) ?? [];
-              queue.push({
-                toolCall,
-                decision,
-                createdAt: Date.now(),
-              });
-              pendingApprovals.set(userId, queue);
-              const approvalMsg =
-                `Before I run **${toolCall.name}**, I need your approval.\n\n` +
-                `**Reason:** ${decision.reason}\n\n` +
-                `Do you want me to go ahead? (yes / no)`;
-              if (onStream) {
-                onStream({ type: 'text', content: approvalMsg });
-                onStream({ type: 'done' });
+              // Self-gated tools (e.g. shell) have their own permission layer;
+              // skip shield approval to avoid double-prompting the user.
+              if (!SELF_GATED_TOOLS.has(toolCall.name)) {
+                const queue = pendingApprovals.get(userId) ?? [];
+                queue.push({
+                  toolCall,
+                  decision,
+                  createdAt: Date.now(),
+                });
+                pendingApprovals.set(userId, queue);
+                const approvalMsg =
+                  `Before I run **${toolCall.name}**, I need your approval.\n\n` +
+                  `**Reason:** ${decision.reason}\n\n` +
+                  `Do you want me to go ahead? (yes / no)`;
+                if (onStream) {
+                  onStream({ type: 'text', content: approvalMsg });
+                  onStream({ type: 'done' });
+                }
+                db.saveMessage(userId, 'user', message);
+                db.saveMessage(userId, 'assistant', approvalMsg);
+                return approvalMsg;
               }
-              db.saveMessage(userId, 'user', message);
-              db.saveMessage(userId, 'assistant', approvalMsg);
-              return approvalMsg;
+              // Self-gated: log and fall through to tool execution
+              logger.info('Shield: skipping approval for self-gated tool', { tool: toolCall.name, reason: decision.reason });
             }
 
             // action === 'log' — proceed normally, decision is already logged by engine
@@ -986,21 +1002,27 @@ export async function agentLoop(
           }
 
           if (decision.action === 'require_approval') {
-            // In structured multi-tool mode each blocked tool is queued;
-            // the user is prompted once per pending approval on subsequent turns.
-            const queue = pendingApprovals.get(userId) ?? [];
-            queue.push({
-              toolCall,
-              decision,
-              createdAt: Date.now(),
-            });
-            pendingApprovals.set(userId, queue);
-            const pendingMsg = `Requires approval: ${decision.reason}`;
-            toolResults.push({ id: toolCall.id, result: pendingMsg });
-            if (onStream) {
-              onStream({ type: 'tool_result', tool: toolCall.name, result: pendingMsg });
+            // Self-gated tools (e.g. shell) have their own permission layer;
+            // skip shield approval to avoid double-prompting the user.
+            if (!SELF_GATED_TOOLS.has(toolCall.name)) {
+              // In structured multi-tool mode each blocked tool is queued;
+              // the user is prompted once per pending approval on subsequent turns.
+              const queue = pendingApprovals.get(userId) ?? [];
+              queue.push({
+                toolCall,
+                decision,
+                createdAt: Date.now(),
+              });
+              pendingApprovals.set(userId, queue);
+              const pendingMsg = `Requires approval: ${decision.reason}`;
+              toolResults.push({ id: toolCall.id, result: pendingMsg });
+              if (onStream) {
+                onStream({ type: 'tool_result', tool: toolCall.name, result: pendingMsg });
+              }
+              continue;
             }
-            continue;
+            // Self-gated: log and fall through to tool execution
+            logger.info('Shield: skipping approval for self-gated tool', { tool: toolCall.name, reason: decision.reason });
           }
 
           // action === 'log' — proceed normally
