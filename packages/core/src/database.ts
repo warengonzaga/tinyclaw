@@ -224,7 +224,7 @@ export function createDatabase(path: string): Database {
   `);
 
   const getActiveSubAgentsStmt = db.prepare(`
-    SELECT * FROM sub_agents WHERE user_id = ? AND status = 'active'
+    SELECT * FROM sub_agents WHERE user_id = ? AND status IN ('active', 'suspended')
     ORDER BY last_active_at DESC
   `);
 
@@ -240,6 +240,11 @@ export function createDatabase(path: string): Database {
 
   const deleteExpiredSubAgentsStmt = db.prepare(`
     DELETE FROM sub_agents WHERE status = 'soft_deleted' AND deleted_at < ?
+  `);
+
+  const archiveStaleSuspendedStmt = db.prepare(`
+    UPDATE sub_agents SET status = 'soft_deleted', deleted_at = ?
+    WHERE status = 'suspended' AND last_active_at < ?
   `);
 
   // --- Role template prepared statements ---
@@ -594,6 +599,11 @@ export function createDatabase(path: string): Database {
 
     deleteExpiredSubAgents(beforeTimestamp: number): number {
       const result = deleteExpiredSubAgentsStmt.run(beforeTimestamp);
+      return result.changes;
+    },
+
+    archiveStaleSuspended(inactiveBefore: number): number {
+      const result = archiveStaleSuspendedStmt.run(Date.now(), inactiveBefore);
       return result.changes;
     },
 
