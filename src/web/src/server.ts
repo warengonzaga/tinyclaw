@@ -1,5 +1,6 @@
-import { existsSync } from 'fs'
+import { existsSync, chmodSync, statSync } from 'fs'
 import { join, resolve } from 'path'
+import { timingSafeEqual } from 'crypto'
 
 const textEncoder = new TextEncoder()
 
@@ -7,21 +8,34 @@ const textEncoder = new TextEncoder()
 // Owner Authority — claim-based token authentication
 // ---------------------------------------------------------------------------
 
+/** Token expiry — claim & login tokens are valid for 1 hour (per OpenClaw pattern). */
+const TOKEN_EXPIRY_MS = 60 * 60 * 1000
+
 /**
- * Generate a cryptographically random claim token.
- * This is printed to the console on boot; the first person to enter it
- * in the web UI becomes the owner.
+ * Human-friendly alphabet for tokens — excludes ambiguous characters
+ * (0/O, 1/I/L) following the OpenClaw pairing-code pattern.
+ */
+const TOKEN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+/**
+ * Generate a cryptographically random claim/login token.
+ * Uses 16 characters from a 32-char human-friendly alphabet (~80-bit entropy).
+ * This is printed to the console on boot.
  */
 function generateClaimToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(6))
-  return 'tc_' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  const chars = Array.from(bytes, b => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length])
+  // Format as tc_XXXX-XXXX-XXXX-XXXX for readability
+  const raw = chars.join('')
+  return `tc_${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}`
 }
 
 /**
  * Generate a persistent session token for the owner cookie.
+ * 48 hex chars (24 random bytes = 192-bit entropy) — matches OpenClaw auto-token strength.
  */
 function generateSessionToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(32))
+  const bytes = crypto.getRandomValues(new Uint8Array(24))
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
 }
 
@@ -32,6 +46,119 @@ async function sha256(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
   const hash = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Timing-safe string comparison — prevents timing attacks on token verification.
+ * Always compares in constant time regardless of where strings differ.
+ * (Pattern from OpenClaw's src/security/secret-equal.ts)
+ */
+function timingSafeCompare(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false
+  const enc = new TextEncoder()
+  const bufA = enc.encode(a)
+  const bufB = enc.encode(b)
+  // If lengths differ, compare bufA against itself (constant time) and return false
+  if (bufA.byteLength !== bufB.byteLength) {
+    timingSafeEqual(bufA, bufA) // burn the same CPU time
+    return false
+  }
+  return timingSafeEqual(bufA, bufB)
+}
+
+// ---------------------------------------------------------------------------
+// Rate Limiting — sliding-window per IP (inspired by OpenClaw)
+// ---------------------------------------------------------------------------
+
+interface RateLimitEntry {
+  /** Timestamps of recent attempts within the window. */
+  attempts: number[]
+  /** If set, requests are blocked until this timestamp. */
+  lockedUntil: number
+}
+
+const RATE_LIMIT_WINDOW_MS = 60_000       // 60-second sliding window
+const RATE_LIMIT_MAX_ATTEMPTS = 5         // max 5 attempts per window
+const RATE_LIMIT_LOCKOUT_MS = 5 * 60_000  // 5-minute lockout after exceeding
+const rateLimitStore = new Map<string, RateLimitEntry>()
+
+/**
+ * Check rate limit for a given key (typically IP address).
+ * Returns true if the request should be allowed, false if rate-limited.
+ */
+function checkRateLimit(key: string): boolean {
+  // Loopback is exempt (local development)
+  if (key === '127.0.0.1' || key === '::1' || key === 'localhost') return true
+
+  const now = Date.now()
+  let entry = rateLimitStore.get(key)
+
+  if (!entry) {
+    entry = { attempts: [], lockedUntil: 0 }
+    rateLimitStore.set(key, entry)
+  }
+
+  // Check lockout
+  if (entry.lockedUntil > now) return false
+
+  // Clean old attempts outside the window
+  entry.attempts = entry.attempts.filter(t => now - t < RATE_LIMIT_WINDOW_MS)
+
+  // Check if under limit
+  if (entry.attempts.length >= RATE_LIMIT_MAX_ATTEMPTS) {
+    entry.lockedUntil = now + RATE_LIMIT_LOCKOUT_MS
+    return false
+  }
+
+  entry.attempts.push(now)
+  return true
+}
+
+/**
+ * Get the IP address from a request.
+ */
+function getClientIP(request: Request, server: any): string {
+  // Check standard proxy headers first
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  const realIP = request.headers.get('x-real-ip')
+  if (realIP) return realIP
+  // Fall back to Bun's socket address
+  try {
+    const addr = server?.requestIP?.(request)
+    if (addr) return addr.address
+  } catch {}
+  return 'unknown'
+}
+
+// Periodically clean stale rate-limit entries (every 10 minutes)
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, entry] of rateLimitStore) {
+    if (entry.lockedUntil < now && entry.attempts.every(t => now - t > RATE_LIMIT_WINDOW_MS)) {
+      rateLimitStore.delete(key)
+    }
+  }
+}, 10 * 60_000).unref?.()
+
+// ---------------------------------------------------------------------------
+// File Permission Hardening (non-Windows)
+// ---------------------------------------------------------------------------
+
+/**
+ * Harden file permissions on sensitive files (config database, etc.).
+ * Sets files to 0o600 (owner read/write only) and directories to 0o700.
+ * Skipped on Windows where chmod is not meaningful.
+ */
+function hardenFilePermissions(filePath: string): void {
+  if (process.platform === 'win32') return
+  try {
+    const stats = statSync(filePath)
+    const targetMode = stats.isDirectory() ? 0o700 : 0o600
+    chmodSync(filePath, targetMode)
+  } catch {
+    // Silently ignore — file may not exist yet
+  }
 }
 
 /**
@@ -53,11 +180,23 @@ function buildSessionCookie(token: string): string {
   return `tinyclaw_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}`
 }
 
+/**
+ * Standard security headers applied to all responses.
+ * Prevents clickjacking, MIME sniffing, and XSS reflection.
+ */
+const SECURITY_HEADERS: Record<string, string> = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+}
+
 function jsonResponse(payload, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...SECURITY_HEADERS,
     }
   })
 }
@@ -66,13 +205,16 @@ function htmlResponse(html, status = 200) {
   return new Response(html, {
     status,
     headers: {
-      'Content-Type': 'text/html; charset=utf-8'
+      'Content-Type': 'text/html; charset=utf-8',
+      ...SECURITY_HEADERS,
     }
   })
 }
 
 function fileResponse(filePath) {
-  return new Response(Bun.file(filePath))
+  return new Response(Bun.file(filePath), {
+    headers: SECURITY_HEADERS,
+  })
 }
 
 function resolveUiPaths() {
@@ -147,6 +289,7 @@ export function createWebUI(config) {
     getSubAgents,
     configManager,
     onOwnerClaimed,
+    configDbPath,
   } = config
 
   const serverStartedAt = Date.now()
@@ -154,10 +297,17 @@ export function createWebUI(config) {
 
   // Claim token — generated once per boot, printed to console
   let claimToken: string | null = null
+  let claimTokenCreatedAt: number = 0
 
   // Login token — generated on boot when ownership is already claimed,
   // allows the owner to re-authenticate from a new browser / cleared cookies.
   let loginToken: string | null = null
+  let loginTokenCreatedAt: number = 0
+
+  // Harden config database permissions on startup
+  if (configDbPath) {
+    hardenFilePermissions(configDbPath)
+  }
 
   /**
    * Check if ownership has been claimed.
@@ -169,6 +319,7 @@ export function createWebUI(config) {
 
   /**
    * Verify that a request comes from the owner via session cookie.
+   * Uses timing-safe comparison on the hash to prevent timing attacks.
    */
   async function isOwnerRequest(request: Request): Promise<boolean> {
     if (!configManager) return false
@@ -177,28 +328,49 @@ export function createWebUI(config) {
     const token = getSessionToken(request)
     if (!token) return false
     const hash = await sha256(token)
-    return hash === storedHash
+    return timingSafeCompare(hash, storedHash)
   }
 
   /**
    * Generate (or return existing) claim token. Called once on boot.
+   * Tokens expire after TOKEN_EXPIRY_MS (1 hour).
    */
   function getOrCreateClaimToken(): string {
-    if (!claimToken) {
+    const now = Date.now()
+    if (!claimToken || (now - claimTokenCreatedAt) > TOKEN_EXPIRY_MS) {
       claimToken = generateClaimToken()
+      claimTokenCreatedAt = now
     }
     return claimToken
   }
 
   /**
+   * Check if the claim token is still valid (not expired).
+   */
+  function isClaimTokenValid(): boolean {
+    if (!claimToken) return false
+    return (Date.now() - claimTokenCreatedAt) <= TOKEN_EXPIRY_MS
+  }
+
+  /**
    * Generate (or return existing) login token. Called on boot when
-   * ownership is already claimed.
+   * ownership is already claimed. Tokens expire after TOKEN_EXPIRY_MS.
    */
   function getOrCreateLoginToken(): string {
-    if (!loginToken) {
+    const now = Date.now()
+    if (!loginToken || (now - loginTokenCreatedAt) > TOKEN_EXPIRY_MS) {
       loginToken = generateClaimToken() // same format, different purpose
+      loginTokenCreatedAt = now
     }
     return loginToken
+  }
+
+  /**
+   * Check if the login token is still valid (not expired).
+   */
+  function isLoginTokenValid(): boolean {
+    if (!loginToken) return false
+    return (Date.now() - loginTokenCreatedAt) <= TOKEN_EXPIRY_MS
   }
 
   return {
@@ -209,31 +381,33 @@ export function createWebUI(config) {
         // First-time: display claim token
         const token = getOrCreateClaimToken()
         console.log('')
-        console.log('  ┌──────────────────────────────────────────────────┐')
-        console.log('  │                                                  │')
-        console.log('  │   🐜 TinyClaw — Owner Claim Token               │')
-        console.log('  │                                                  │')
-        console.log(`  │   Token: ${token}                         │`)
-        console.log('  │                                                  │')
-        console.log('  │   Enter this on the web UI to claim ownership.   │')
-        console.log('  │   The first person to claim becomes the owner.   │')
-        console.log('  │                                                  │')
-        console.log('  └──────────────────────────────────────────────────┘')
+        console.log('  ┌────────────────────────────────────────────────────────┐')
+        console.log('  │                                                        │')
+        console.log('  │   🐜 TinyClaw — Owner Claim Token                      │')
+        console.log('  │                                                        │')
+        console.log(`  │   Token: ${token}                   │`)
+        console.log('  │                                                        │')
+        console.log('  │   Enter this on the web UI to claim ownership.         │')
+        console.log('  │   The first person to claim becomes the owner.         │')
+        console.log('  │   ⏳ Expires in 1 hour. Restart to generate a new one. │')
+        console.log('  │                                                        │')
+        console.log('  └────────────────────────────────────────────────────────┘')
         console.log('')
       } else {
         // Already claimed: display login token for re-authentication
         const token = getOrCreateLoginToken()
         console.log('')
-        console.log('  ┌──────────────────────────────────────────────────┐')
-        console.log('  │                                                  │')
-        console.log('  │   🐜 TinyClaw — Owner Login Token               │')
-        console.log('  │                                                  │')
-        console.log(`  │   Token: ${token}                         │`)
-        console.log('  │                                                  │')
-        console.log('  │   Use this at /login to access the dashboard     │')
-        console.log('  │   from a new browser or after clearing cookies.  │')
-        console.log('  │                                                  │')
-        console.log('  └──────────────────────────────────────────────────┘')
+        console.log('  ┌────────────────────────────────────────────────────────┐')
+        console.log('  │                                                        │')
+        console.log('  │   🐜 TinyClaw — Owner Login Token                      │')
+        console.log('  │                                                        │')
+        console.log(`  │   Token: ${token}                   │`)
+        console.log('  │                                                        │')
+        console.log('  │   Use this at /login to access the dashboard           │')
+        console.log('  │   from a new browser or after clearing cookies.        │')
+        console.log('  │   ⏳ Expires in 1 hour. Restart to generate a new one. │')
+        console.log('  │                                                        │')
+        console.log('  └────────────────────────────────────────────────────────┘')
         console.log('')
       }
 
@@ -269,6 +443,12 @@ export function createWebUI(config) {
 
           // Owner login — re-authenticate using a login token from the console
           if (pathname === '/api/auth/login' && request.method === 'POST') {
+            // Rate limit login attempts
+            const clientIP = getClientIP(request, server)
+            if (!checkRateLimit(clientIP)) {
+              return jsonResponse({ error: 'Too many attempts. Try again later.' }, 429)
+            }
+
             if (!isOwnerClaimed()) {
               return jsonResponse({ error: 'No owner to log in as. Use the claim flow first.' }, 400)
             }
@@ -279,8 +459,8 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'Invalid JSON' }, 400)
             }
             const token = body?.token
-            if (!token || token !== loginToken) {
-              return jsonResponse({ error: 'Invalid login token' }, 401)
+            if (!token || !isLoginTokenValid() || !timingSafeCompare(token, loginToken!)) {
+              return jsonResponse({ error: 'Invalid or expired login token. Restart TinyClaw to generate a new one.' }, 401)
             }
 
             // Issue a new session token and update the stored hash
@@ -305,6 +485,12 @@ export function createWebUI(config) {
 
           // Claim ownership — first-to-claim flow
           if (pathname === '/api/auth/claim' && request.method === 'POST') {
+            // Rate limit claim attempts
+            const clientIP = getClientIP(request, server)
+            if (!checkRateLimit(clientIP)) {
+              return jsonResponse({ error: 'Too many attempts. Try again later.' }, 429)
+            }
+
             if (isOwnerClaimed()) {
               return jsonResponse({ error: 'Ownership already claimed' }, 403)
             }
@@ -315,8 +501,8 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'Invalid JSON' }, 400)
             }
             const token = body?.token
-            if (!token || token !== claimToken) {
-              return jsonResponse({ error: 'Invalid claim token' }, 401)
+            if (!token || !isClaimTokenValid() || !timingSafeCompare(token, claimToken!)) {
+              return jsonResponse({ error: 'Invalid or expired claim token. Restart TinyClaw to generate a new one.' }, 401)
             }
 
             // Claim successful — generate session token and persist owner

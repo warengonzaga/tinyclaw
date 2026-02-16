@@ -70,6 +70,7 @@ html, body {
 .markdown-content {
   word-wrap: break-word;
   overflow-wrap: break-word;
+  line-height: 1.5;
 }
 
 .markdown-content p {
@@ -80,39 +81,116 @@ html, body {
   margin-bottom: 0;
 }
 
-.markdown-content code {
-  background: var(--color-bg-secondary);
-  padding: 0.2em 0.4em;
-  border-radius: 4px;
-  font-size: 0.875em;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+/* Headings */
+.markdown-content h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 0.75em 0 0.4em 0;
+  color: var(--color-text-normal);
+  border-bottom: 1px solid var(--color-bg-modifier-active);
+  padding-bottom: 0.25em;
 }
 
+.markdown-content h2 {
+  font-size: 1.3em;
+  font-weight: 700;
+  margin: 0.65em 0 0.35em 0;
+  color: var(--color-text-normal);
+}
+
+.markdown-content h3 {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin: 0.5em 0 0.3em 0;
+  color: var(--color-text-normal);
+}
+
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em 0;
+  color: var(--color-text-muted);
+}
+
+.markdown-content h1:first-child,
+.markdown-content h2:first-child,
+.markdown-content h3:first-child {
+  margin-top: 0;
+}
+
+/* Inline code */
+.markdown-content code {
+  background: var(--color-bg-secondary);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  border: 1px solid var(--color-bg-modifier-active);
+}
+
+/* Code blocks */
 .markdown-content pre {
   background: var(--color-bg-secondary);
   padding: 1em;
   border-radius: 8px;
   overflow-x: auto;
   margin: 0.5em 0;
+  border: 1px solid var(--color-bg-modifier-active);
 }
 
 .markdown-content pre code {
   background: none;
   padding: 0;
+  border: none;
+  font-size: 0.85em;
+  line-height: 1.6;
 }
 
+/* Lists */
 .markdown-content ul, .markdown-content ol {
   margin: 0.5em 0;
   padding-left: 1.5em;
 }
 
+.markdown-content li {
+  margin: 0.2em 0;
+}
+
+.markdown-content li > p {
+  margin: 0;
+}
+
+/* Nested lists */
+.markdown-content ul ul,
+.markdown-content ol ol,
+.markdown-content ul ol,
+.markdown-content ol ul {
+  margin: 0.15em 0;
+}
+
+/* Task lists (checkboxes) */
+.markdown-content input[type="checkbox"] {
+  margin-right: 0.4em;
+  accent-color: var(--color-brand);
+}
+
+/* Blockquotes */
 .markdown-content blockquote {
   border-left: 4px solid var(--color-brand);
   margin: 0.5em 0;
-  padding-left: 1em;
+  padding: 0.5em 1em;
   color: var(--color-text-muted);
+  background: var(--color-bg-secondary);
+  border-radius: 0 6px 6px 0;
 }
 
+.markdown-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Links */
 .markdown-content a {
   color: var(--color-text-link);
   text-decoration: none;
@@ -120,6 +198,106 @@ html, body {
 
 .markdown-content a:hover {
   text-decoration: underline;
+}
+
+/* Horizontal rules */
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--color-bg-modifier-active);
+  margin: 0.75em 0;
+}
+
+/* Tables */
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.9em;
+  overflow-x: auto;
+  display: block;
+}
+
+.markdown-content thead {
+  display: table-header-group;
+}
+
+.markdown-content tbody {
+  display: table-row-group;
+}
+
+.markdown-content tr {
+  display: table-row;
+  border-bottom: 1px solid var(--color-bg-modifier-active);
+}
+
+.markdown-content thead tr {
+  border-bottom: 2px solid var(--color-bg-modifier-active);
+}
+
+.markdown-content th {
+  display: table-cell;
+  padding: 0.5em 0.75em;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-normal);
+  background: var(--color-bg-secondary);
+  white-space: nowrap;
+}
+
+.markdown-content td {
+  display: table-cell;
+  padding: 0.5em 0.75em;
+  text-align: left;
+  color: var(--color-text-normal);
+}
+
+.markdown-content tbody tr:hover {
+  background: var(--color-bg-modifier-hover);
+}
+
+/* Strong and emphasis */
+.markdown-content strong {
+  font-weight: 600;
+  color: var(--color-text-normal);
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+/* Images */
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 0.5em 0;
+}
+
+/* Definition lists / details */
+.markdown-content details {
+  margin: 0.5em 0;
+  padding: 0.5em;
+  background: var(--color-bg-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--color-bg-modifier-active);
+}
+
+.markdown-content summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text-normal);
+}
+
+/* Strikethrough */
+.markdown-content del {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+/* Subscript / superscript */
+.markdown-content sub,
+.markdown-content sup {
+  font-size: 0.75em;
 }
 
 /* Typing indicator animation */

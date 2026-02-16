@@ -48,8 +48,18 @@
   let botStartedAt = $state(null)    // Timestamp from health API for uptime
 
   // Track which background task completions have been auto-injected into chat.
-  // Non-reactive — used purely for dedup, not rendered.
-  const shownCompletionIds = new Set()
+  // Persisted in sessionStorage so refreshes don't re-inject old results.
+  const shownCompletionIds = new Set(
+    JSON.parse(sessionStorage.getItem('tc_shownCompletionIds') || '[]')
+  )
+  function markCompletionShown(id) {
+    shownCompletionIds.add(id)
+    sessionStorage.setItem('tc_shownCompletionIds', JSON.stringify([...shownCompletionIds]))
+  }
+
+  // First fetch flag — on page load we seed the set with already-completed
+  // tasks so they are not re-injected into chat.
+  let initialFetchDone = false
 
   // Owner userId — matches what the server sets
   const userId = $derived(view === 'owner' ? 'web:owner' : `friend:${friendName.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'anonymous'}`)
@@ -105,10 +115,23 @@
     }
   })
 
+  // Strip em-dashes and en-dashes from text before rendering
+  function stripDashes(text) {
+    return text
+      .replace(/\s*—\s*/g, ', ')
+      .replace(/\s*–\s*/g, ', ')
+      .replace(/,\s*,/g, ',')
+      .replace(/,\s*\./g, '.')
+  }
+
   function renderMarkdown(text) {
     if (!text) return ''
-    const html = marked.parse(text)
-    return DOMPurify.sanitize(html)
+    const cleaned = stripDashes(text)
+    const html = marked.parse(cleaned)
+    return DOMPurify.sanitize(html, {
+      ADD_TAGS: ['input'],
+      ADD_ATTR: ['type', 'checked', 'disabled']
+    })
   }
 
   async function checkHealth() {
@@ -221,16 +244,21 @@
         const data = await res.json()
         const newTasks = data.tasks || []
 
-        // Detect newly completed/failed tasks and auto-inject results into chat
+        // Detect newly completed/failed tasks and auto-inject results into chat.
+        // On the very first fetch after page load, just seed the set so we
+        // don't re-inject results the user already saw before the refresh.
         for (const task of newTasks) {
           if (
             (task.status === 'completed' || task.status === 'failed') &&
             !shownCompletionIds.has(task.id)
           ) {
-            shownCompletionIds.add(task.id)
-            injectBackgroundResult(task)
+            markCompletionShown(task.id)
+            if (initialFetchDone) {
+              injectBackgroundResult(task)
+            }
           }
         }
+        initialFetchDone = true
 
         backgroundTasks = newTasks
       }
@@ -585,13 +613,12 @@
 
   function getStatusColor(s) {
     switch (s) {
-      case 'running': return 'bg-yellow'
-      case 'completed': return 'bg-green'
+      case 'running': case 'working': return 'bg-yellow'
+      case 'completed': case 'delivered': return 'bg-green'
       case 'failed': return 'bg-red'
-      case 'delivered': return 'bg-green'
-      case 'active': return 'bg-green'
+      case 'active': case 'idle': return 'bg-green'
       case 'suspended': return 'bg-yellow'
-      case 'soft_deleted': return 'bg-text-muted'
+      case 'soft_deleted': case 'archived': return 'bg-text-muted'
       default: return 'bg-text-muted'
     }
   }
@@ -601,8 +628,37 @@
     const runningTask = backgroundTasks.find(t => t.agentId === agent.id && t.status === 'running')
     if (runningTask) return 'working'
     if (agent.status === 'soft_deleted') return 'archived'
-    if (agent.status === 'suspended') return 'suspended'
+    // Check if the last task failed (0 successes out of 1+ tasks)
+    const lastTask = backgroundTasks.find(t => t.agentId === agent.id && t.status === 'failed')
+    if (lastTask || (agent.totalTasks > 0 && agent.successfulTasks === 0)) return 'failed'
+    // "Suspended" is the internal state for idle-after-task; show user-friendly label
     return 'idle'
+  }
+
+  function getHistoryLabel(agent) {
+    // Contextual label for archived agents
+    if (agent.totalTasks > 0 && agent.successfulTasks === 0) return 'failed'
+    if (agent.totalTasks > 0 && agent.successfulTasks === agent.totalTasks) return 'completed'
+    if (agent.totalTasks > 0) return 'partial' // some succeeded, some failed
+    return 'dismissed'
+  }
+
+  function getHistoryColor(label) {
+    switch (label) {
+      case 'failed': return 'bg-red'
+      case 'completed': return 'bg-green'
+      case 'partial': return 'bg-yellow'
+      default: return 'bg-text-muted'
+    }
+  }
+
+  function getHistoryTextColor(label) {
+    switch (label) {
+      case 'failed': return 'text-red'
+      case 'completed': return 'text-green'
+      case 'partial': return 'text-yellow'
+      default: return 'text-text-muted'
+    }
   }
 
   function getAgentCurrentTask(agent) {
@@ -634,8 +690,13 @@
       }, [])
   )
   let allAgents = $derived([...subAgents, ...phantomAgents])
-  let activeAgents = $derived(allAgents.filter(a => a.status === 'active' || a.status === 'suspended'))
-  let archivedAgents = $derived(allAgents.filter(a => a.status === 'soft_deleted'))
+  // Only truly active agents (with running work) show in Active Sub-Agents.
+  // Suspended and soft_deleted agents go to History.
+  let isFailedAgent = (a) => a.totalTasks > 0 && a.successfulTasks === 0
+  let activeAgents = $derived(allAgents.filter(a => a.status === 'active'))
+  let archivedAgents = $derived(allAgents.filter(a =>
+    a.status === 'soft_deleted' || a.status === 'suspended'
+  ))
   let workingAgents = $derived(
     activeAgents.filter(a => backgroundTasks.some(t => t.agentId === a.id && t.status === 'running'))
   )
@@ -644,6 +705,19 @@
   let runningBgTasks = $derived(backgroundTasks.filter(t => t.status === 'running').length)
   let activeAgentCount = $derived(
     workingAgents.length + (activeDelegation ? 1 : 0)
+  )
+
+  // Track delegation roles that have been completed/resulted across ALL messages.
+  // Used to hide the spinner on "start" cards even when the completion event
+  // lands in a different message (e.g. after an approval flow).
+  let completedDelegationRoles = $derived(
+    new Set(
+      messages.flatMap(m =>
+        (m.delegationEvents || [])
+          .filter(e => e.type === 'complete' || e.type === 'result')
+          .map(e => e.role)
+      )
+    )
   )
 </script>
 
@@ -680,7 +754,7 @@
           bind:value={claimToken}
           onkeydown={handleClaimKeydown}
           type="text"
-          placeholder="tc_XXXXXXXXXXXX"
+          placeholder="tc_XXXX-XXXX-XXXX-XXXX"
           class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm font-mono"
           disabled={claimLoading}
         />
@@ -694,7 +768,8 @@
       </div>
 
       <p class="text-text-muted/50 text-xs mt-4">
-        The claim token was printed to the console when TinyClaw started.
+        The claim token was printed to the console when TinyClaw started.<br/>
+        <span class="text-yellow/70">Expires 1 hour after generation. Restart to get a new one.</span>
       </p>
     </div>
   </div>
@@ -722,7 +797,7 @@
           bind:value={loginToken}
           onkeydown={handleLoginKeydown}
           type="text"
-          placeholder="tc_XXXXXXXXXXXX"
+          placeholder="tc_XXXX-XXXX-XXXX-XXXX"
           class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm font-mono"
           disabled={loginLoading}
         />
@@ -736,7 +811,8 @@
       </div>
 
       <p class="text-text-muted/50 text-xs mt-4">
-        The login token is printed to the terminal each time TinyClaw starts.
+        The login token is printed to the terminal each time TinyClaw starts.<br/>
+        <span class="text-yellow/70">Expires 1 hour after generation. Restart to get a new one.</span>
       </p>
 
       <a
@@ -1033,7 +1109,7 @@
                   <div class="my-2 space-y-2">
                     {#each message.delegationEvents as event, eventIdx}
                       {#if event.type === 'start'}
-                        {@const hasCompleted = message.delegationEvents.some((e, j) => j > eventIdx && (e.type === 'complete' || e.type === 'result'))}
+                        {@const hasCompleted = message.delegationEvents.some((e, j) => j > eventIdx && (e.type === 'complete' || e.type === 'result')) || completedDelegationRoles.has(event.role)}
                         {#if !hasCompleted}
                         <div class="delegation-card flex items-start gap-3 p-3 rounded-lg bg-brand/10 border border-brand/20">
                           <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center">
@@ -1274,7 +1350,7 @@
                   {#if statusLabel === 'working'}
                     <div class="delegation-spinner w-2.5 h-2.5 border-2 border-brand/30 border-t-brand rounded-full flex-shrink-0"></div>
                   {:else}
-                    <span class={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(agent.status)}`}></span>
+                    <span class={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(statusLabel)}`}></span>
                   {/if}
                   <span class="text-sm font-medium text-text-normal truncate">{agent.role}</span>
                 </div>
@@ -1291,7 +1367,7 @@
                 <div class="flex items-center gap-3 mt-1.5 text-xs text-text-muted">
                   <span title="Performance">{((agent.performanceScore || 0) * 100).toFixed(0)}%</span>
                   <span title="Tasks">{agent.successfulTasks || 0}/{agent.totalTasks || 0} tasks</span>
-                  <span class={statusLabel === 'working' ? 'text-brand' : 'capitalize'}>{statusLabel}</span>
+                  <span class={statusLabel === 'working' ? 'text-brand' : statusLabel === 'failed' ? 'text-red' : 'capitalize'}>{statusLabel}</span>
                 </div>
                 {#if agent.lastActiveAt}
                   <div class="text-[10px] text-text-muted mt-1">{formatTimeAgo(agent.lastActiveAt)}</div>
@@ -1303,11 +1379,21 @@
 
         <!-- Background Tasks row -->
         <div class="px-4 py-3 flex items-center justify-between cursor-default border-t border-bg-modifier-active">
-          <span class="text-sm text-text-normal">Background Tasks — {backgroundTasks.length}</span>
+          <span class="text-sm text-text-normal">Background Tasks — {runningBgTasks}</span>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-text-muted">
             <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
           </svg>
         </div>
+        {#if runningBgTasks > 0}
+          <div class="px-3 pb-2 space-y-1.5">
+            {#each backgroundTasks.filter(t => t.status === 'running') as task (task.id)}
+              <div class="flex items-center gap-2 px-1">
+                <div class="delegation-spinner w-2.5 h-2.5 border-2 border-brand/30 border-t-brand rounded-full flex-shrink-0"></div>
+                <span class="text-xs text-text-muted truncate">{task.taskDescription || 'Working...'}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
 
         <!-- Archived agents -->
         {#if archivedAgents.length > 0}
@@ -1320,16 +1406,17 @@
             </div>
             <div class="px-3 pb-2 space-y-2">
               {#each archivedAgents as agent (agent.id)}
-                {@const lastTask = getAgentCurrentTask(agent)}
+                {@const historyLabel = getHistoryLabel(agent)}
                 <div class="p-2.5 rounded-lg bg-bg-tertiary opacity-60">
                   <div class="flex items-center gap-2">
-                    <span class={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(agent.status)}`}></span>
+                    <span class={`w-2 h-2 rounded-full flex-shrink-0 ${getHistoryColor(historyLabel)}`}></span>
                     <span class="text-sm font-medium text-text-muted truncate">{agent.role}</span>
                   </div>
                   <div class="flex items-center gap-3 mt-1.5 text-xs text-text-muted">
                     <span title="Performance">{((agent.performanceScore || 0) * 100).toFixed(0)}%</span>
                     <span title="Tasks">{agent.successfulTasks || 0}/{agent.totalTasks || 0} tasks</span>
-                    <span>archived</span>
+                    <span class={getHistoryTextColor(historyLabel)}>{historyLabel}</span>
+                    <span class="text-text-muted">· archived</span>
                   </div>
                   {#if agent.lastActiveAt}
                     <div class="text-[10px] text-text-muted mt-1">{formatTimeAgo(agent.lastActiveAt)}</div>
