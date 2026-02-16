@@ -163,15 +163,15 @@ export function createBackgroundRunner(
               lifecycle.recordTaskResult(agentId, false);
             }
 
-            // Auto-suspend sub-agent once all its tasks are done
-            // Check if there are any remaining running tasks for this agent
+            // Auto-dismiss sub-agent once all its tasks are done — moves to History.
+            // The agent can still be found and revived by findReusable for follow-up tasks.
             const allTasks = db.getUserBackgroundTasks(userId);
             const hasRunningTasks = allTasks.some(
               (t) => t.agentId === agentId && t.status === 'running',
             );
             if (!hasRunningTasks) {
-              lifecycle.suspend(agentId);
-              logger.info('Sub-agent auto-suspended (task complete)', { agentId });
+              lifecycle.dismiss(agentId);
+              logger.info(`Sub-agent auto-dismissed (task ${result.success ? 'complete' : 'failed'})`, { agentId });
             }
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -179,14 +179,14 @@ export function createBackgroundRunner(
             lifecycle.recordTaskResult(agentId, false);
             logger.error('Background task failed', { taskId, error: errorMsg });
 
-            // Auto-suspend sub-agent on failure too
+            // Auto-dismiss sub-agent on failure — move to History
             const allTasks = db.getUserBackgroundTasks(userId);
             const hasRunningTasks = allTasks.some(
               (t) => t.agentId === agentId && t.status === 'running',
             );
             if (!hasRunningTasks) {
-              lifecycle.suspend(agentId);
-              logger.info('Sub-agent auto-suspended (task failed)', { agentId });
+              lifecycle.dismiss(agentId);
+              logger.info('Sub-agent auto-dismissed (task failed)', { agentId });
             }
           } finally {
             controllers.delete(taskId);
