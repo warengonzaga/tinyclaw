@@ -943,6 +943,7 @@ export async function startCommand(): Promise<void> {
   const webUI = createWebUI({
     port,
     configManager,
+    configDbPath: configManager.path,
     onOwnerClaimed: (ownerId: string) => {
       // Update context at runtime when ownership is claimed
       (context as { ownerId?: string }).ownerId = ownerId;
