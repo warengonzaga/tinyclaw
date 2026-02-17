@@ -4,6 +4,7 @@
   import DOMPurify from 'dompurify'
   import QRCode from 'qrcode'
   import AvatarLed from './AvatarLed.svelte'
+  import HatchingAnimation from './HatchingAnimation.svelte'
   import {
     SECURITY_WARNING_TITLE,
     SECURITY_WARNING_BODY,
@@ -59,6 +60,14 @@
   let loginLoading = $state(false)
   let wantsLogin = $state(false) // true when on /login path
   let wantsRecovery = $state(false) // true when on /recovery path
+  let showHatching = $state(false) // true during post-setup hatching animation
+  let soulTraits = $state(null) // soul traits fetched for hatching card reveal
+  let isFirstLogin = $state(false) // true when entering dashboard from hatching (first boot)
+  let welcomeSent = $state(false) // prevents re-triggering welcome on re-renders
+  let welcomeTimerId = $state(null) // setTimeout ID for deferred welcome trigger
+  let ownerName = $state('') // owner display name from FRIEND.md (empty = not yet set)
+  let agentName = $state('') // agent display name from IDENTITY.md (empty = defaults to 'Tiny Claw')
+  let agentEmoji = $state('') // agent emoji from IDENTITY.md (empty = defaults to '🐜')
 
   // Recovery state
   let recoveryToken = $state('')
@@ -143,13 +152,14 @@
     URL.revokeObjectURL(url)
   }
 
-  // View: 'loading' | 'setup' | 'login' | 'recovery' | 'owner'
+  // View: 'loading' | 'setup' | 'login' | 'recovery' | 'hatching' | 'owner'
   // Owner dashboard is the default authenticated view
   let view = $derived(
     !authChecked ? 'loading'
     : !ownerClaimed ? 'setup'
     : wantsRecovery ? 'recovery'
     : wantsLogin ? 'login'
+    : showHatching ? 'hatching'
     : isOwner ? 'owner'
     : 'landing'
   )
@@ -208,6 +218,8 @@
     if (view === 'owner') {
       fetchBackgroundTasks()
       fetchSubAgents()
+      fetchOwnerProfile()
+      fetchAgentProfile()
     }
     const interval = setInterval(checkHealth, 12000)
     // Poll faster (3s) to keep sidebar responsive during background execution
@@ -236,6 +248,7 @@
     return () => {
       clearInterval(interval)
       clearInterval(bgInterval)
+      if (welcomeTimerId) clearTimeout(welcomeTimerId)
       window.removeEventListener('popstate', handlePopstate)
       mql.removeEventListener('change', handleBreakpoint)
     }
@@ -358,6 +371,154 @@
     setupSubmitting = false
   }
 
+  /** Fetch soul traits from the server for the hatching card reveal. */
+  async function fetchSoulTraits() {
+    try {
+      const res = await fetch('/api/soul/traits')
+      if (res.ok) {
+        const data = await res.json()
+        soulTraits = data.traits || null
+      }
+    } catch {
+      // Non-critical — card will show placeholder data
+    }
+  }
+
+  /** Fetch owner display name from FRIEND.md via the server. */
+  async function fetchOwnerProfile() {
+    try {
+      const res = await fetch('/api/owner/profile')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.name) {
+          ownerName = data.name
+        }
+      }
+    } catch {
+      // Non-critical — fallback to defaults
+    }
+  }
+
+  /** Fetch agent display name and emoji from IDENTITY.md (or soul seed fallback). */
+  async function fetchAgentProfile() {
+    try {
+      const res = await fetch('/api/agent/profile')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.name) {
+          agentName = data.name
+        }
+        if (data.emoji) {
+          agentEmoji = data.emoji
+        }
+      }
+    } catch {
+      // Non-critical — fallback to defaults
+    }
+  }
+
+  /** Transition from setup into the hatching animation. */
+  function enterHatching() {
+    setupRestarting = false
+    showHatching = true
+    window.history.replaceState({}, '', '/hatching')
+    fetchSoulTraits()
+  }
+
+  /** Called when the owner dismisses the soul card to enter the dashboard. */
+  function enterDashboard() {
+    showHatching = false
+    isFirstLogin = true
+    window.history.replaceState({}, '', '/')
+    fetchBackgroundTasks()
+    fetchSubAgents()
+    fetchOwnerProfile()
+    fetchAgentProfile()
+    // Trigger proactive AI welcome after a short delay for the view to render
+    if (welcomeTimerId) clearTimeout(welcomeTimerId)
+    welcomeTimerId = setTimeout(() => triggerWelcomeMessage(), 500)
+  }
+
+  /** Stream a proactive welcome message from the AI agent on first login. */
+  async function triggerWelcomeMessage() {
+    if (welcomeSent || messages.length > 0 || view !== 'owner') return
+    welcomeSent = true
+
+    const assistantMessage = {
+      id: createId(),
+      role: 'assistant',
+      content: '',
+      streaming: true,
+      timestamp: getTimestamp(),
+      delegationEvents: []
+    }
+    messages = [assistantMessage]
+    isStreaming = true
+    isUsingTools = false
+    activeDelegation = null
+
+    await tick()
+    scrollToBottom()
+
+    try {
+      const response = await fetch('/api/chat/welcome', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream, application/json'
+        },
+        body: JSON.stringify({})
+      })
+
+      if (!response.ok) {
+        throw new Error(`Welcome request failed with ${response.status}`)
+      }
+
+      const contentType = response.headers.get('content-type') || ''
+
+      if (response.body && contentType.includes('text/event-stream')) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          let boundaryIndex = buffer.indexOf('\n\n')
+
+          while (boundaryIndex !== -1) {
+            const chunk = buffer.slice(0, boundaryIndex).trim()
+            buffer = buffer.slice(boundaryIndex + 2)
+            if (chunk) parseSseChunk(chunk, assistantMessage.id)
+            boundaryIndex = buffer.indexOf('\n\n')
+          }
+
+          await tick()
+          scrollToBottom()
+        }
+
+        if (buffer.trim()) {
+          parseSseChunk(buffer.trim(), assistantMessage.id)
+        }
+      }
+    } catch (error) {
+      console.warn('Welcome message failed:', error)
+      const name = agentName || 'Tiny Claw'
+      const emoji = agentEmoji || '🐜'
+      updateMessage(assistantMessage.id, {
+        content: `Hello! I'm ${name} ${emoji}, your new AI companion. I just hatched and I'm excited to meet you! What's your name?`,
+        streaming: false
+      })
+    }
+
+    updateMessage(assistantMessage.id, { streaming: false })
+    isStreaming = false
+    isFirstLogin = false
+    scrollToBottom()
+  }
+
   async function finishSetupAndEnter() {
     setupRestarting = true
 
@@ -365,10 +526,7 @@
     try {
       await checkAuth()
       if (ownerClaimed && isOwner) {
-        setupRestarting = false
-        window.history.replaceState({}, '', '/')
-        fetchBackgroundTasks()
-        fetchSubAgents()
+        enterHatching()
         return
       }
     } catch {
@@ -391,12 +549,10 @@
           authChecked = true
 
           if (ownerClaimed) {
-            // Server is back — redirect to owner page or login
+            // Server is back — show hatching or go to login
             setupRestarting = false
             if (isOwner) {
-              window.history.replaceState({}, '', '/')
-              fetchBackgroundTasks()
-              fetchSubAgents()
+              enterHatching()
             } else {
               // Session lost during restart — go to login
               wantsLogin = true
@@ -985,6 +1141,10 @@
       updateMessage(assistantId, { streaming: false })
       isStreaming = false
       scrollToBottom()
+      // Re-check owner profile — the AI may have learned the owner's name
+      fetchOwnerProfile()
+      // Re-check agent profile — the AI may have updated its identity
+      fetchAgentProfile()
       return
     }
 
@@ -1000,6 +1160,10 @@
 
     isStreaming = false
     scrollToBottom()
+    // Re-check owner profile — the AI may have learned the owner's name
+    fetchOwnerProfile()
+    // Re-check agent profile — the AI may have updated its identity
+    fetchAgentProfile()
   }
 
   function formatTimeAgo(timestamp) {
@@ -1585,6 +1749,10 @@
     </div>
   </div>
 
+{:else if view === 'hatching'}
+  <!-- Post-Setup Hatching Animation -->
+  <HatchingAnimation {soulTraits} onComplete={enterDashboard} />
+
 {:else if view === 'landing'}
   <!-- Static Landing / Branding Page -->
   <div class="h-full flex flex-col relative">
@@ -1627,7 +1795,7 @@
       <span class="text-xs text-text-muted/50 font-medium">Beta</span>
       <span class="text-[10px] text-text-muted/30">v1.0.0</span>
       <span class="text-text-muted/30 text-xs">|</span>
-      <span class="text-xs text-text-muted/50 font-medium">Owner</span>
+      <span class="text-xs text-text-muted/50 font-medium">{ownerName || 'Owner'}</span>
     </div>
     <div class="ml-auto flex items-center gap-1 md:gap-2">
       <a
@@ -1674,7 +1842,7 @@
     <div class="flex items-center gap-2.5">
       <AvatarLed size={32} {status} />
       <div class="flex flex-col">
-        <span class="text-sm font-semibold text-text-normal leading-tight">Tiny Claw</span>
+        <span class="text-sm font-semibold text-text-normal leading-tight">{agentName || 'Tiny Claw'}</span>
         <span class="text-[11px] {status === 'offline' ? 'text-text-muted/50' : 'text-text-muted'} leading-tight capitalize">{status}</span>
       </div>
     </div>
@@ -1708,11 +1876,15 @@
         <!-- Welcome State -->
         <div class="flex flex-col items-center justify-center h-full text-center">
           <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-4">
-            <span class="text-4xl">🐜</span>
+            <span class="text-4xl">{agentEmoji || '🐜'}</span>
           </div>
-          <h2 class="text-2xl font-bold text-text-normal mb-2">Welcome to Tiny Claw</h2>
+          <h2 class="text-2xl font-bold text-text-normal mb-2">Welcome to {agentName || 'Tiny Claw'}</h2>
           <p class="text-text-muted max-w-md">
-            This is the start of your conversation. Ask me anything and I'll do my best to help!
+            {#if isFirstLogin}
+              Your AI agent is waking up...
+            {:else}
+              This is the start of your conversation. Ask me anything and I'll do my best to help!
+            {/if}
           </p>
         </div>
       {:else}
@@ -1724,11 +1896,11 @@
               <div class="flex-shrink-0 mt-0.5">
                 {#if message.role === 'user'}
                   <div class="w-10 h-10 rounded-full bg-brand flex items-center justify-center">
-                    <span class="text-white text-sm font-medium">U</span>
+                    <span class="text-white text-sm font-medium">{ownerName ? ownerName[0].toUpperCase() : 'U'}</span>
                   </div>
                 {:else}
                   <div class="w-10 h-10 rounded-full bg-green flex items-center justify-center">
-                    <span class="text-lg">🐜</span>
+                    <span class="text-lg">{agentEmoji || '🐜'}</span>
                   </div>
                 {/if}
               </div>
@@ -1737,7 +1909,7 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-baseline gap-2">
                   <span class={`font-medium ${message.role === 'user' ? 'text-brand' : 'text-green'}`}>
-                    {message.role === 'user' ? 'You' : 'Tiny Claw'}
+                    {message.role === 'user' ? (ownerName || 'You') : (agentName || 'Tiny Claw')}
                   </span>
                   <span class="text-xs text-text-muted">{message.timestamp}</span>
                   {#if message.streaming}
@@ -1919,9 +2091,9 @@
               {#if activeDelegation}
                 Sub-agent working...
               {:else if isUsingTools}
-                Tiny Claw is working...
+                {agentName || 'Tiny Claw'} is working...
               {:else}
-                Tiny Claw is thinking...
+                {agentName || 'Tiny Claw'} is thinking...
               {/if}
             </span>
           {/if}
@@ -1946,7 +2118,7 @@
 
       <!-- Name -->
       <div class="px-4 mb-3">
-        <h2 class="text-lg font-bold text-text-normal">Tiny Claw</h2>
+        <h2 class="text-lg font-bold text-text-normal">{agentName || 'Tiny Claw'}</h2>
       </div>
 
       <!-- Info Card -->
