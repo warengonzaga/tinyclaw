@@ -196,7 +196,7 @@ export function createFriendsServer(config: FriendsServerConfig) {
             }
 
             if (typeof body?.nickname !== 'string') {
-              return jsonResponse({ error: 'Nickname must be 1–64 characters' }, 400);
+              return jsonResponse({ error: 'Nickname must be a string' }, 400);
             }
             const newNickname = body.nickname.trim();
             if (!newNickname || newNickname.length > 64) {
