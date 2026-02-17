@@ -10,6 +10,14 @@ export default defineConfig({
       '@tinyclaw/core/messages': resolve(__dirname, '../../packages/core/src/messages.ts'),
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {
