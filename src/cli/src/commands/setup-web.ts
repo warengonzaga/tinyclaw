@@ -44,7 +44,13 @@ export async function webSetupCommand(): Promise<void> {
 
   // --- Launch setup-only web server -------------------------------------
 
-  const port = parseInt(process.env.PORT || '3000', 10);
+  const parsedPort = parseInt(process.env.PORT || '3000', 10);
+  const port = Number.isInteger(parsedPort) && parsedPort >= 1 && parsedPort <= 65535
+    ? parsedPort
+    : 3000;
+  if (process.env.PORT && port !== parsedPort) {
+    logger.warn(`Invalid PORT "${process.env.PORT}" — falling back to ${port}`, undefined, { emoji: '⚠️' });
+  }
   const setupOnlyMessage =
     'Tiny Claw setup is not complete yet. Open /setup to finish onboarding, or run tinyclaw setup in the CLI.';
 
@@ -58,16 +64,17 @@ export async function webSetupCommand(): Promise<void> {
     secretsManager,
     configDbPath: configManager.path,
     dataDir,
-    onOwnerClaimed: (ownerId: string) => {
+    onOwnerClaimed: async (ownerId: string) => {
       logger.info('Owner claimed via web setup flow', { ownerId }, { emoji: '🔑' });
       logger.info('Setup complete — starting Tiny Claw agent...', undefined, { emoji: '🚀' });
 
-      // Clean up managers before restart
-      try { configManager.close(); } catch { /* ignore */ }
-      secretsManager.close().catch(() => {}).finally(() => {
-        // Exit with restart code so the supervisor respawns as a normal start
-        process.exit(RESTART_EXIT_CODE);
-      });
+      // Graceful shutdown: stop web server, then close managers before restart
+      try { await setupWebUI.stop(); } catch (err) { logger.warn('Error stopping web server during shutdown', { err }, { emoji: '⚠️' }); }
+      try { configManager.close(); } catch (err) { logger.warn('Error closing config manager during shutdown', { err }, { emoji: '⚠️' }); }
+      try { await secretsManager.close(); } catch (err) { logger.warn('Error closing secrets manager during shutdown', { err }, { emoji: '⚠️' }); }
+
+      // Exit with restart code so the supervisor respawns as a normal start
+      process.exit(RESTART_EXIT_CODE);
     },
     onMessage: async () => setupOnlyMessage,
     onMessageStream: async (_message: string, _userId: string, callback: StreamCallback) => {

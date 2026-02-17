@@ -110,7 +110,13 @@ export async function setupWebCommand(): Promise<void> {
   const configManager = await ConfigManager.create();
   logger.info('Config engine initialized', { configPath: configManager.path }, { emoji: '\u2705' });
 
-  const port = parseInt(process.env.PORT || '3000', 10);
+  const parsedPort = parseInt(process.env.PORT || '3000', 10);
+  const port = Number.isInteger(parsedPort) && parsedPort >= 1 && parsedPort <= 65535
+    ? parsedPort
+    : 3000;
+  if (process.env.PORT && port !== parsedPort) {
+    logger.warn(`Invalid PORT "${process.env.PORT}" — falling back to ${port}`, undefined, { emoji: '\u26a0\ufe0f' });
+  }
   const setupOnlyMessage =
     'Tiny Claw setup is not complete yet. Open /setup to finish onboarding, or run tinyclaw setup in the CLI.';
 
@@ -121,28 +127,53 @@ export async function setupWebCommand(): Promise<void> {
   logger.info(`2. ${theme.cmd('tinyclaw setup --web')} ${theme.dim('(Web setup)')}`, undefined, { emoji: '\ud83d\udccb' });
   logger.info('\u2500'.repeat(52), undefined, { emoji: '' });
 
-  const setupWebUI = createWebUI({
-    port,
-    configManager,
-    secretsManager,
-    configDbPath: configManager.path,
-    dataDir,
-    onOwnerClaimed: (ownerId: string) => {
-      logger.info('Owner claimed via web setup flow', { ownerId }, { emoji: '\ud83d\udd11' });
-    },
-    onMessage: async () => setupOnlyMessage,
-    onMessageStream: async (_message: string, _userId: string, callback: StreamCallback) => {
-      callback({ type: 'text', content: setupOnlyMessage });
-      callback({ type: 'done' });
-    },
-    getBackgroundTasks: () => [],
-    getSubAgents: () => [],
-  });
+  let setupWebUI: ReturnType<typeof createWebUI> | null = null;
 
-  await setupWebUI.start();
+  try {
+    setupWebUI = createWebUI({
+      port,
+      configManager,
+      secretsManager,
+      configDbPath: configManager.path,
+      dataDir,
+      onOwnerClaimed: (ownerId: string) => {
+        logger.info('Owner claimed via web setup flow', { ownerId }, { emoji: '\ud83d\udd11' });
+      },
+      onMessage: async () => setupOnlyMessage,
+      onMessageStream: async (_message: string, _userId: string, callback: StreamCallback) => {
+        callback({ type: 'text', content: setupOnlyMessage });
+        callback({ type: 'done' });
+      },
+      getBackgroundTasks: () => [],
+      getSubAgents: () => [],
+    });
 
-  logger.info('Setup-only web server is running', 'web', { emoji: '\ud83d\udee0\ufe0f' });
-  logger.info(`Open: ${theme.brand(`http://localhost:${port}/setup`)}`, 'web', { emoji: '\ud83d\udd17' });
+    await setupWebUI.start();
+
+    logger.info('Setup-only web server is running', 'web', { emoji: '\ud83d\udee0\ufe0f' });
+    logger.info(`Open: ${theme.brand(`http://localhost:${port}/setup`)}`, 'web', { emoji: '\ud83d\udd17' });
+  } catch (err) {
+    logger.error('Failed to start web setup server', { err }, { emoji: '\u274c' });
+    // Graceful cleanup on error
+    if (setupWebUI) {
+      try { await setupWebUI.stop(); } catch { /* ignore */ }
+    }
+    await cleanup(secretsManager, configManager);
+    throw err;
+  }
+
+  // Graceful shutdown on process signals
+  const gracefulShutdown = async () => {
+    logger.info('Shutting down web setup server...', undefined, { emoji: '\ud83d\udeab' });
+    if (setupWebUI) {
+      try { await setupWebUI.stop(); } catch { /* ignore */ }
+    }
+    await cleanup(secretsManager, configManager);
+    process.exit(0);
+  };
+
+  process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
 }
 
 /**
