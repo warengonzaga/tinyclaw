@@ -91,7 +91,7 @@
     : wantsRecovery ? 'recovery'
     : wantsLogin ? 'login'
     : isOwner ? 'owner'
-    : 'login'
+    : 'landing'
   )
 
   // Delegation state
@@ -1396,6 +1396,39 @@
           Back to login
         </a>
       {/if}
+    </div>
+  </div>
+
+{:else if view === 'landing'}
+  <!-- Static Landing / Branding Page -->
+  <div class="h-full flex flex-col relative">
+    <!-- Top-right owner login icon -->
+    <a
+      href="/login"
+      onclick={(e) => { e.preventDefault(); wantsLogin = true; window.history.pushState({}, '', '/login'); }}
+      class="absolute top-4 right-4 p-2 rounded-lg hover:bg-bg-modifier-hover transition-colors group z-10"
+      title="Owner Login"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-text-muted group-hover:text-brand transition-colors">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+        <polyline points="10 17 15 12 10 7" />
+        <line x1="15" y1="12" x2="3" y2="12" />
+      </svg>
+    </a>
+
+    <!-- Centered branding -->
+    <div class="flex-1 flex items-center justify-center">
+      <div class="flex flex-col items-center gap-4 select-none">
+        <span class="text-6xl">🐜</span>
+        <div class="flex flex-col items-center gap-1">
+          <h1 class="text-3xl font-bold text-text-normal tracking-wide">Tiny Claw</h1>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-text-muted/60 font-medium">Beta</span>
+            <span class="text-xs text-text-muted/30">v1.0.0</span>
+          </div>
+        </div>
+        <p class="text-text-muted/50 text-sm mt-2">Autonomous AI Agent Framework</p>
+      </div>
     </div>
   </div>
 
