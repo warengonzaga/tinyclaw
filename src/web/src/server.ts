@@ -1099,12 +1099,8 @@ export function createWebUI(config) {
               if (!isOwnerClaimed()) {
                 return Response.redirect(new URL('/setup', request.url).toString(), 302)
               }
-              // If owner, serve the admin dashboard
-              if (await isOwnerRequest(request)) {
-                return fileResponse(distIndex)
-              }
-              // Not owner — redirect to login page
-              return Response.redirect(new URL('/login', request.url).toString(), 302)
+              // Serve the SPA — it handles landing page vs owner dashboard client-side
+              return fileResponse(distIndex)
             }
 
             // No built files - show setup instructions
