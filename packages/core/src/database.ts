@@ -1,5 +1,5 @@
-import { Database as BunDatabase } from 'bun:sqlite';
-import type { Database, Message, CompactionRecord, SubAgentRecord, RoleTemplate, BackgroundTask, EpisodicRecord, TaskMetricRecord, BlackboardEntry } from '@tinyclaw/types';
+import { Database as BunDatabase, type SQLQueryBindings } from 'bun:sqlite';
+import type { Database, Message, CompactionRecord, SubAgentRecord, RoleTemplate, BackgroundTask, EpisodicRecord, TaskMetricRecord, BlackboardEntry, QueryTier } from '@tinyclaw/types';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 
@@ -398,7 +398,7 @@ export function createDatabase(path: string): Database {
       role: row.role as string,
       systemPrompt: row.system_prompt as string,
       toolsGranted: JSON.parse((row.tools_granted as string) || '[]'),
-      tierPreference: (row.tier_preference as string) || null,
+      tierPreference: (row.tier_preference as QueryTier) || null,
       status: row.status as SubAgentRecord['status'],
       performanceScore: row.performance_score as number,
       totalTasks: row.total_tasks as number,
@@ -417,7 +417,7 @@ export function createDatabase(path: string): Database {
       name: row.name as string,
       roleDescription: row.role_description as string,
       defaultTools: JSON.parse((row.default_tools as string) || '[]'),
-      defaultTier: (row.default_tier as string) || null,
+      defaultTier: (row.default_tier as QueryTier) || null,
       timesUsed: row.times_used as number,
       avgPerformance: row.avg_performance as number,
       tags: JSON.parse((row.tags as string) || '[]'),
@@ -594,7 +594,7 @@ export function createDatabase(path: string): Database {
 
       if (fields.length === 0) return;
       values.push(id);
-      db.prepare(`UPDATE sub_agents SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      db.prepare(`UPDATE sub_agents SET ${fields.join(', ')} WHERE id = ?`).run(...values as SQLQueryBindings[]);
     },
 
     deleteExpiredSubAgents(beforeTimestamp: number): number {
@@ -643,7 +643,7 @@ export function createDatabase(path: string): Database {
 
       if (fields.length === 0) return;
       values.push(id);
-      db.prepare(`UPDATE role_templates SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      db.prepare(`UPDATE role_templates SET ${fields.join(', ')} WHERE id = ?`).run(...values as SQLQueryBindings[]);
     },
 
     deleteRoleTemplate(id: string): void {
@@ -724,7 +724,7 @@ export function createDatabase(path: string): Database {
 
       if (fields.length === 0) return;
       values.push(id);
-      db.prepare(`UPDATE episodic_memory SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      db.prepare(`UPDATE episodic_memory SET ${fields.join(', ')} WHERE id = ?`).run(...values as SQLQueryBindings[]);
     },
 
     deleteEpisodicEvents(ids: string[]): void {
