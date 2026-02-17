@@ -3,6 +3,16 @@
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
   import AvatarLed from './AvatarLed.svelte'
+  import {
+    SECURITY_WARNING_TITLE,
+    SECURITY_WARNING_BODY,
+    SECURITY_WARRANTY,
+    SECURITY_SAFETY_TITLE,
+    SECURITY_SAFETY_PRACTICES,
+    SECURITY_CONFIRM,
+    DEFAULT_MODEL,
+    defaultModelNote,
+  } from '@tinyclaw/core/messages'
 
   marked.setOptions({
     breaks: true,
@@ -1043,19 +1053,24 @@
         {/if}
 
         <div class="w-full p-4 rounded-lg bg-yellow/10 border border-yellow/30 text-left mb-4">
-          <p class="text-yellow text-sm font-semibold mb-2">Security Warning</p>
-          <p class="text-text-muted text-sm">
-            Tiny Claw can read files, execute code, and act through tools. Review prompts carefully and operate in a controlled environment.
-          </p>
+          <p class="text-yellow text-sm font-semibold mb-2">{SECURITY_WARNING_TITLE}</p>
+          <p class="text-text-muted text-sm mb-3">{SECURITY_WARNING_BODY}</p>
+          <p class="text-text-muted text-sm font-semibold mb-3">{SECURITY_WARRANTY}</p>
+          <p class="text-text-muted text-sm font-semibold mb-1">{SECURITY_SAFETY_TITLE}</p>
+          <ul class="text-text-muted text-sm list-disc list-inside mb-3">
+            {#each SECURITY_SAFETY_PRACTICES as practice}
+              <li>{practice}</li>
+            {/each}
+          </ul>
           <label class="mt-3 flex items-start gap-2 text-sm text-text-normal">
             <input type="checkbox" bind:checked={acceptedRisk} class="mt-1" />
-            <span>I understand the risks and want to proceed.</span>
+            <span>{SECURITY_CONFIRM}.</span>
           </label>
         </div>
 
         <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4">
           <p class="text-text-normal text-sm font-semibold mb-1">Default Built-in Provider</p>
-          <p class="text-text-muted text-sm">Ollama Cloud model: <span class="font-mono text-text-normal">kimi-k2.5:cloud</span></p>
+          <p class="text-text-muted text-sm whitespace-pre-line">{defaultModelNote(DEFAULT_MODEL)}</p>
         </div>
 
         <div class="w-full grid gap-3">

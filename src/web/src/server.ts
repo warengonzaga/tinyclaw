@@ -2,6 +2,7 @@ import { existsSync, chmodSync, statSync } from 'fs'
 import { join, resolve } from 'path'
 import { timingSafeEqual } from 'crypto'
 import { SecurityDatabase } from './security-db'
+import { DEFAULT_PROVIDER, DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core'
 
 const textEncoder = new TextEncoder()
 
@@ -19,9 +20,6 @@ const SETUP_SESSION_EXPIRY_MS = 15 * 60 * 1000
  */
 const TOKEN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
-const DEFAULT_PROVIDER = 'ollama'
-const DEFAULT_MODEL = 'kimi-k2.5:cloud'
-const DEFAULT_BASE_URL = 'https://ollama.com'
 const BOOTSTRAP_SECRET_LENGTH = 30
 const BACKUP_CODES_COUNT = 10
 const BACKUP_CODE_LENGTH = 30
