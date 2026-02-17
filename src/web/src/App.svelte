@@ -287,6 +287,7 @@
           botStartedAt = data.startedAt
           // Detect restart: if we had a previous startedAt and it changed, the server restarted
           if (previousStartedAt && data.startedAt !== previousStartedAt && view === 'owner' && !isStreaming) {
+            restartSent = false
             if (restartTimerId) clearTimeout(restartTimerId)
             restartTimerId = setTimeout(() => triggerRestartMessage(), 800)
           }
@@ -546,6 +547,7 @@
     messages = [...messages, assistantMessage]
     isStreaming = true
     isUsingTools = false
+    activeDelegation = null
 
     await tick()
     scrollToBottom()

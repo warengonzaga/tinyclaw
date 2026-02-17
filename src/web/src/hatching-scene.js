@@ -888,11 +888,42 @@ export function createHatchingScene(canvas, callbacks = {}) {
     animId = requestAnimationFrame(loop)
   }
 
+  function clampTarget(a) {
+    // Recompute exit point for the new canvas bounds
+    const ep = exitPoint(a.x, a.y, w, h)
+    a.exitX = ep.ex
+    a.exitY = ep.ey
+    // If the ant is heading toward its exit (not detouring), update the target too
+    if (!a.detouring && a.state === 'crossing') {
+      a.targetX = a.exitX
+      a.targetY = a.exitY
+    } else if (a.detouring) {
+      // Clamp detour point inside new bounds
+      a.detourX = clamp(a.detourX, 40, w - 40)
+      a.detourY = clamp(a.detourY, 40, h - 40)
+      a.targetX = a.detourX
+      a.targetY = a.detourY
+    } else if (a.state === 'entering') {
+      a.targetX = w / 2
+      a.targetY = h / 2
+    } else if (a.state === 'exiting') {
+      const exitPt = exitPoint(a.x, a.y, w, h)
+      a.targetX = exitPt.ex
+      a.targetY = exitPt.ey
+    }
+  }
+
   function onResize() {
     resize()
     // Rebuild ground but keep animation state
-    for (const a of ants) { a.w = w; a.h = h }
-    if (eggCarrier) { eggCarrier.w = w; eggCarrier.h = h }
+    for (const a of ants) {
+      a.w = w; a.h = h
+      clampTarget(a)
+    }
+    if (eggCarrier) {
+      eggCarrier.w = w; eggCarrier.h = h
+      clampTarget(eggCarrier)
+    }
   }
 
   function destroy() {

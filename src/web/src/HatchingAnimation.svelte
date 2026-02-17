@@ -82,7 +82,9 @@
     if (prefersReducedMotion) {
       showCard = true
       setTimeout(() => { showButton = true }, 600)
-      return
+      return () => {
+        if (tiltRaf) cancelAnimationFrame(tiltRaf)
+      }
     }
 
     const scene = createHatchingScene(canvasEl, {
@@ -205,7 +207,7 @@
               </div>
               <div class="flavor-row">
                 <span class="flavor-icon">😄</span>
-                <span class="flavor-text">{humor === 'none' ? 'Serious' : humor.replace('-', ' ')}</span>
+                <span class="flavor-text">{humor === 'none' ? 'Serious' : humor.replaceAll('-', ' ')}</span>
               </div>
             </div>
 
