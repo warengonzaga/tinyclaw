@@ -16,3 +16,14 @@ export {
   BUILTIN_MODEL_TAGS,
 } from './models.js';
 export type { BuiltinModelTag } from './models.js';
+
+// Shared onboarding messages — single source of truth
+export {
+  SECURITY_WARNING_TITLE,
+  SECURITY_WARNING_BODY,
+  SECURITY_WARRANTY,
+  SECURITY_SAFETY_TITLE,
+  SECURITY_SAFETY_PRACTICES,
+  SECURITY_CONFIRM,
+  defaultModelNote,
+} from './messages.js';
