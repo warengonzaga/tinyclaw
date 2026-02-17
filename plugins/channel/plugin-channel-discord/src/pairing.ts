@@ -11,9 +11,10 @@
  */
 
 import type { Tool, SecretsManagerInterface, ConfigManagerInterface } from '@tinyclaw/types';
+import { buildChannelKeyName } from '@tinyclaw/types';
 
 /** Secret key for the Discord bot token. */
-export const DISCORD_TOKEN_SECRET_KEY = 'channel.discord.token';
+export const DISCORD_TOKEN_SECRET_KEY = buildChannelKeyName('discord');
 /** Config key for the enabled flag. */
 export const DISCORD_ENABLED_CONFIG_KEY = 'channels.discord.enabled';
 /** The plugin's package ID. */
