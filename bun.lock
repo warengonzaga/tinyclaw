@@ -231,6 +231,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/core": "workspace:*",
+        "@tinyclaw/heartware": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
         "dompurify": "^3.2.6",
         "marked": "^12.0.2",
