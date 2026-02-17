@@ -14,7 +14,8 @@
 // Types
 // ---------------------------------------------------------------------------
 
-export type QueryTier = 'simple' | 'moderate' | 'complex' | 'reasoning';
+import type { QueryTier } from '@tinyclaw/types';
+export type { QueryTier };
 
 export interface ClassificationResult {
   /** Determined complexity tier */
