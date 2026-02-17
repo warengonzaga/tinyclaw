@@ -38,7 +38,7 @@ import { createShieldEngine } from '@tinyclaw/shield';
 import { createCompactor } from '@tinyclaw/compactor';
 import { createShellEngine, createShellTools } from '@tinyclaw/shell';
 import type { ChannelPlugin, Provider, StreamCallback, Tool } from '@tinyclaw/types';
-import { createWebUI } from '@tinyclaw/ui';
+import { createWebUI } from '@tinyclaw/web';
 import { theme } from '../ui/theme.js';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 
@@ -930,11 +930,11 @@ export async function startCommand(): Promise<void> {
 
   // --- Auto-build Web UI if needed --------------------------------------
 
-  // Resolve web package root by finding @tinyclaw/ui's entry point
-  // @tinyclaw/ui exports src/server.ts → its parent dir is src/web/
+  // Resolve web package root by finding @tinyclaw/web's entry point
+  // @tinyclaw/web exports src/server.ts → its parent dir is src/web/
   let webRoot: string;
   try {
-    const uiEntry = require.resolve('@tinyclaw/ui');
+    const uiEntry = require.resolve('@tinyclaw/web');
     webRoot = resolve(uiEntry, '..', '..');
   } catch {
     // Fallback: resolve relative to this file (src/cli/src/commands/ → src/web/)

@@ -11,7 +11,7 @@ import { homedir } from 'os';
 import { logger, setLogMode } from '@tinyclaw/logger';
 import { SecretsManager } from '@tinyclaw/secrets';
 import { ConfigManager } from '@tinyclaw/config';
-import { createWebUI } from '@tinyclaw/ui';
+import { createWebUI } from '@tinyclaw/web';
 import type { StreamCallback } from '@tinyclaw/types';
 import { theme } from '../ui/theme.js';
 import { RESTART_EXIT_CODE } from '../supervisor.js';

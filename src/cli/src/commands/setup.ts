@@ -49,7 +49,7 @@ import {
   BACKUP_CODES_COUNT,
 } from '@tinyclaw/core';
 import { logger, setLogMode } from '@tinyclaw/logger';
-import { createWebUI } from '@tinyclaw/ui';
+import { createWebUI } from '@tinyclaw/web';
 import type { StreamCallback } from '@tinyclaw/types';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';

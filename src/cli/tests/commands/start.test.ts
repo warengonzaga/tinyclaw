@@ -247,14 +247,14 @@ mock.module('@tinyclaw/shell', () => ({
 
 mock.module('@tinyclaw/types', () => ({}));
 
-// ── Mock @tinyclaw/ui ───────────────────────────────────────────────
+// ── Mock @tinyclaw/web ───────────────────────────────────────────────
 
 const mockWebUIStart = mock(() => Promise.resolve());
 const mockWebUIStop = mock(() => Promise.resolve());
 
-// ── Mock @tinyclaw/ui ────────────────────────────────────────────────
+// ── Mock @tinyclaw/web ────────────────────────────────────────────────
 
-mock.module('@tinyclaw/ui', () => ({
+mock.module('@tinyclaw/web', () => ({
   createWebUI: mock(() => ({
     start: mockWebUIStart,
     stop: mockWebUIStop,
