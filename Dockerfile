@@ -44,17 +44,25 @@ FROM oven/bun:1-slim AS production
 
 WORKDIR /app
 
+# Create non-root user for security (Trivy DS002)
+RUN groupadd --gid 1001 tinyclaw && \
+    useradd --uid 1001 --gid tinyclaw --shell /bin/sh tinyclaw
+
 # Copy everything needed at runtime
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/bun.lock ./
-COPY --from=builder /app/packages ./packages
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/plugins ./plugins
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder --chown=tinyclaw:tinyclaw /app/package.json ./
+COPY --from=builder --chown=tinyclaw:tinyclaw /app/bun.lock ./
+COPY --from=builder --chown=tinyclaw:tinyclaw /app/packages ./packages
+COPY --from=builder --chown=tinyclaw:tinyclaw /app/src ./src
+COPY --from=builder --chown=tinyclaw:tinyclaw /app/plugins ./plugins
+COPY --from=builder --chown=tinyclaw:tinyclaw /app/node_modules ./node_modules
 
 # SQLite data volume (defaults to ~/.tinyclaw inside the container)
 ENV TINYCLAW_DATA_DIR=/data
+RUN mkdir -p /data && chown tinyclaw:tinyclaw /data
 VOLUME /data
+
+# Switch to non-root user
+USER tinyclaw
 
 # API + Web UI
 EXPOSE 3000
