@@ -3,6 +3,17 @@ import { join, resolve } from 'path'
 import { timingSafeEqual } from 'crypto'
 import { SecurityDatabase } from './security-db'
 import { DEFAULT_PROVIDER, DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core'
+import { logger } from '@tinyclaw/logger'
+import {
+  generateRecoveryToken,
+  generateBackupCodes,
+  generateTotpSecret,
+  createTotpUri,
+  verifyTotpCode as _verifyTotpCode,
+  sha256,
+  generateSessionToken,
+  BACKUP_CODES_COUNT,
+} from '@tinyclaw/core/owner-auth'
 
 const textEncoder = new TextEncoder()
 
@@ -21,13 +32,6 @@ const SETUP_SESSION_EXPIRY_MS = 15 * 60 * 1000
 const TOKEN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
 const BOOTSTRAP_SECRET_LENGTH = 30
-const BACKUP_CODES_COUNT = 10
-const BACKUP_CODE_LENGTH = 30
-const RECOVERY_TOKEN_LENGTH = 200
-
-const TOTP_BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-const TOTP_STEP_SECONDS = 30
-const TOTP_DIGITS = 6
 
 interface SetupSession {
   expiresAt: number
@@ -42,92 +46,6 @@ function generateClaimToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(BOOTSTRAP_SECRET_LENGTH))
   const chars = Array.from(bytes, b => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length])
   return chars.join('')
-}
-
-function generateRecoveryToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(RECOVERY_TOKEN_LENGTH))
-  const chars = Array.from(bytes, b => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length])
-  return chars.join('')
-}
-
-function generateBackupCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(BACKUP_CODE_LENGTH))
-  const chars = Array.from(bytes, b => TOKEN_ALPHABET[b % TOKEN_ALPHABET.length])
-  return chars.join('')
-}
-
-function generateBackupCodes(count = BACKUP_CODES_COUNT): string[] {
-  const codes: string[] = []
-  for (let i = 0; i < count; i++) codes.push(generateBackupCode())
-  return codes
-}
-
-function generateTotpSecret(length = 32): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(length))
-  return Array.from(bytes, b => TOTP_BASE32_ALPHABET[b % TOTP_BASE32_ALPHABET.length]).join('')
-}
-
-function base32Decode(input: string): Uint8Array {
-  const cleaned = input.toUpperCase().replace(/=+$/g, '')
-  let bits = 0
-  let value = 0
-  const bytes: number[] = []
-
-  for (const ch of cleaned) {
-    const idx = TOTP_BASE32_ALPHABET.indexOf(ch)
-    if (idx < 0) throw new Error('Invalid Base32')
-    value = (value << 5) | idx
-    bits += 5
-    if (bits >= 8) {
-      bytes.push((value >>> (bits - 8)) & 0xff)
-      bits -= 8
-    }
-  }
-
-  return Uint8Array.from(bytes)
-}
-
-function createTotpUri(secret: string, accountName = 'owner', issuer = 'TinyClaw'): string {
-  return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=${TOTP_DIGITS}&period=${TOTP_STEP_SECONDS}`
-}
-
-async function generateTotpCode(secret: string, counter: number): Promise<string> {
-  const keyData = base32Decode(secret)
-  const counterBuffer = new ArrayBuffer(8)
-  const view = new DataView(counterBuffer)
-  view.setUint32(4, counter >>> 0)
-
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-1' },
-    false,
-    ['sign']
-  )
-
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, counterBuffer)
-  const hmac = new Uint8Array(signature)
-  const offset = hmac[hmac.length - 1] & 0x0f
-  const binary =
-    ((hmac[offset] & 0x7f) << 24) |
-    ((hmac[offset + 1] & 0xff) << 16) |
-    ((hmac[offset + 2] & 0xff) << 8) |
-    (hmac[offset + 3] & 0xff)
-
-  const otp = binary % (10 ** TOTP_DIGITS)
-  return String(otp).padStart(TOTP_DIGITS, '0')
-}
-
-async function verifyTotpCode(secret: string, code: string): Promise<boolean> {
-  const normalized = String(code || '').replace(/\s+/g, '')
-  if (!/^\d{6}$/.test(normalized)) return false
-
-  const nowCounter = Math.floor(Date.now() / 1000 / TOTP_STEP_SECONDS)
-  for (const drift of [-1, 0, 1]) {
-    const expected = await generateTotpCode(secret, nowCounter + drift)
-    if (timingSafeCompare(normalized, expected)) return true
-  }
-  return false
 }
 
 function buildProviderApiKeyName(providerName: string): string {
@@ -146,24 +64,6 @@ function parseSoulSeed(value?: string): number {
 }
 
 /**
- * Generate a persistent session token for the owner cookie.
- * 48 hex chars (24 random bytes = 192-bit entropy) — matches OpenClaw auto-token strength.
- */
-function generateSessionToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(24))
-  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
-}
-
-/**
- * SHA-256 hash a string (for storing session token hashes in config).
- */
-async function sha256(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('')
-}
-
-/**
  * Timing-safe string comparison — prevents timing attacks on token verification.
  * Always compares in constant time regardless of where strings differ.
  * (Pattern from OpenClaw's src/security/secret-equal.ts)
@@ -179,6 +79,11 @@ function timingSafeCompare(a: string, b: string): boolean {
     return false
   }
   return timingSafeEqual(bufA, bufB)
+}
+
+/** TOTP verification using timing-safe comparison. */
+async function verifyTotpCode(secret: string, code: string): Promise<boolean> {
+  return _verifyTotpCode(secret, code, timingSafeCompare)
 }
 
 // ---------------------------------------------------------------------------
@@ -630,30 +535,11 @@ export function createWebUI(config) {
       if (!isOwnerClaimed()) {
         // First-time: display bootstrap secret
         const token = getOrCreateClaimToken()
-        console.log('')
-        console.log('  ┌────────────────────────────────────────────────────────┐')
-        console.log('  │                                                        │')
-        console.log('  │   🐜 Tiny Claw — Bootstrap Secret                      │')
-        console.log('  │                                                        │')
-        console.log(`  │   Secret: ${token}   │`)
-        console.log('  │                                                        │')
-        console.log('  │   Open /setup and enter this to initialize ownership.  │')
-        console.log('  │   ⏳ Expires in 1 hour. Restart to generate a new one. │')
-        console.log('  │                                                        │')
-        console.log('  └────────────────────────────────────────────────────────┘')
-        console.log('')
+        logger.info(`Bootstrap secret: ${token}`, 'web')
+        logger.info('Open /setup and enter this to claim ownership (expires in 1 hour)', 'web')
       } else {
-        // Already claimed: remind owner how to access login
-        console.log('')
-        console.log('  ┌────────────────────────────────────────────────────────┐')
-        console.log('  │                                                        │')
-        console.log('  │   🐜 Tiny Claw — Owner Access                          │')
-        console.log('  │                                                        │')
-        console.log('  │   Open /login and enter your TOTP code.               │')
-        console.log('  │   Lost access? Use /recovery with your recovery token.│')
-        console.log('  │                                                        │')
-        console.log('  └────────────────────────────────────────────────────────┘')
-        console.log('')
+        // Already claimed: owner can log in via /login
+        logger.info('Owner claimed — open /login to access the dashboard', 'web')
       }
 
       server = Bun.serve({
@@ -1181,7 +1067,7 @@ export function createWebUI(config) {
               const agents = getSubAgents ? getSubAgents(userId) : []
               return jsonResponse({ agents })
             } catch (err) {
-              console.error('[/api/sub-agents] Error fetching sub-agents:', err)
+              logger.error(`Error fetching sub-agents: ${err}`, 'web')
               return jsonResponse({ agents: [], error: String(err) }, 500)
             }
           }

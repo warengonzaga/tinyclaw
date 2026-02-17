@@ -2,16 +2,23 @@
   import { onMount, tick } from 'svelte'
   import { marked } from 'marked'
   import DOMPurify from 'dompurify'
+  import QRCode from 'qrcode'
   import AvatarLed from './AvatarLed.svelte'
   import {
     SECURITY_WARNING_TITLE,
     SECURITY_WARNING_BODY,
+    SECURITY_LICENSE,
     SECURITY_WARRANTY,
     SECURITY_SAFETY_TITLE,
     SECURITY_SAFETY_PRACTICES,
     SECURITY_CONFIRM,
     DEFAULT_MODEL,
     defaultModelNote,
+    TOTP_SETUP_TITLE,
+    TOTP_SETUP_BODY,
+    BACKUP_CODES_INTRO,
+    BACKUP_CODES_HINT,
+    RECOVERY_TOKEN_HINT,
   } from '@tinyclaw/core/messages'
 
   marked.setOptions({
@@ -42,6 +49,7 @@
   let setupSoulSeed = $state('')
   let setupTotpSecret = $state('')
   let setupTotpUri = $state('')
+  let setupTotpQrUrl = $state('')
   let setupTotpCode = $state('')
   let setupBackupCodes = $state([])
   let setupRecoveryToken = $state('')
@@ -50,6 +58,7 @@
   let loginLoading = $state(false)
   let wantsLogin = $state(false) // true when on /login path
   let wantsRecovery = $state(false) // true when on /recovery path
+  let wantsDashboard = $state(false) // true when owner explicitly navigates to /dashboard
   let friendName = $state('')
   let friendNameSet = $state(false)
 
@@ -70,6 +79,7 @@
   let reenrollToken = $state('')
   let reenrollTotpSecret = $state('')
   let reenrollTotpUri = $state('')
+  let reenrollTotpQrUrl = $state('')
   let reenrollTotpCode = $state('')
   let reenrollLoading = $state(false)
   let reenrollError = $state('')
@@ -77,12 +87,13 @@
   let reenrollRecoveryToken = $state('')
 
   // View: 'loading' | 'setup' | 'login' | 'recovery' | 'owner' | 'friend'
+  // Default is 'friend' (public chat) — owner dashboard only via explicit /dashboard
   let view = $derived(
     !authChecked ? 'loading'
     : !ownerClaimed ? 'setup'
-    : isOwner ? 'owner'
     : wantsRecovery ? 'recovery'
     : wantsLogin ? 'login'
+    : (isOwner && wantsDashboard) ? 'owner'
     : 'friend'
   )
 
@@ -125,18 +136,19 @@
     await checkAuth()
 
     // Route detection — determine view based on URL path
+    // Default is public chat; owner dashboard only on explicit /dashboard
     const pathname = window.location.pathname
     if (!ownerClaimed && pathname !== '/setup') {
       window.history.replaceState({}, '', '/setup')
     }
-    if (pathname === '/chat' && ownerClaimed) {
-      isOwner = false // Force friend view on /chat path
+    if (pathname === '/dashboard' && ownerClaimed && isOwner) {
+      wantsDashboard = true // Show owner dashboard only on explicit /dashboard
     }
     if (pathname === '/login' && ownerClaimed && !isOwner) {
-      wantsLogin = true // Show login form on /login path
+      wantsLogin = true
     }
     if (pathname === '/recovery' && ownerClaimed && !isOwner) {
-      wantsRecovery = true // Show recovery form on /recovery path
+      wantsRecovery = true
     }
 
     checkHealth()
@@ -230,6 +242,9 @@
         setupToken = data.setupToken
         setupTotpSecret = data.totpSecret || ''
         setupTotpUri = data.totpUri || ''
+        if (setupTotpUri) {
+          setupTotpQrUrl = await QRCode.toDataURL(setupTotpUri, { width: 200, margin: 2 })
+        }
         setupPhase = 'form'
         bootstrapSecret = ''
       } else {
@@ -284,7 +299,8 @@
   async function finishSetupAndEnter() {
     await checkAuth()
     if (ownerClaimed && isOwner) {
-      window.history.replaceState({}, '', '/')
+      wantsDashboard = true
+      window.history.replaceState({}, '', '/dashboard')
       fetchBackgroundTasks()
       fetchSubAgents()
     }
@@ -306,9 +322,10 @@
       if (res.ok) {
         isOwner = true
         wantsLogin = false
+        wantsDashboard = true
         totpCode = ''
-        // Redirect to dashboard
-        window.history.replaceState({}, '', '/')
+        // Redirect to owner dashboard
+        window.history.replaceState({}, '', '/dashboard')
         // Start polling owner data
         fetchBackgroundTasks()
         fetchSubAgents()
@@ -438,6 +455,9 @@
         reenrollToken = data.reenrollToken
         reenrollTotpSecret = data.totpSecret
         reenrollTotpUri = data.totpUri
+        if (reenrollTotpUri) {
+          reenrollTotpQrUrl = await QRCode.toDataURL(reenrollTotpUri, { width: 200, margin: 2 })
+        }
         recoveryPhase = 'totp-confirm'
       } else {
         reenrollError = data.error || 'Failed to start TOTP setup.'
@@ -1055,6 +1075,7 @@
         <div class="w-full p-4 rounded-lg bg-yellow/10 border border-yellow/30 text-left mb-4">
           <p class="text-yellow text-sm font-semibold mb-2">{SECURITY_WARNING_TITLE}</p>
           <p class="text-text-muted text-sm mb-3">{SECURITY_WARNING_BODY}</p>
+          <p class="text-text-muted text-sm font-semibold mb-3">{SECURITY_LICENSE}</p>
           <p class="text-text-muted text-sm font-semibold mb-3">{SECURITY_WARRANTY}</p>
           <p class="text-text-muted text-sm font-semibold mb-1">{SECURITY_SAFETY_TITLE}</p>
           <ul class="text-text-muted text-sm list-disc list-inside mb-3">
@@ -1091,10 +1112,15 @@
         </div>
 
         <div class="w-full mt-4 p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left">
-          <p class="text-text-normal text-sm font-semibold mb-2">Set up TOTP</p>
-          <p class="text-text-muted text-sm mb-2">Add this key in your authenticator app, then enter the code it generates.</p>
-          <p class="text-text-normal text-xs font-mono break-all mb-1">{setupTotpSecret}</p>
-          <p class="text-text-muted/70 text-xs break-all mb-3">{setupTotpUri}</p>
+          <p class="text-text-normal text-sm font-semibold mb-2">{TOTP_SETUP_TITLE}</p>
+          <p class="text-text-muted text-sm mb-2">{TOTP_SETUP_BODY}</p>
+          {#if setupTotpQrUrl}
+            <div class="flex justify-center mb-3">
+              <img src={setupTotpQrUrl} alt="Scan this QR code with your authenticator app" class="rounded-lg" width="200" height="200" />
+            </div>
+          {/if}
+          <p class="text-text-muted text-xs mb-1">Or enter the secret manually:</p>
+          <p class="text-text-normal text-xs font-mono break-all mb-3">{setupTotpSecret}</p>
           <input
             bind:value={setupTotpCode}
             type="text"
@@ -1113,13 +1139,13 @@
         </button>
       {:else if setupPhase === 'backup-codes'}
         <p class="text-text-muted text-sm mb-4">
-          Save these backup codes and your recovery token now. You will need both to recover access if you lose your authenticator.
+          {BACKUP_CODES_INTRO}
         </p>
 
         <div class="w-full p-4 rounded-lg bg-bg-secondary border border-brand/30 text-left mb-4">
           <p class="text-xs text-brand font-semibold uppercase tracking-wider mb-2">Recovery Token</p>
           <div class="text-sm font-mono text-text-normal break-all select-all bg-bg-primary px-3 py-2 rounded">{setupRecoveryToken}</div>
-          <p class="text-xs text-text-muted mt-2">Go to <span class="text-brand font-mono">/recovery</span> and enter this token to start the recovery process.</p>
+          <p class="text-xs text-text-muted mt-2">{RECOVERY_TOKEN_HINT}</p>
         </div>
 
         <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4 max-h-72 overflow-y-auto">
@@ -1130,7 +1156,7 @@
         </div>
 
         <p class="text-xs text-text-muted/60 mb-4">
-          Each backup code can only be used once. Keep them in a secure place separate from your authenticator.
+          {BACKUP_CODES_HINT}
         </p>
 
         <button
@@ -1181,7 +1207,8 @@
       </div>
 
       <a
-        href="/chat"
+        href="/"
+        onclick={(e) => { e.preventDefault(); wantsLogin = false; window.history.replaceState({}, '', '/'); }}
         class="mt-6 text-sm text-brand hover:underline"
       >
         or chat as a friend instead
@@ -1242,8 +1269,13 @@
         </p>
 
         <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4">
+          {#if reenrollTotpQrUrl}
+            <div class="flex justify-center mb-3">
+              <img src={reenrollTotpQrUrl} alt="Scan this QR code with your authenticator app" class="rounded-lg" width="200" height="200" />
+            </div>
+          {/if}
+          <p class="text-text-muted text-xs mb-1">Or enter the secret manually:</p>
           <p class="text-text-normal text-xs font-mono break-all mb-1">{reenrollTotpSecret}</p>
-          <p class="text-text-muted/70 text-xs break-all">{reenrollTotpUri}</p>
         </div>
 
         {#if reenrollError}
@@ -1367,6 +1399,7 @@
       {#if recoveryPhase === 'token' || recoveryPhase === 'backup'}
         <a
           href="/login"
+          onclick={(e) => { e.preventDefault(); wantsRecovery = false; wantsLogin = true; window.history.replaceState({}, '', '/login'); }}
           class="mt-6 text-sm text-text-muted hover:text-text-normal"
         >
           Back to login
@@ -1383,6 +1416,18 @@
       <span class="text-sm font-semibold text-text-normal tracking-wide">Tiny Claw</span>
       <span class="text-xs text-text-muted/50 font-medium">Chat</span>
     </div>
+    <!-- Subtle owner access — barely visible, intentionally low-profile -->
+    <a
+      href="/login"
+      onclick={(e) => { e.preventDefault(); wantsLogin = true; window.history.replaceState({}, '', '/login'); }}
+      class="ml-auto text-text-muted/20 hover:text-text-muted/50 transition-colors"
+      title="Owner"
+      aria-label="Owner login"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
+        <path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5 3.5 3.5 0 0 0 3.5 3.5 3.5 3.5 0 0 0 3.5-3.5A3.5 3.5 0 0 0 8 1ZM3 13c0-2.21 2.239-4 5-4s5 1.79 5 4v1H3v-1Z" clip-rule="evenodd" />
+      </svg>
+    </a>
   </div>
 
   <!-- Profile Bar -->
