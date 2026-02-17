@@ -898,6 +898,33 @@ export async function startCommand(): Promise<void> {
     },
   });
 
+  // Proactive check-in — periodically prompts the AI to reflect and prepare
+  // a helpful update for the owner. Runs on start and every 6 hours.
+  pulse.register({
+    id: 'proactive-checkin',
+    schedule: '6h',
+    runOnStart: true,
+    handler: async () => {
+      const ownerId = configManager.get<string>('owner.ownerId');
+      if (!ownerId) return; // No owner claimed yet
+
+      // Only run if the owner has at least 1 past conversation
+      const history = db.getHistory(ownerId, 1);
+      if (history.length === 0) return; // First boot — welcome handled by web UI
+
+      await queue.enqueue('pulse:proactive', async () => {
+        await agentLoop(
+          '[SYSTEM: This is a proactive check-in. Review your memory, recent logs, and any pending tasks. ' +
+          'Prepare a brief, useful status update or helpful suggestion for your owner. ' +
+          'Think about: what tasks are pending, what you learned recently, and what might be helpful to share. ' +
+          'Save any insights to your daily log. Do NOT respond conversationally — just update your internal state.]',
+          'pulse:proactive',
+          context,
+        );
+      });
+    },
+  });
+
   pulse.start();
   logger.info('Pulse scheduler initialized', undefined, { emoji: '✅' });
 

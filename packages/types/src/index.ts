@@ -427,6 +427,10 @@ export interface PulseJob {
   schedule: string; // interval like '30m', '1h', '24h'
   handler: () => Promise<void>;
   lastRun?: number;
+  /** When true, the handler fires immediately on start (not just on interval). */
+  runOnStart?: boolean;
+  /** Internal flag — true while handler() is executing; prevents overlapping runs. */
+  isRunning?: boolean;
 }
 
 // ---------------------------------------------------------------------------
