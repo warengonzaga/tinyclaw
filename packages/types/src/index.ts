@@ -132,6 +132,9 @@ export const OWNER_ONLY_TOOLS: ReadonlySet<string> = new Set([
   'friends_chat_reinvite',
   'friends_chat_revoke',
   'friends_chat_list',
+  // Discord channel management
+  'discord_pair',
+  'discord_unpair',
 ]);
 
 /**
