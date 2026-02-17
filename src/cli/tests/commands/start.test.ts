@@ -332,23 +332,13 @@ describe('startCommand', () => {
     expect(mockGetStats).toHaveBeenCalled();
   });
 
-  test('forces setup-only web mode with --web flag', async () => {
-    process.argv = [...process.argv, '--web'];
-    await expect(startCommand()).resolves.toBeUndefined();
-    expect(mockWebUIStart).toHaveBeenCalled();
-
-    const fullOutput = consoleOutput.join('\n');
-    expect(fullOutput).toContain('/setup');
-    expect(fullOutput).toContain('tinyclaw setup');
-  });
 });
 
 describe('startCommand — missing API key', () => {
-  test('starts setup-only web mode when no API key is found', async () => {
+  test('exits with code 1 when no API key is found', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(false));
     await expect(startCommand()).resolves.toBeUndefined();
-    expect(mockWebUIStart).toHaveBeenCalled();
-    expect(exitCode).toBeUndefined();
+    expect(exitCode).toBe(1);
   });
 
   test('prints guidance for both CLI and Web onboarding when key is missing', async () => {
@@ -357,6 +347,6 @@ describe('startCommand — missing API key', () => {
 
     const fullOutput = consoleOutput.join('\n');
     expect(fullOutput).toContain('tinyclaw setup');
-    expect(fullOutput).toContain('/setup');
+    expect(fullOutput).toContain('tinyclaw setup --web');
   });
 });
