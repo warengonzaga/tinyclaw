@@ -173,13 +173,38 @@ export async function startCommand(): Promise<void> {
     return;
   }
 
+  // --- Pre-flight: validate that setup has been completed ---------------
+  // Check for API key, soul seed, and owner authority config. All three
+  // must be present for the agent to run. After a purge, the config DB
+  // (soul seed + owner auth) is wiped even if secrets are preserved.
+
   const hasOllamaKey = await secretsManager.check(
     buildProviderKeyName('ollama')
   );
+  const hasSoulSeed = configManager.get<number>('heartware.seed') !== undefined;
+  const hasOwnerAuth = configManager.get<string>('owner.ownerId') !== undefined;
 
-  if (!hasOllamaKey) {
-    await launchSetupOnlyWebMode('Setup not completed yet.');
-    return;
+  if (!hasOllamaKey || !hasSoulSeed || !hasOwnerAuth) {
+    const missing: string[] = [];
+    if (!hasOllamaKey) missing.push('API key');
+    if (!hasSoulSeed) missing.push('soul seed');
+    if (!hasOwnerAuth) missing.push('owner authentication');
+
+    const reason = `Setup not completed yet — missing: ${missing.join(', ')}.`;
+    const port = parseInt(process.env.PORT || '3000', 10);
+
+    console.log();
+    console.log(theme.warn(`  ⚠ ${reason}`));
+    console.log();
+    console.log(`    ${theme.label('Choose your onboarding path:')}`);
+    console.log(`    1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`);
+    console.log(`    2. ${theme.cmd('tinyclaw start --web')} + open ${theme.cmd(`http://localhost:${port}/setup`)} ${theme.dim('(Web setup)')}`);
+    console.log();
+
+    // Clean up managers before exiting
+    configManager.close();
+    try { await secretsManager.close(); } catch { /* ignore */ }
+    process.exit(1);
   }
 
   // Read provider settings from config (fallback to defaults)
@@ -1063,8 +1088,8 @@ export async function startCommand(): Promise<void> {
   logger.log(`Learning: ${stats.totalPatterns} patterns learned`, undefined, { emoji: '🧠' });
   logger.log('');
   logger.log('Tiny Claw is ready!', undefined, { emoji: '🎉' });
-  logger.log(`   API server: http://localhost:${port}`);
-  logger.log('   Web UI: Run "bun run dev:ui" then open http://localhost:5173');
+  logger.info(`API server: http://localhost:${port}`, undefined, { emoji: '🌐' });
+  logger.debug('Web UI: Run "bun run dev:ui" then open http://localhost:5173', undefined, { emoji: '🔧' });
   logger.log('');
 
   // --- Graceful shutdown ------------------------------------------------
