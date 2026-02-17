@@ -578,7 +578,7 @@ export function createWebUI(config) {
               claimed,
               isOwner,
               setupRequired: !claimed,
-              mfaConfigured: Boolean(configManager?.get('owner.totpSecret')),
+              mfaConfigured: Boolean(await secretsManager?.retrieve('owner.totpSecret')),
             })
           }
 
@@ -692,7 +692,7 @@ export function createWebUI(config) {
             configManager.set('owner.ownerId', ownerId)
             configManager.set('owner.sessionTokenHash', sessionHash)
             configManager.set('owner.claimedAt', Date.now())
-            configManager.set('owner.totpSecret', session.totpSecret)
+            await secretsManager.store('owner.totpSecret', session.totpSecret)
             configManager.set('owner.backupCodeHashes', backupCodeHashes)
             configManager.set('owner.backupCodesRemaining', backupCodeHashes.length)
             configManager.set('owner.recoveryTokenHash', recoveryTokenHash)
@@ -733,7 +733,7 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'Invalid JSON' }, 400)
             }
 
-            const totpSecret = configManager?.get<string>('owner.totpSecret')
+            const totpSecret = await secretsManager?.retrieve('owner.totpSecret')
             if (!totpSecret) {
               return jsonResponse({ error: 'Owner MFA is not configured.' }, 400)
             }
@@ -946,7 +946,7 @@ export function createWebUI(config) {
             const recoveryTokenHash = await sha256(recoveryToken)
 
             // Persist new TOTP, backup codes, and recovery token
-            configManager?.set('owner.totpSecret', session.totpSecret)
+            await secretsManager?.store('owner.totpSecret', session.totpSecret)
             configManager?.set('owner.backupCodeHashes', backupCodeHashes)
             configManager?.set('owner.backupCodesRemaining', backupCodeHashes.length)
             configManager?.set('owner.recoveryTokenHash', recoveryTokenHash)
