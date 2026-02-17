@@ -172,6 +172,14 @@
         "discord.js": "^14.0.0",
       },
     },
+    "plugins/channel/plugin-channel-friends": {
+      "name": "@tinyclaw/plugin-channel-friends",
+      "version": "0.1.0",
+      "dependencies": {
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
+      },
+    },
     "plugins/provider/plugin-provider-openai": {
       "name": "@tinyclaw/plugin-provider-openai",
       "version": "0.1.0",
@@ -430,6 +438,8 @@
     "@tinyclaw/memory": ["@tinyclaw/memory@workspace:packages/memory"],
 
     "@tinyclaw/plugin-channel-discord": ["@tinyclaw/plugin-channel-discord@workspace:plugins/channel/plugin-channel-discord"],
+
+    "@tinyclaw/plugin-channel-friends": ["@tinyclaw/plugin-channel-friends@workspace:plugins/channel/plugin-channel-friends"],
 
     "@tinyclaw/plugin-provider-openai": ["@tinyclaw/plugin-provider-openai@workspace:plugins/provider/plugin-provider-openai"],
 

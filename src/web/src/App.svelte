@@ -58,9 +58,6 @@
   let loginLoading = $state(false)
   let wantsLogin = $state(false) // true when on /login path
   let wantsRecovery = $state(false) // true when on /recovery path
-  let wantsDashboard = $state(false) // true when owner explicitly navigates to /dashboard
-  let friendName = $state('')
-  let friendNameSet = $state(false)
 
   // Recovery state
   let recoveryToken = $state('')
@@ -86,15 +83,15 @@
   let reenrollBackupCodes = $state([])
   let reenrollRecoveryToken = $state('')
 
-  // View: 'loading' | 'setup' | 'login' | 'recovery' | 'owner' | 'friend'
-  // Default is 'friend' (public chat) — owner dashboard only via explicit /dashboard
+  // View: 'loading' | 'setup' | 'login' | 'recovery' | 'owner'
+  // Owner dashboard is the default authenticated view
   let view = $derived(
     !authChecked ? 'loading'
     : !ownerClaimed ? 'setup'
     : wantsRecovery ? 'recovery'
     : wantsLogin ? 'login'
-    : (isOwner && wantsDashboard) ? 'owner'
-    : 'friend'
+    : isOwner ? 'owner'
+    : 'login'
   )
 
   // Delegation state
@@ -119,7 +116,7 @@
   let initialFetchDone = false
 
   // Owner userId — matches what the server sets
-  const userId = $derived(view === 'owner' ? 'web:owner' : `friend:${friendName.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'anonymous'}`)
+  const userId = 'web:owner'
 
   const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`
 
@@ -136,13 +133,9 @@
     await checkAuth()
 
     // Route detection — determine view based on URL path
-    // Default is public chat; owner dashboard only on explicit /dashboard
     const pathname = window.location.pathname
     if (!ownerClaimed && pathname !== '/setup') {
       window.history.replaceState({}, '', '/setup')
-    }
-    if (pathname === '/dashboard' && ownerClaimed && isOwner) {
-      wantsDashboard = true // Show owner dashboard only on explicit /dashboard
     }
     if (pathname === '/login' && ownerClaimed && !isOwner) {
       wantsLogin = true
@@ -299,8 +292,7 @@
   async function finishSetupAndEnter() {
     await checkAuth()
     if (ownerClaimed && isOwner) {
-      wantsDashboard = true
-      window.history.replaceState({}, '', '/dashboard')
+      window.history.replaceState({}, '', '/')
       fetchBackgroundTasks()
       fetchSubAgents()
     }
@@ -322,10 +314,9 @@
       if (res.ok) {
         isOwner = true
         wantsLogin = false
-        wantsDashboard = true
         totpCode = ''
         // Redirect to owner dashboard
-        window.history.replaceState({}, '', '/dashboard')
+        window.history.replaceState({}, '', '/')
         // Start polling owner data
         fetchBackgroundTasks()
         fetchSubAgents()
@@ -821,10 +812,8 @@
   async function streamChat(message, assistantId) {
     isStreaming = true
 
-    const endpoint = view === 'friend' ? '/api/chat/friend' : '/api/chat'
-    const body = view === 'friend'
-      ? { message, friendName: friendName || 'Friend', stream: true }
-      : { message, userId, stream: true }
+    const endpoint = '/api/chat'
+    const body = { message, userId, stream: true }
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -1171,6 +1160,16 @@
 
 {:else if view === 'login'}
   <!-- Owner Login Page — TOTP only -->
+  <!-- Title Bar -->
+  <div class="h-9 min-h-9 px-4 flex items-center bg-bg-titlebar border-b border-bg-modifier-active">
+    <div class="flex items-center gap-2 md:absolute md:left-1/2 md:-translate-x-1/2">
+      <span class="text-sm font-semibold text-text-normal tracking-wide">Tiny Claw 🐜</span>
+      <span class="text-xs text-text-muted/50 font-medium">Beta</span>
+      <span class="text-[10px] text-text-muted/30">v1.0.0</span>
+      <span class="text-text-muted/30 text-xs">|</span>
+      <span class="text-xs text-text-muted/50 font-medium">Owner Login</span>
+    </div>
+  </div>
   <div class="flex-1 flex items-center justify-center px-4">
     <div class="w-full max-w-sm flex flex-col items-center text-center">
       <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-6">
@@ -1205,14 +1204,6 @@
           {loginLoading ? 'Logging in...' : 'Login'}
         </button>
       </div>
-
-      <a
-        href="/"
-        onclick={(e) => { e.preventDefault(); wantsLogin = false; window.history.replaceState({}, '', '/'); }}
-        class="mt-6 text-sm text-brand hover:underline"
-      >
-        or chat as a friend instead
-      </a>
     </div>
   </div>
 
@@ -1408,173 +1399,16 @@
     </div>
   </div>
 
-{:else if view === 'friend'}
-  <!-- Friend Chat View (simplified) -->
-  <!-- Title Bar -->
-  <div class="h-9 min-h-9 px-4 flex items-center bg-bg-titlebar border-b border-bg-modifier-active">
-    <div class="flex items-center gap-2 md:absolute md:left-1/2 md:-translate-x-1/2">
-      <span class="text-sm font-semibold text-text-normal tracking-wide">Tiny Claw</span>
-      <span class="text-xs text-text-muted/50 font-medium">Chat</span>
-    </div>
-    <!-- Subtle owner access — barely visible, intentionally low-profile -->
-    <a
-      href="/login"
-      onclick={(e) => { e.preventDefault(); wantsLogin = true; window.history.replaceState({}, '', '/login'); }}
-      class="ml-auto text-text-muted/20 hover:text-text-muted/50 transition-colors"
-      title="Owner"
-      aria-label="Owner login"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-3 h-3">
-        <path fill-rule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5 3.5 3.5 0 0 0 3.5 3.5 3.5 3.5 0 0 0 3.5-3.5A3.5 3.5 0 0 0 8 1ZM3 13c0-2.21 2.239-4 5-4s5 1.79 5 4v1H3v-1Z" clip-rule="evenodd" />
-      </svg>
-    </a>
-  </div>
-
-  <!-- Profile Bar -->
-  <div class="h-12 min-h-12 px-4 flex items-center border-b border-bg-modifier-active bg-bg-tertiary shadow-sm">
-    <div class="flex items-center gap-2.5">
-      <AvatarLed size={32} {status} />
-      <div class="flex flex-col">
-        <span class="text-sm font-semibold text-text-normal leading-tight">Tiny Claw</span>
-        <span class="text-[11px] {status === 'offline' ? 'text-text-muted/50' : 'text-text-muted'} leading-tight capitalize">{status}</span>
-      </div>
-    </div>
-  </div>
-
-  {#if !friendNameSet}
-    <!-- Friend Name Prompt -->
-    <div class="flex-1 flex items-center justify-center px-4">
-      <div class="w-full max-w-sm flex flex-col items-center text-center">
-        <div class="w-16 h-16 rounded-full bg-green/20 flex items-center justify-center mb-4">
-          <span class="text-3xl">👋</span>
-        </div>
-        <h2 class="text-xl font-bold text-text-normal mb-2">Hey there!</h2>
-        <p class="text-text-muted text-sm mb-5">What's your name? Tiny Claw would love to know who it's chatting with.</p>
-        <div class="w-full flex gap-2">
-          <input
-            bind:value={friendName}
-            onkeydown={(e) => { if (e.key === 'Enter' && friendName.trim()) { e.preventDefault(); friendNameSet = true; } }}
-            type="text"
-            placeholder="Your name"
-            class="flex-1 bg-input-bg text-text-normal placeholder-text-muted px-4 py-3 rounded-lg outline-none border border-transparent focus:border-brand/50 text-sm"
-          />
-          <button
-            onclick={() => { if (friendName.trim()) friendNameSet = true }}
-            disabled={!friendName.trim()}
-            class="px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-          >
-            Start Chatting
-          </button>
-        </div>
-      </div>
-    </div>
-  {:else}
-    <!-- Friend Chat Interface -->
-    <div class="flex-1 flex flex-col min-h-0">
-      <div
-        bind:this={messagesContainer}
-        class="flex-1 overflow-y-auto px-4 py-4"
-      >
-        {#if messages.length === 0}
-          <div class="flex flex-col items-center justify-center h-full text-center">
-            <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-4">
-              <span class="text-4xl">🐜</span>
-            </div>
-            <h2 class="text-2xl font-bold text-text-normal mb-2">Hey, {friendName}!</h2>
-            <p class="text-text-muted max-w-md">
-              Tiny Claw is happy to chat with you. Say hello!
-            </p>
-          </div>
-        {:else}
-          <div class="space-y-4">
-            {#each messages as message (message.id)}
-              <div class="group flex gap-4 py-0.5 px-2 rounded hover:bg-bg-modifier-hover transition-colors">
-                <div class="flex-shrink-0 mt-0.5">
-                  {#if message.role === 'user'}
-                    <div class="w-10 h-10 rounded-full bg-brand flex items-center justify-center">
-                      <span class="text-white text-sm font-medium">{friendName.charAt(0).toUpperCase()}</span>
-                    </div>
-                  {:else}
-                    <div class="w-10 h-10 rounded-full bg-green flex items-center justify-center">
-                      <span class="text-lg">🐜</span>
-                    </div>
-                  {/if}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-baseline gap-2">
-                    <span class={`font-medium ${message.role === 'user' ? 'text-brand' : 'text-green'}`}>
-                      {message.role === 'user' ? friendName : 'Tiny Claw'}
-                    </span>
-                    <span class="text-xs text-text-muted">{message.timestamp}</span>
-                    {#if message.streaming}
-                      <span class="text-xs text-text-muted/70">thinking...</span>
-                    {/if}
-                  </div>
-                  <div class="markdown-content text-text-normal mt-0.5">
-                    {#if message.content}
-                      {@html renderMarkdown(message.content)}
-                    {:else if message.streaming}
-                      <div class="flex gap-1 py-2">
-                        <span class="typing-dot w-2 h-2 bg-text-muted rounded-full"></span>
-                        <span class="typing-dot w-2 h-2 bg-text-muted rounded-full"></span>
-                        <span class="typing-dot w-2 h-2 bg-text-muted rounded-full"></span>
-                      </div>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </div>
-
-      <!-- Friend Input Area -->
-      <div class="px-4 pb-6 pt-2">
-        {#if streamError}
-          <div class="mb-2 px-3 py-2 bg-red/10 border border-red/30 rounded-lg text-red text-sm">
-            {streamError}
-          </div>
-        {/if}
-        <form onsubmit={(e) => { e.preventDefault(); sendMessage(); }} class="relative">
-          <div class="bg-input-bg rounded-lg flex items-end gap-2 pr-2">
-            <textarea
-              bind:value={input}
-              onkeydown={handleKeydown}
-              placeholder="Message @tinyclaw"
-              rows="1"
-              class="flex-1 bg-transparent text-text-normal placeholder-text-muted px-4 py-3 resize-none outline-none max-h-48 min-h-[48px]"
-              style="field-sizing: content;"
-            ></textarea>
-            <button
-              type="submit"
-              disabled={isStreaming || !input.trim()}
-              aria-label="Send message"
-              class="mb-2 p-2 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-bg-modifier-hover text-text-muted hover:text-text-normal flex items-center justify-center flex-shrink-0"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
-                <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-              </svg>
-            </button>
-          </div>
-          <div class="flex items-center justify-between mt-2 text-xs text-text-muted px-1">
-            <span>Press <kbd class="px-1.5 py-0.5 bg-bg-secondary rounded text-[10px]">Enter</kbd> to send, <kbd class="px-1.5 py-0.5 bg-bg-secondary rounded text-[10px]">Shift+Enter</kbd> for new line</span>
-            {#if isStreaming}
-              <span class="text-text-muted/70">Tiny Claw is thinking...</span>
-            {/if}
-          </div>
-        </form>
-      </div>
-    </div>
-  {/if}
-
 {:else}
   <!-- Owner Dashboard (full view) -->
   <!-- Title Bar -->
   <div class="h-9 min-h-9 px-4 flex items-center bg-bg-titlebar border-b border-bg-modifier-active">
     <div class="flex items-center gap-2 md:absolute md:left-1/2 md:-translate-x-1/2">
-      <span class="text-sm font-semibold text-text-normal tracking-wide">Tiny Claw</span>
+      <span class="text-sm font-semibold text-text-normal tracking-wide">Tiny Claw 🐜</span>
       <span class="text-xs text-text-muted/50 font-medium">Beta</span>
       <span class="text-[10px] text-text-muted/30">v1.0.0</span>
+      <span class="text-text-muted/30 text-xs">|</span>
+      <span class="text-xs text-text-muted/50 font-medium">Owner</span>
     </div>
     <div class="ml-auto flex items-center gap-1 md:gap-2">
       <a

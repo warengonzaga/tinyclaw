@@ -127,6 +127,11 @@ export const OWNER_ONLY_TOOLS: ReadonlySet<string> = new Set([
   'secrets_store',
   'secrets_check',
   'secrets_list',
+  // Friends chat management
+  'friends_chat_invite',
+  'friends_chat_reinvite',
+  'friends_chat_revoke',
+  'friends_chat_list',
 ]);
 
 /**

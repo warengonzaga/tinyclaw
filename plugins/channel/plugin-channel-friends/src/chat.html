@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tiny Claw — Friends Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked@17.0.2/marked.min.js" integrity="sha384-tkjnnf9Tzhv5ZFrDroGvUExw9C3EVFo0RFRkzKR8ZX4b5Psoec4yb1PlD8Jh4j4H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.3.1/dist/purify.min.js" integrity="sha384-80VlBZnyAwkkqtSfg5NhPyZff6nU4K/qniLBL8Jnm4KDv6jZhLiYtJbhglg/i9ww" crossorigin="anonymous"></script>
+  <style>
+    /* ── Ant Colony Theme ──────────────────────────────────────── */
+    :root {
+      --bg-titlebar: #050505;
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-tertiary: #171717;
+      --bg-modifier-hover: #1e1e1e;
+      --bg-modifier-active: #262626;
+      --text-normal: #e0e0e0;
+      --text-muted: #8a8a8a;
+      --text-link: #c98540;
+      --brand: #8b5a2b;
+      --brand-hover: #6d4422;
+      --green: #7AB648;
+      --yellow: #c49530;
+      --red: #b24035;
+      --input-bg: #1a1a1a;
+      --led-off: #1a2a12;
+      --led-bezel: #0f0f0f;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-primary);
+      color: var(--text-normal);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.375;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Scrollbar ─────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bg-modifier-active); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* ── Title Bar ─────────────────────────────────────────────── */
+    .titlebar {
+      height: 36px;
+      min-height: 36px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      background: var(--bg-titlebar);
+      border-bottom: 1px solid var(--bg-modifier-active);
+    }
+    .titlebar-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 auto;
+    }
+    .titlebar-title { font-size: 14px; font-weight: 600; color: var(--text-normal); letter-spacing: 0.025em; }
+    .titlebar-badge { font-size: 12px; color: rgba(138,138,138,0.5); font-weight: 500; }
+    .titlebar-version { font-size: 10px; color: rgba(138,138,138,0.3); }
+    .titlebar-sep { color: rgba(138,138,138,0.3); font-size: 12px; }
+    .titlebar-label { font-size: 12px; color: rgba(138,138,138,0.5); font-weight: 500; }
+
+    /* ── Profile Bar ───────────────────────────────────────────── */
+    .profile-bar {
+      height: 48px;
+      min-height: 48px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--bg-modifier-active);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .profile-info { display: flex; align-items: center; gap: 10px; }
+    .profile-name { font-size: 14px; font-weight: 600; color: var(--text-normal); line-height: 1.2; }
+    .profile-status { font-size: 11px; color: var(--text-muted); line-height: 1.2; text-transform: capitalize; }
+
+    /* ── Avatar LED ─────────────────────────────────────────────── */
+    .avatar-wrapper { position: relative; display: inline-block; flex-shrink: 0; }
+    .avatar-circle {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+    .avatar-dot {
+      position: absolute;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-tertiary);
+      bottom: -2px; right: -2px;
+    }
+    .avatar-dot.online {
+      background: var(--green);
+      box-shadow: 0 0 3px var(--green), 0 0 8px rgba(122,182,72,0.4);
+    }
+    .avatar-dot.offline {
+      background: var(--led-off);
+      box-shadow: inset 0 -1px 2px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.05);
+    }
+
+    /* ── Views ──────────────────────────────────────────────────── */
+    .view { display: none; flex: 1; flex-direction: column; min-height: 0; }
+    .view.active { display: flex; }
+
+    /* ── Invite Code View ──────────────────────────────────────── */
+    .invite-view {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .invite-card {
+      width: 100%;
+      max-width: 384px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .invite-icon {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(122,182,72,0.2);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+      font-size: 30px;
+    }
+    .invite-title { font-size: 20px; font-weight: 700; color: var(--text-normal); margin-bottom: 8px; }
+    .invite-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+    .invite-row { width: 100%; display: flex; gap: 8px; }
+    .invite-input {
+      flex: 1;
+      background: var(--input-bg);
+      color: var(--text-normal);
+      border: 1px solid transparent;
+      padding: 12px 16px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 14px;
+      font-family: inherit;
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+    .invite-input:focus { border-color: rgba(139,90,43,0.5); }
+    .invite-input::placeholder { color: var(--text-muted); letter-spacing: normal; }
+    .invite-btn {
+      padding: 12px 20px;
+      background: var(--brand);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+    .invite-btn:hover { background: var(--brand-hover); }
+    .invite-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .invite-error { color: var(--red); font-size: 13px; margin-top: 12px; }
+
+    /* ── Chat View ─────────────────────────────────────────────── */
+    .chat-container { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
+    .empty-icon {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: rgba(139,90,43,0.2);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+      font-size: 40px;
+    }
+    .empty-title { font-size: 24px; font-weight: 700; color: var(--text-normal); margin-bottom: 8px; }
+    .empty-desc { font-size: 14px; color: var(--text-muted); max-width: 400px; }
+
+    /* Message bubbles */
+    .message {
+      display: flex;
+      gap: 16px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      transition: background 0.1s;
+    }
+    .message:hover { background: var(--bg-modifier-hover); }
+    .message + .message { margin-top: 16px; }
+
+    .msg-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .msg-avatar.user { background: var(--brand); }
+    .msg-avatar.user span { color: #fff; font-size: 14px; font-weight: 500; }
+    .msg-avatar.bot { background: var(--green); }
+    .msg-avatar.bot span { font-size: 18px; }
+
+    .msg-body { flex: 1; min-width: 0; }
+    .msg-header { display: flex; align-items: baseline; gap: 8px; }
+    .msg-name { font-weight: 500; }
+    .msg-name.user { color: var(--brand); }
+    .msg-name.bot { color: var(--green); }
+    .msg-time { font-size: 12px; color: var(--text-muted); }
+    .msg-thinking { font-size: 12px; color: rgba(138,138,138,0.7); }
+
+    /* Typing dots */
+    .typing-dots { display: flex; gap: 4px; padding: 8px 0; }
+    .typing-dot {
+      width: 8px; height: 8px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      animation: typing 1.4s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing {
+      0%, 60%, 100% { opacity: 0.3; }
+      30% { opacity: 1; }
+    }
+
+    /* ── Input Area ────────────────────────────────────────────── */
+    .input-area { padding: 8px 16px 24px; }
+    .error-banner {
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      background: rgba(178,64,53,0.1);
+      border: 1px solid rgba(178,64,53,0.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-size: 14px;
+    }
+    .input-row {
+      background: var(--input-bg);
+      border-radius: 8px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding-right: 8px;
+    }
+    .input-row textarea {
+      flex: 1;
+      background: transparent;
+      color: var(--text-normal);
+      border: none;
+      padding: 12px 16px;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.375;
+      max-height: 192px;
+      min-height: 48px;
+      field-sizing: content;
+    }
+    .input-row textarea::placeholder { color: var(--text-muted); }
+    .send-btn {
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: color 0.15s, background 0.15s;
+    }
+    .send-btn:hover { background: var(--bg-modifier-hover); color: var(--text-normal); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .send-btn svg { width: 20px; height: 20px; }
+
+    .input-hints {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+    .input-hints kbd {
+      padding: 2px 6px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: inherit;
+    }
+    .thinking-hint { color: rgba(138,138,138,0.7); }
+
+    /* ── Markdown content ──────────────────────────────────────── */
+    .markdown-content { word-wrap: break-word; overflow-wrap: break-word; line-height: 1.5; margin-top: 2px; }
+    .markdown-content p { margin: 0 0 0.5em; }
+    .markdown-content p:last-child { margin-bottom: 0; }
+    .markdown-content h1 { font-size: 1.5em; font-weight: 700; margin: 0.75em 0 0.4em; border-bottom: 1px solid var(--bg-modifier-active); padding-bottom: 0.25em; }
+    .markdown-content h2 { font-size: 1.3em; font-weight: 700; margin: 0.65em 0 0.35em; }
+    .markdown-content h3 { font-size: 1.15em; font-weight: 600; margin: 0.5em 0 0.3em; }
+    .markdown-content h1:first-child, .markdown-content h2:first-child, .markdown-content h3:first-child { margin-top: 0; }
+    .markdown-content code { background: var(--bg-secondary); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.85em; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; border: 1px solid var(--bg-modifier-active); }
+    .markdown-content pre { background: var(--bg-secondary); padding: 1em; border-radius: 8px; overflow-x: auto; margin: 0.5em 0; border: 1px solid var(--bg-modifier-active); }
+    .markdown-content pre code { background: none; padding: 0; border: none; font-size: 0.85em; line-height: 1.6; }
+    .markdown-content ul, .markdown-content ol { margin: 0.5em 0; padding-left: 1.5em; }
+    .markdown-content li { margin: 0.2em 0; }
+    .markdown-content li > p { margin: 0; }
+    .markdown-content blockquote { border-left: 4px solid var(--brand); margin: 0.5em 0; padding: 0.5em 1em; color: var(--text-muted); background: var(--bg-secondary); border-radius: 0 6px 6px 0; }
+    .markdown-content a { color: var(--text-link); text-decoration: none; }
+    .markdown-content a:hover { text-decoration: underline; }
+    .markdown-content strong { font-weight: 600; }
+    .markdown-content hr { border: none; border-top: 1px solid var(--bg-modifier-active); margin: 0.75em 0; }
+    .markdown-content table { width: 100%; border-collapse: collapse; margin: 0.5em 0; font-size: 0.9em; }
+    .markdown-content tr { border-bottom: 1px solid var(--bg-modifier-active); }
+    .markdown-content th { padding: 0.5em 0.75em; text-align: left; font-weight: 600; background: var(--bg-secondary); }
+    .markdown-content td { padding: 0.5em 0.75em; text-align: left; }
+    .markdown-content img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5em 0; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Title Bar -->
+    <div class="titlebar">
+      <div class="titlebar-center">
+        <span class="titlebar-title">Tiny Claw 🐜</span>
+        <span class="titlebar-badge">Beta</span>
+        <span class="titlebar-version">v1.0.0</span>
+        <span class="titlebar-sep">|</span>
+        <span class="titlebar-label">Friends Chat</span>
+      </div>
+    </div>
+
+    <!-- Profile Bar -->
+    <div class="profile-bar">
+      <div class="profile-info">
+        <div class="avatar-wrapper">
+          <div class="avatar-circle"><span>🐜</span></div>
+          <span class="avatar-dot offline" id="statusDot"></span>
+        </div>
+        <div>
+          <div class="profile-name">Tiny Claw</div>
+          <div class="profile-status" id="statusText">checking</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invite View (unauthenticated) -->
+    <div class="view active" id="inviteView">
+      <div class="invite-view">
+        <div class="invite-card">
+          <div class="invite-icon">🔑</div>
+          <h2 class="invite-title">Welcome!</h2>
+          <p class="invite-desc">Enter your invite code to start chatting with Tiny Claw.</p>
+          <div class="invite-row">
+            <input
+              type="text"
+              id="inviteInput"
+              class="invite-input"
+              placeholder="Invite code"
+              maxlength="16"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button class="invite-btn" id="inviteBtn" onclick="redeemInvite()">Join</button>
+          </div>
+          <div class="invite-error" id="inviteError" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat View (authenticated) -->
+    <div class="view" id="chatView">
+      <div class="chat-container">
+        <div class="messages" id="messages">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">🐜</div>
+            <h2 class="empty-title" id="greetingTitle">Hey!</h2>
+            <p class="empty-desc">Tiny Claw is happy to chat with you. Say hello!</p>
+          </div>
+        </div>
+        <div class="input-area">
+          <div class="error-banner" id="errorBanner" style="display:none;"></div>
+          <form onsubmit="event.preventDefault(); sendMessage();">
+            <div class="input-row">
+              <textarea
+                id="chatInput"
+                placeholder="Message @tinyclaw"
+                rows="1"
+              ></textarea>
+              <button type="submit" class="send-btn" id="sendBtn" disabled aria-label="Send message">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+                </svg>
+              </button>
+            </div>
+            <div class="input-hints">
+              <span>Press <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for new line</span>
+              <span class="thinking-hint" id="thinkingHint" style="display:none;">Tiny Claw is thinking...</span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────
+    let authenticated = false;
+    let username = '';
+    let nickname = '';
+    let messages = [];
+    let isStreaming = false;
+    let agentStatus = 'checking';
+
+    // ── DOM refs ──────────────────────────────────────────────
+    const $inviteView    = document.getElementById('inviteView');
+    const $chatView      = document.getElementById('chatView');
+    const $inviteInput   = document.getElementById('inviteInput');
+    const $inviteBtn     = document.getElementById('inviteBtn');
+    const $inviteError   = document.getElementById('inviteError');
+    const $messages      = document.getElementById('messages');
+    const $emptyState    = document.getElementById('emptyState');
+    const $greetingTitle = document.getElementById('greetingTitle');
+    const $chatInput     = document.getElementById('chatInput');
+    const $sendBtn       = document.getElementById('sendBtn');
+    const $errorBanner   = document.getElementById('errorBanner');
+    const $thinkingHint  = document.getElementById('thinkingHint');
+    const $statusDot     = document.getElementById('statusDot');
+    const $statusText    = document.getElementById('statusText');
+
+    // ── Markdown rendering ────────────────────────────────────
+    marked.setOptions({ breaks: true, gfm: true });
+
+    function renderMarkdown(text) {
+      if (!text) return '';
+      const cleaned = text
+        .replace(/\s*—\s*/g, ', ')
+        .replace(/\s*–\s*/g, ', ')
+        .replace(/,\s*,/g, ',')
+        .replace(/,\s*\./g, '.');
+      const html = marked.parse(cleaned);
+      return DOMPurify.sanitize(html, {
+        ADD_TAGS: ['input'],
+        ADD_ATTR: ['type', 'checked', 'disabled']
+      });
+    }
+
+    // ── Utilities ─────────────────────────────────────────────
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function createId() {
+      return Date.now() + '-' + Math.random().toString(16).slice(2);
+    }
+
+    function getTimestamp() {
+      return new Date().toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit', hour12: true
+      });
+    }
+
+    function scrollToBottom() {
+      $messages.scrollTop = $messages.scrollHeight;
+    }
+
+    // ── Status check ──────────────────────────────────────────
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          agentStatus = 'online';
+          $statusDot.className = 'avatar-dot online';
+        } else {
+          agentStatus = 'offline';
+          $statusDot.className = 'avatar-dot offline';
+        }
+      } catch {
+        agentStatus = 'offline';
+        $statusDot.className = 'avatar-dot offline';
+      }
+      $statusText.textContent = agentStatus;
+    }
+
+    // ── Auth ──────────────────────────────────────────────────
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        if (data.authenticated) {
+          authenticated = true;
+          username = data.username;
+          nickname = data.nickname;
+          showChat();
+        }
+      } catch {}
+    }
+
+    async function redeemInvite() {
+      const code = $inviteInput.value.trim();
+      if (!code) return;
+
+      $inviteBtn.disabled = true;
+      $inviteError.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+
+        if (data.authenticated) {
+          authenticated = true;
+          username = data.username;
+          nickname = data.nickname;
+          showChat();
+        } else {
+          $inviteError.textContent = data.error || 'Invalid invite code.';
+          $inviteError.style.display = 'block';
+        }
+      } catch {
+        $inviteError.textContent = 'Connection error. Please try again.';
+        $inviteError.style.display = 'block';
+      }
+
+      $inviteBtn.disabled = false;
+    }
+
+    function showChat() {
+      $inviteView.classList.remove('active');
+      $chatView.classList.add('active');
+      $greetingTitle.textContent = 'Hey, ' + (nickname || username) + '!';
+      $chatInput.focus();
+    }
+
+    // ── Message rendering ─────────────────────────────────────
+    function renderMessages() {
+      if (messages.length === 0) {
+        $emptyState.style.display = 'flex';
+        return;
+      }
+      $emptyState.style.display = 'none';
+
+      // Build HTML for all messages
+      let html = '';
+      for (const msg of messages) {
+        const isUser = msg.role === 'user';
+        const avatarClass = isUser ? 'user' : 'bot';
+        const avatarContent = isUser
+          ? '<span>' + escapeHtml((nickname || username || '?').charAt(0).toUpperCase()) + '</span>'
+          : '<span>🐜</span>';
+        const nameClass = isUser ? 'user' : 'bot';
+        const displayName = isUser ? escapeHtml(nickname || username || '') : 'Tiny Claw';
+
+        let contentHtml = '';
+        if (msg.content) {
+          contentHtml = '<div class="markdown-content">' + renderMarkdown(msg.content) + '</div>';
+        } else if (msg.streaming) {
+          contentHtml = '<div class="typing-dots"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+        }
+
+        const thinkingBadge = msg.streaming && msg.content
+          ? '<span class="msg-thinking">thinking...</span>'
+          : '';
+
+        html += '<div class="message" data-id="' + escapeHtml(msg.id) + '">'
+          + '<div class="msg-avatar ' + avatarClass + '">' + avatarContent + '</div>'
+          + '<div class="msg-body">'
+          + '<div class="msg-header">'
+          + '<span class="msg-name ' + nameClass + '">' + displayName + '</span>'
+          + '<span class="msg-time">' + escapeHtml(msg.timestamp) + '</span>'
+          + thinkingBadge
+          + '</div>'
+          + contentHtml
+          + '</div>'
+          + '</div>';
+      }
+
+      $messages.innerHTML = html;
+      scrollToBottom();
+    }
+
+    function updateLastMessage(patch) {
+      if (messages.length === 0) return;
+      Object.assign(messages[messages.length - 1], patch);
+      renderMessages();
+    }
+
+    function appendToLastMessage(text) {
+      if (messages.length === 0) return;
+      messages[messages.length - 1].content += text;
+      renderMessages();
+    }
+
+    // ── SSE streaming ─────────────────────────────────────────
+    function handleStreamPayload(payload) {
+      if (typeof payload === 'string') {
+        appendToLastMessage(payload);
+        return;
+      }
+      if (!payload || !payload.type) return;
+
+      if (payload.type === 'text') {
+        appendToLastMessage(payload.content || '');
+      }
+      if (payload.type === 'error') {
+        $errorBanner.textContent = payload.error || 'Streaming error.';
+        $errorBanner.style.display = 'block';
+      }
+      if (payload.type === 'done') {
+        updateLastMessage({ streaming: false });
+        isStreaming = false;
+        $sendBtn.disabled = false;
+        $thinkingHint.style.display = 'none';
+      }
+    }
+
+    function parseSseChunk(chunk) {
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const data = line.slice(5).trim();
+          if (!data) continue;
+          let payload = data;
+          try { payload = JSON.parse(data); } catch {}
+          handleStreamPayload(payload);
+        }
+      }
+    }
+
+    async function streamChat(message) {
+      isStreaming = true;
+      $sendBtn.disabled = true;
+      $thinkingHint.style.display = 'inline';
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream, application/json'
+        },
+        body: JSON.stringify({ message, stream: true })
+      });
+
+      if (!res.ok) {
+        isStreaming = false;
+        $sendBtn.disabled = false;
+        $thinkingHint.style.display = 'none';
+        throw new Error('Request failed with ' + res.status);
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+
+      if (res.body && contentType.includes('text/event-stream')) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          let idx = buffer.indexOf('\n\n');
+
+          while (idx !== -1) {
+            const chunk = buffer.slice(0, idx).trim();
+            buffer = buffer.slice(idx + 2);
+            if (chunk) parseSseChunk(chunk);
+            idx = buffer.indexOf('\n\n');
+          }
+
+          scrollToBottom();
+        }
+
+        if (buffer.trim()) parseSseChunk(buffer.trim());
+        updateLastMessage({ streaming: false });
+        isStreaming = false;
+        $sendBtn.disabled = false;
+        $thinkingHint.style.display = 'none';
+        scrollToBottom();
+        return;
+      }
+
+      // Fallback: JSON response
+      const text = await res.text();
+      try {
+        const data = JSON.parse(text);
+        updateLastMessage({ content: data.content || data.reply || data.message || '', streaming: false });
+      } catch {
+        updateLastMessage({ content: text, streaming: false });
+      }
+      isStreaming = false;
+      $sendBtn.disabled = false;
+      $thinkingHint.style.display = 'none';
+      scrollToBottom();
+    }
+
+    // ── Send message ──────────────────────────────────────────
+    async function sendMessage() {
+      const message = $chatInput.value.trim();
+      if (!message || isStreaming) return;
+
+      $errorBanner.style.display = 'none';
+      $chatInput.value = '';
+      updateSendButton();
+
+      messages.push({
+        id: createId(),
+        role: 'user',
+        content: message,
+        timestamp: getTimestamp()
+      });
+
+      messages.push({
+        id: createId(),
+        role: 'assistant',
+        content: '',
+        streaming: true,
+        timestamp: getTimestamp()
+      });
+
+      renderMessages();
+
+      try {
+        await streamChat(message);
+      } catch (err) {
+        $errorBanner.textContent = err.message || 'Streaming failed.';
+        $errorBanner.style.display = 'block';
+        updateLastMessage({
+          content: 'I had trouble processing that request. Please try again.',
+          streaming: false
+        });
+        isStreaming = false;
+        $sendBtn.disabled = false;
+        $thinkingHint.style.display = 'none';
+      }
+    }
+
+    // ── Input handling ────────────────────────────────────────
+    function updateSendButton() {
+      $sendBtn.disabled = isStreaming || !$chatInput.value.trim();
+    }
+
+    $chatInput.addEventListener('input', updateSendButton);
+    $chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    $inviteInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        redeemInvite();
+      }
+    });
+
+    // ── Init ──────────────────────────────────────────────────
+    (async function init() {
+      checkHealth();
+      setInterval(checkHealth, 12000);
+      await checkAuth();
+    })();
+  </script>
+</body>
+</html>

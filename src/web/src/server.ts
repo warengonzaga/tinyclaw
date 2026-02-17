@@ -964,88 +964,6 @@ export function createWebUI(config) {
           }
 
           // =================================================================
-          // Friend chat endpoint — open to everyone, uses friend userId
-          // =================================================================
-
-          if (pathname === '/api/chat/friend' && request.method === 'POST') {
-            let body = null
-            try {
-              body = await request.json()
-            } catch {
-              return jsonResponse({ error: 'Invalid JSON' }, 400)
-            }
-
-            const message = body?.message || ''
-            const friendName = body?.friendName || 'Anonymous'
-            // Friends get a prefixed userId to separate from owner
-            const friendUserId = `friend:${friendName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
-
-            if (!message) {
-              return jsonResponse({ error: 'Message is required' }, 400)
-            }
-
-            if (onMessageStream) {
-              const stream = new ReadableStream({
-                start(controller) {
-                  let isClosed = false
-                  const heartbeat = setInterval(() => {
-                    if (isClosed) { clearInterval(heartbeat); return }
-                    try {
-                      controller.enqueue(textEncoder.encode(': heartbeat\n\n'))
-                    } catch {
-                      clearInterval(heartbeat)
-                    }
-                  }, 8_000)
-
-                  const send = (payload) => {
-                    if (isClosed) return
-                    try {
-                      const data = typeof payload === 'string' ? payload : JSON.stringify(payload)
-                      controller.enqueue(textEncoder.encode(`data: ${data}\n\n`))
-                      if (typeof payload === 'object' && payload?.type === 'done') {
-                        isClosed = true
-                        clearInterval(heartbeat)
-                        controller.close()
-                      }
-                    } catch {
-                      isClosed = true
-                      clearInterval(heartbeat)
-                    }
-                  }
-
-                  onMessageStream(message, friendUserId, send)
-                    .then(() => {
-                      if (!isClosed) {
-                        isClosed = true
-                        clearInterval(heartbeat)
-                        try { controller.close() } catch {}
-                      }
-                    })
-                    .catch((error) => {
-                      if (!isClosed) {
-                        send({ type: 'error', error: error?.message || 'Streaming error.' })
-                        isClosed = true
-                        clearInterval(heartbeat)
-                        try { controller.close() } catch {}
-                      }
-                    })
-                }
-              })
-
-              return new Response(stream, {
-                headers: {
-                  'Content-Type': 'text/event-stream',
-                  'Cache-Control': 'no-cache',
-                  Connection: 'keep-alive'
-                }
-              })
-            }
-
-            const responseText = await onMessage(message, friendUserId)
-            return jsonResponse({ content: responseText })
-          }
-
-          // =================================================================
           // Owner-only API endpoints — require session cookie
           // =================================================================
 
@@ -1238,18 +1156,6 @@ export function createWebUI(config) {
 
             if (existsSync(distIndex)) {
               return fileResponse(distIndex) // SPA handles recovery view
-            }
-
-            return htmlResponse(buildDevNotice())
-          }
-
-          // Friend chat route — served to everyone
-          if (pathname === '/chat') {
-            const { distDir } = resolveUiPaths()
-            const distIndex = join(distDir, 'index.html')
-
-            if (existsSync(distIndex)) {
-              return fileResponse(distIndex) // SPA handles friend vs owner view
             }
 
             return htmlResponse(buildDevNotice())
