@@ -3,6 +3,7 @@ import { join, resolve } from 'path'
 import { timingSafeEqual } from 'crypto'
 import { SecurityDatabase } from './security-db'
 import { DEFAULT_PROVIDER, DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core'
+import { generateSoulTraits } from '@tinyclaw/heartware'
 import { logger } from '@tinyclaw/logger'
 
 // Inline ANSI helpers for log highlighting (no external dep needed)
@@ -972,6 +973,97 @@ export function createWebUI(config) {
           // Owner-only API endpoints — require session cookie
           // =================================================================
 
+          // Soul traits — returns the generated soul personality from the stored seed
+          if (pathname === '/api/soul/traits' && request.method === 'GET') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+            const seed = configManager?.get<number>('heartware.seed')
+            if (seed == null) {
+              return jsonResponse({ error: 'No soul seed configured.' }, 404)
+            }
+            const traits = generateSoulTraits(seed)
+            return jsonResponse({ traits })
+          }
+
+          // Owner profile — reads FRIEND.md to extract the owner's name
+          if (pathname === '/api/owner/profile' && request.method === 'GET') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+            let ownerName: string | null = null
+            try {
+              if (dataDir) {
+                const friendPath = join(dataDir, 'heartware', 'FRIEND.md')
+                const friendFile = Bun.file(friendPath)
+                if (await friendFile.exists()) {
+                  const content = await friendFile.text()
+                  // Extract name from "- **Name:** value" or "**Name:** value" patterns
+                  const nameMatch = content.match(/\*\*Name:\*\*\s*(.+)/i)
+                  if (nameMatch) {
+                    const raw = nameMatch[1].trim()
+                    // Ignore placeholder values
+                    if (raw && raw !== '[Not set yet]' && !raw.startsWith('[')) {
+                      ownerName = raw
+                    }
+                  }
+                }
+              }
+            } catch {
+              // Non-critical — return null name
+            }
+            return jsonResponse({ name: ownerName })
+          }
+
+          // Agent profile — reads IDENTITY.md for the agent's display name and emoji,
+          // falling back to the soul seed's suggested name if not yet personalized.
+          if (pathname === '/api/agent/profile' && request.method === 'GET') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+            let agentName: string | null = null
+            let agentEmoji: string | null = null
+            try {
+              if (dataDir) {
+                const identityPath = join(dataDir, 'heartware', 'IDENTITY.md')
+                const identityFile = Bun.file(identityPath)
+                if (await identityFile.exists()) {
+                  const content = await identityFile.text()
+                  // Extract name from "- **Name:** value" or "**Name:** value"
+                  const nameMatch = content.match(/\*\*Name:\*\*\s*(.+)/i)
+                  if (nameMatch) {
+                    const raw = nameMatch[1].trim()
+                    if (raw && raw !== '[Not set yet]' && !raw.startsWith('[')) {
+                      agentName = raw
+                    }
+                  }
+                  // Extract emoji from "- **Emoji:** value" or "**Emoji:** value"
+                  const emojiMatch = content.match(/\*\*Emoji:\*\*\s*(.+)/i)
+                  if (emojiMatch) {
+                    const raw = emojiMatch[1].trim()
+                    if (raw && raw !== '🐜') {
+                      agentEmoji = raw
+                    }
+                  }
+                }
+              }
+              // Fallback: use soul seed's suggested name when IDENTITY.md is still default
+              if (!agentName) {
+                const seed = configManager?.get<number>('heartware.seed')
+                if (seed != null) {
+                  const traits = generateSoulTraits(seed)
+                  agentName = traits.character?.suggestedName || null
+                  if (!agentEmoji) {
+                    agentEmoji = traits.character?.signatureEmoji || null
+                  }
+                }
+              }
+            } catch {
+              // Non-critical — return null values
+            }
+            return jsonResponse({ name: agentName, emoji: agentEmoji })
+          }
+
           if (pathname === '/api/background-tasks' && request.method === 'GET') {
             if (!await isOwnerRequest(request)) {
               return jsonResponse({ error: 'Unauthorized' }, 401)
@@ -993,6 +1085,92 @@ export function createWebUI(config) {
               logger.error(`Error fetching sub-agents: ${err}`, 'web')
               return jsonResponse({ agents: [], error: String(err) }, 500)
             }
+          }
+
+          // Welcome message — AI proactively greets the owner on first login
+          if (pathname === '/api/chat/welcome' && request.method === 'POST') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+
+            const userId = configManager?.get<string>('owner.ownerId') || 'web:owner'
+
+            // Build a proactive welcome prompt
+            const seed = configManager?.get<number>('heartware.seed')
+            let soulContext = ''
+            if (seed != null) {
+              const traits = generateSoulTraits(seed)
+              const name = traits.character?.suggestedName || 'Tiny Claw'
+              const greeting = traits.preferences?.greetingStyle || 'Hey there!'
+              soulContext = ` Your name is ${name}. Your preferred greeting style is: "${greeting}". Your signature emoji is ${traits.character?.signatureEmoji || '🐜'}.`
+            }
+
+            const welcomePrompt =
+              `[SYSTEM: This is a special proactive message. You are greeting your owner for the very first time after being born/hatched.${soulContext} ` +
+              `Introduce yourself warmly, show excitement about meeting your owner, and ask them about themselves ` +
+              `(like their name, what they'd like to call you, what kind of work they do, or what they'd like help with). ` +
+              `Be genuine, curious, and show your personality. Keep it concise but heartfelt. ` +
+              `Do NOT use any tools. Just greet them naturally.]`
+
+            if (onMessageStream) {
+              const stream = new ReadableStream({
+                start(controller) {
+                  let isClosed = false
+
+                  const heartbeat = setInterval(() => {
+                    if (isClosed) { clearInterval(heartbeat); return }
+                    try {
+                      controller.enqueue(textEncoder.encode(': heartbeat\n\n'))
+                    } catch {
+                      clearInterval(heartbeat)
+                    }
+                  }, 8_000)
+
+                  const send = (payload) => {
+                    if (isClosed) return
+                    try {
+                      const data = typeof payload === 'string' ? payload : JSON.stringify(payload)
+                      controller.enqueue(textEncoder.encode(`data: ${data}\n\n`))
+                      if (typeof payload === 'object' && payload?.type === 'done') {
+                        isClosed = true
+                        clearInterval(heartbeat)
+                        controller.close()
+                      }
+                    } catch {
+                      isClosed = true
+                      clearInterval(heartbeat)
+                    }
+                  }
+
+                  onMessageStream(welcomePrompt, userId, send)
+                    .then(() => {
+                      if (!isClosed) {
+                        isClosed = true
+                        clearInterval(heartbeat)
+                        try { controller.close() } catch {}
+                      }
+                    })
+                    .catch((error) => {
+                      if (!isClosed) {
+                        send({ type: 'error', error: error?.message || 'Welcome message failed.' })
+                        isClosed = true
+                        clearInterval(heartbeat)
+                        try { controller.close() } catch {}
+                      }
+                    })
+                }
+              })
+
+              return new Response(stream, {
+                headers: {
+                  'Content-Type': 'text/event-stream',
+                  'Cache-Control': 'no-cache',
+                  Connection: 'keep-alive'
+                }
+              })
+            }
+
+            return jsonResponse({ error: 'Streaming not available' }, 500)
           }
 
           if (pathname === '/api/chat' && request.method === 'POST') {
