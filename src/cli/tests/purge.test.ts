@@ -131,6 +131,7 @@ describe('tinyclaw purge — default (data only)', () => {
 
   test('deletes the data directory after confirmation', async () => {
     expect(existsSync(tempDataDir)).toBe(true);
+    expect(existsSync(join(tempDataDir, 'data'))).toBe(true);
 
     const { stdout, exitCode } = await runPurge(['--yes'], {
       TINYCLAW_DATA_DIR: tempDataDir,
@@ -140,6 +141,8 @@ describe('tinyclaw purge — default (data only)', () => {
     expect(stdout).toContain('Purge complete');
     expect(stdout).toContain('Data directory deleted');
     expect(existsSync(tempDataDir)).toBe(false);
+    // data/ subdirectory must also be gone
+    expect(existsSync(join(tempDataDir, 'data'))).toBe(false);
   });
 
   test('shows secrets preserved message when not using --force', async () => {

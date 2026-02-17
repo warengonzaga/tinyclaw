@@ -15,7 +15,7 @@
  */
 
 import { join } from 'path';
-import { homedir } from 'os';
+import { homedir, platform } from 'os';
 import { rm, access, readFile } from 'fs/promises';
 import * as p from '@clack/prompts';
 import { showBanner } from '../ui/banner.js';
@@ -118,8 +118,7 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
 
   if (dataExists) {
     targets.push(`  ${theme.label('Data directory')}     ${theme.dim(dataDir)}`);
-    targets.push(`    • config.db        ${theme.dim('(configuration database)')}`);
-    targets.push(`    • agent.db         ${theme.dim('(messages, memory, sub-agents, metrics)')}`);
+    targets.push(`    • data/            ${theme.dim('(config.db, agent.db, security.db + WAL/SHM files)')}`);
     targets.push(`    • learning/        ${theme.dim('(learned patterns)')}`);
     targets.push(`    • heartware/       ${theme.dim('(identity files + backups)')}`);
     targets.push(`    • audit/           ${theme.dim('(audit logs)')}`);
@@ -179,11 +178,26 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
   const deleted: string[] = [];
   const errors: string[] = [];
 
+  // On Windows, SQLite WAL/SHM files may be briefly locked; retry to handle
+  // EBUSY / EPERM errors that prevent directory deletion.
+  const isWindows = platform() === 'win32';
+  const rmOptions = {
+    recursive: true,
+    force: true,
+    maxRetries: isWindows ? 5 : 0,
+    retryDelay: isWindows ? 200 : 100,
+  };
+
   // Delete data directory
   if (dataExists) {
     try {
-      await rm(dataDir, { recursive: true, force: true });
-      deleted.push('Data directory');
+      await rm(dataDir, rmOptions);
+      // Verify deletion actually succeeded (locked files can cause silent partial removal)
+      if (await dirExists(dataDir)) {
+        errors.push('Data directory: some files could not be removed (they may be locked by a running process)');
+      } else {
+        deleted.push('Data directory');
+      }
     } catch (err) {
       errors.push(`Data directory: ${String(err)}`);
     }
@@ -192,8 +206,12 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
   // Delete secrets (only with --force)
   if (flags.force && secretsExist) {
     try {
-      await rm(secretsDir, { recursive: true, force: true });
-      deleted.push('Secrets store');
+      await rm(secretsDir, rmOptions);
+      if (await dirExists(secretsDir)) {
+        errors.push('Secrets store: some files could not be removed (they may be locked by a running process)');
+      } else {
+        deleted.push('Secrets store');
+      }
     } catch (err) {
       errors.push(`Secrets store: ${String(err)}`);
     }
