@@ -1,6 +1,12 @@
 // Core type definitions for Tiny Claw
 
 // ---------------------------------------------------------------------------
+// Query Classification
+// ---------------------------------------------------------------------------
+
+export type QueryTier = 'simple' | 'moderate' | 'complex' | 'reasoning';
+
+// ---------------------------------------------------------------------------
 // Core Primitives
 // ---------------------------------------------------------------------------
 
@@ -40,6 +46,7 @@ export interface StreamEvent {
     isReuse?: boolean;
     success?: boolean;
     status?: string;
+    background?: boolean;
   };
 }
 
@@ -215,6 +222,7 @@ export interface Database {
   getAllSubAgents(userId: string, includeDeleted?: boolean): SubAgentRecord[];
   updateSubAgent(id: string, updates: Partial<SubAgentRecord>): void;
   deleteExpiredSubAgents(beforeTimestamp: number): number;
+  archiveStaleSuspended(inactiveBefore: number): number;
 
   // Role templates
   saveRoleTemplate(template: RoleTemplate): void;
@@ -268,7 +276,7 @@ export interface SubAgentRecord {
   role: string;
   systemPrompt: string;
   toolsGranted: string[];
-  tierPreference: string | null;
+  tierPreference: QueryTier | null;
   status: 'active' | 'suspended' | 'soft_deleted';
   performanceScore: number;
   totalTasks: number;
@@ -286,7 +294,7 @@ export interface RoleTemplate {
   name: string;
   roleDescription: string;
   defaultTools: string[];
-  defaultTier: string | null;
+  defaultTier: QueryTier | null;
   timesUsed: number;
   avgPerformance: number;
   tags: string[];
