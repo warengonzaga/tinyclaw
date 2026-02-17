@@ -22,7 +22,7 @@
  *   audit/                 — audit logs
  */
 
-import { join, resolve, basename } from 'path';
+import { join, resolve, basename, sep } from 'path';
 import { homedir } from 'os';
 import { existsSync, createReadStream, createWriteStream } from 'fs';
 import { readdir, stat, readFile, mkdir } from 'fs/promises';
@@ -466,6 +466,12 @@ async function importBackup(args: string[]): Promise<void> {
     return;
   }
 
+  if (manifest.version !== MANIFEST_VERSION) {
+    importSpinner.stop(theme.error('Failed'));
+    p.log.error(`Unsupported manifest version: ${manifest.version}, expected ${MANIFEST_VERSION}`);
+    return;
+  }
+
   importSpinner.stop(theme.success('Archive loaded'));
 
   // Show what we're about to import
@@ -517,10 +523,22 @@ async function importBackup(args: string[]): Promise<void> {
   let extracted = 0;
   const errors: string[] = [];
 
+  const resolvedDataDir = resolve(dataDir);
+
   for (const entry of entries) {
     if (entry.name === 'manifest.json') continue;
 
-    const targetPath = join(dataDir, entry.name);
+    // Path traversal protection: reject absolute paths, symlinks, and '..' segments
+    if (entry.type === 'symlink') {
+      errors.push(`${entry.name}: skipped (symlink)`);
+      continue;
+    }
+
+    const targetPath = resolve(dataDir, entry.name);
+    if (!targetPath.startsWith(resolvedDataDir + sep) && targetPath !== resolvedDataDir) {
+      errors.push(`${entry.name}: skipped (path traversal detected)`);
+      continue;
+    }
 
     try {
       if (entry.type === 'directory') {
