@@ -45,6 +45,9 @@ const MANIFEST_VERSION = 1;
 /** Subdirectories inside ~/.tinyclaw/ to include in export */
 const EXPORTABLE_DIRS = ['data', 'heartware', 'learning', 'audit'];
 
+/** Default directory for backup archives */
+const DEFAULT_BACKUP_DIR = 'backups';
+
 // ---------------------------------------------------------------------------
 // Path helpers
 // ---------------------------------------------------------------------------
@@ -177,8 +180,8 @@ async function collectFiles(
     const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
 
     if (entry.isDirectory()) {
-      // Skip .backups directory — heartware internal backups
-      if (entry.name === '.backups') continue;
+      // Skip .backups (heartware internal) and backups/ (export archives)
+      if (entry.name === '.backups' || entry.name === 'backups') continue;
       const nested = await collectFiles(absPath, relPath);
       results.push(...nested);
     } else if (entry.isFile()) {
@@ -244,7 +247,10 @@ async function exportBackup(args: string[]): Promise<void> {
       }
     }
   } else {
-    outputPath = join(process.cwd(), defaultFilename);
+    // Default to ~/.tinyclaw/backups/
+    const backupDir = join(dataDir, DEFAULT_BACKUP_DIR);
+    await mkdir(backupDir, { recursive: true });
+    outputPath = join(backupDir, defaultFilename);
   }
 
   // Collect files to export
@@ -659,6 +665,7 @@ function printHelp(): void {
   console.log(`    Bundles all portable data (heartware, config, memory, learning)`);
   console.log(`    into a single .tinyclaw file. Secrets are ${theme.warn('NOT')} included — only`);
   console.log(`    their key names are saved so you know what to re-enter on import.`);
+  console.log(`    Saved to ~/.tinyclaw/backups/ by default. Use ${theme.dim('.')} for current directory.`);
   console.log();
   console.log('  ' + theme.label('Import'));
   console.log(`    Extracts the archive into ~/.tinyclaw/ and prompts you to`);
@@ -666,7 +673,7 @@ function printHelp(): void {
   console.log();
   console.log('  ' + theme.label('Examples'));
   console.log(`    ${theme.dim('$')} tinyclaw backup export`);
-  console.log(`    ${theme.dim('$')} tinyclaw backup export ~/backups/`);
+  console.log(`    ${theme.dim('$')} tinyclaw backup export .`);
   console.log(`    ${theme.dim('$')} tinyclaw backup import 2026-02-17T18-15-30.tinyclaw`);
   console.log();
 }
