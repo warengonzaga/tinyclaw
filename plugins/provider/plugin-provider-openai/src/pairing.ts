@@ -35,7 +35,7 @@ export function createOpenAIPairingTools(
         'Stores the API key securely, configures the model, enables the plugin, ' +
         'and routes complex/reasoning queries to OpenAI. ' +
         'After pairing, call tinyclaw_restart to apply the changes. ' +
-        'To get an API key: go to https://platform.openai.com/api-keys and create one.',,
+        'To get an API key: go to https://platform.openai.com/api-keys and create one.',
       parameters: {
         type: 'object',
         properties: {

@@ -102,7 +102,9 @@ const discordPlugin: ChannelPlugin = {
       const userId = `discord:${msg.author.id}`;
 
       try {
-        await msg.channel.sendTyping();
+        if ('sendTyping' in msg.channel) {
+          await msg.channel.sendTyping();
+        }
 
         const response = await context.enqueue(userId, rawContent);
 
@@ -112,7 +114,9 @@ const discordPlugin: ChannelPlugin = {
         } else {
           const chunks = splitIntoChunks(response, 1900);
           for (const chunk of chunks) {
-            await msg.channel.send(chunk);
+            if ('send' in msg.channel) {
+              await msg.channel.send(chunk);
+            }
           }
         }
       } catch (err) {
