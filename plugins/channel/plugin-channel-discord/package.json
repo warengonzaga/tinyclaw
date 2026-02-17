@@ -5,10 +5,14 @@
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/warengonzaga/tinyclaw.git",
@@ -19,6 +23,9 @@
     "url": "https://github.com/warengonzaga/tinyclaw/issues"
   },
   "keywords": ["tinyclaw", "plugin", "channel", "discord"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
   "dependencies": {
     "@tinyclaw/logger": "workspace:*",
     "@tinyclaw/types": "workspace:*",
