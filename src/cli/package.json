@@ -35,9 +35,11 @@
     "@tinyclaw/ui": "workspace:*",
     "@wgtechlabs/log-engine": "^2.3.0",
     "figlet": "^1.10.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@types/figlet": "^1.7.0"
+    "@types/figlet": "^1.7.0",
+    "@types/qrcode": "^1.5.6"
   }
 }
