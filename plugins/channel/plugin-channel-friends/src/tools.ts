@@ -191,7 +191,8 @@ export function createFriendsTools(
               ? 'invite pending'
               : 'revoked';
 
-          const lastSeen = new Date(f.lastSeen).toLocaleString();
+          const lastSeenDate = new Date(f.lastSeen);
+          const lastSeen = f.lastSeen && !isNaN(lastSeenDate.getTime()) ? lastSeenDate.toLocaleString() : 'Unknown';
           return `- **${f.nickname}** (@${f.username}) — ${status}, last seen: ${lastSeen}`;
         });
 

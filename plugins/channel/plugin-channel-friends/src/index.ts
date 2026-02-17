@@ -108,7 +108,7 @@ const friendsPlugin: ChannelPlugin = {
         // Use the streaming enqueue if available, otherwise fallback
         const response = await context.enqueue(userId, message);
         // If enqueue returned a string directly (non-streaming), send it as done
-        if (response) {
+        if (response !== undefined && response !== null) {
           send({ type: 'text', content: response });
           send({ type: 'done' });
         }

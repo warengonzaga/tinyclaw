@@ -156,7 +156,10 @@ export function createFriendsServer(config: FriendsServerConfig) {
               return jsonResponse({ error: 'Invalid JSON' }, 400);
             }
 
-            const code = (body?.code as string || '').trim();
+            if (typeof body?.code !== 'string') {
+              return jsonResponse({ error: 'Invite code must be a string' }, 400);
+            }
+            const code = body.code.trim();
             if (!code) {
               return jsonResponse({ error: 'Invite code is required' }, 400);
             }
@@ -192,7 +195,10 @@ export function createFriendsServer(config: FriendsServerConfig) {
               return jsonResponse({ error: 'Invalid JSON' }, 400);
             }
 
-            const newNickname = (body?.nickname as string || '').trim();
+            if (typeof body?.nickname !== 'string') {
+              return jsonResponse({ error: 'Nickname must be 1–64 characters' }, 400);
+            }
+            const newNickname = body.nickname.trim();
             if (!newNickname || newNickname.length > 64) {
               return jsonResponse({ error: 'Nickname must be 1–64 characters' }, 400);
             }
@@ -215,7 +221,10 @@ export function createFriendsServer(config: FriendsServerConfig) {
               return jsonResponse({ error: 'Invalid JSON' }, 400);
             }
 
-            const message = (body?.message as string || '').trim();
+            if (typeof body?.message !== 'string') {
+              return jsonResponse({ error: 'Message is required' }, 400);
+            }
+            const message = body.message.trim();
             if (!message) {
               return jsonResponse({ error: 'Message is required' }, 400);
             }
