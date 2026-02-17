@@ -47,6 +47,10 @@ const RAPID_RESTART_WINDOW_MS = 60_000; // 1 minute
  */
 export async function supervisedStart(): Promise<void> {
   const restartTimestamps: number[] = [];
+  // --web is forwarded only on the first spawn (for setup --web).
+  // After a restart (e.g. setup complete), it is dropped so the next
+  // spawn runs as a normal start.
+  let forwardWeb = process.argv.includes('--web');
 
   const spawnAgent = (): void => {
     // Track restart frequency
@@ -74,7 +78,7 @@ export async function supervisedStart(): Promise<void> {
     // Forward start flags to the supervised child process
     const extraArgs: string[] = [];
     if (process.argv.includes('--verbose')) extraArgs.push('--verbose');
-    if (process.argv.includes('--web')) extraArgs.push('--web');
+    if (forwardWeb) extraArgs.push('--web');
 
     const child = spawn(execPath, [scriptPath, '--supervised-start', ...extraArgs], {
       stdio: 'inherit',
@@ -95,6 +99,8 @@ export async function supervisedStart(): Promise<void> {
       process.removeListener('SIGINT', sigintHandler);
 
       if (code === RESTART_EXIT_CODE) {
+        // Drop --web on restart so the next spawn runs as a normal start
+        forwardWeb = false;
         logger.log('');
         logger.log('Restart requested — respawning agent...', undefined, { emoji: '🔄' });
         logger.log('');

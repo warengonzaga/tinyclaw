@@ -10,7 +10,6 @@
  *   tinyclaw setup        Interactive first-time setup wizard
  *   tinyclaw setup --web  Start web onboarding at /setup
  *   tinyclaw start        Boot the agent (requires setup first)
- *   tinyclaw start --web  Force web onboarding mode at /setup
  *   tinyclaw purge        Wipe all data for a fresh install
  *   tinyclaw --version    Print version
  *   tinyclaw --help       Show help
@@ -36,7 +35,6 @@ function showHelp(): void {
   console.log();
   console.log('  ' + theme.label('Options'));
   console.log(`    ${theme.dim('--verbose')}       Show debug-level logs during start`);
-  console.log(`    ${theme.dim('--web')}           Force web onboarding mode at /setup`);
   console.log(`    ${theme.dim('--version, -v')}   Show version number`);
   console.log(`    ${theme.dim('--help, -h')}      Show this help message`);
   console.log();
@@ -51,6 +49,7 @@ async function main(): Promise<void> {
   switch (command) {
     case 'setup': {
       if (args.includes('--web')) {
+        // Web setup goes through supervisor so the restart mechanism works
         const { supervisedStart } = await import('./supervisor.js');
         await supervisedStart();
         break;
@@ -62,15 +61,21 @@ async function main(): Promise<void> {
     }
 
     case 'start': {
-      // Pass --verbose through to supervised child process
       const { supervisedStart } = await import('./supervisor.js');
       await supervisedStart();
       break;
     }
 
     case '--supervised-start': {
-      const { startCommand } = await import('./commands/start.js');
-      await startCommand();
+      if (args.includes('--web')) {
+        // Web setup mode — after setup completes, exits with restart code
+        // so the supervisor respawns without --web as a normal start
+        const { webSetupCommand } = await import('./commands/setup-web.js');
+        await webSetupCommand();
+      } else {
+        const { startCommand } = await import('./commands/start.js');
+        await startCommand();
+      }
       break;
     }
 
