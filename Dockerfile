@@ -4,7 +4,7 @@ FROM oven/bun:1 AS builder
 WORKDIR /app
 
 # Copy workspace manifests first for layer caching
-COPY package.json bun.lock ./
+COPY package.json bun.lock tsconfig.json ./
 COPY packages/compactor/package.json ./packages/compactor/
 COPY packages/config/package.json ./packages/config/
 COPY packages/core/package.json ./packages/core/
@@ -61,8 +61,11 @@ EXPOSE 3000
 
 # Health check against the API server
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD bun -e "fetch('http://localhost:3000/api/health').then(r=>{if(!r.ok)throw 1}).catch(()=>process.exit(1))"
+  CMD bun -e "fetch('http://localhost:'+(process.env.PORT||3000)+'/api/health').then(r=>{if(!r.ok)throw 1}).catch(()=>process.exit(1))"
 
 ENV NODE_ENV=production
+
+# The app handles SIGINT for graceful shutdown (not SIGTERM)
+STOPSIGNAL SIGINT
 
 ENTRYPOINT ["bun", "run", "start"]
