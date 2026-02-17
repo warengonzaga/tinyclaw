@@ -53,6 +53,7 @@
   let setupTotpCode = $state('')
   let setupBackupCodes = $state([])
   let setupRecoveryToken = $state('')
+  let setupRestarting = $state(false)
   let totpCode = $state('')
   let loginError = $state('')
   let loginLoading = $state(false)
@@ -299,12 +300,66 @@
   }
 
   async function finishSetupAndEnter() {
-    await checkAuth()
-    if (ownerClaimed && isOwner) {
-      window.history.replaceState({}, '', '/')
-      fetchBackgroundTasks()
-      fetchSubAgents()
+    setupRestarting = true
+
+    // First, try an immediate auth check (works when server doesn't restart)
+    try {
+      await checkAuth()
+      if (ownerClaimed && isOwner) {
+        window.history.replaceState({}, '', '/')
+        fetchBackgroundTasks()
+        fetchSubAgents()
+        return
+      }
+    } catch {
+      // Server likely restarting — fall through to polling
     }
+
+    // Poll until the server comes back online and owner is authenticated
+    const pollInterval = 2000
+    const maxAttempts = 90 // 3 minutes max
+    let attempts = 0
+
+    const poll = async () => {
+      attempts++
+      try {
+        const res = await fetch('/api/auth/status')
+        if (res.ok) {
+          const data = await res.json()
+          ownerClaimed = data.claimed
+          isOwner = data.isOwner
+          authChecked = true
+
+          if (ownerClaimed) {
+            // Server is back — redirect to owner page or login
+            setupRestarting = false
+            if (isOwner) {
+              window.history.replaceState({}, '', '/')
+              fetchBackgroundTasks()
+              fetchSubAgents()
+            } else {
+              // Session lost during restart — go to login
+              wantsLogin = true
+              window.history.replaceState({}, '', '/login')
+            }
+            return
+          }
+        }
+      } catch {
+        // Server still restarting — keep polling
+      }
+
+      if (attempts < maxAttempts) {
+        setTimeout(poll, pollInterval)
+      } else {
+        // Timeout — show a manual redirect hint
+        setupRestarting = false
+        setupError = 'Server is taking longer than expected. Please refresh the page.'
+      }
+    }
+
+    // Wait a moment for the server to begin restarting before polling
+    setTimeout(poll, 1500)
   }
 
   async function submitLogin() {
@@ -1020,7 +1075,8 @@
 
 {:else if view === 'setup'}
   <!-- Setup Onboarding Page -->
-  <div class="flex-1 flex items-center justify-center px-4 py-6">
+  <div class="flex-1 overflow-y-auto bg-bg-primary">
+  <div class="min-h-full flex items-center justify-center px-4 py-6">
     <div class="w-full max-w-xl flex flex-col items-center text-center">
       <div class="w-20 h-20 rounded-full bg-brand/20 flex items-center justify-center mb-6">
         <span class="text-4xl">🛡️</span>
@@ -1136,6 +1192,14 @@
           {setupSubmitting ? 'Saving setup...' : 'Complete setup'}
         </button>
       {:else if setupPhase === 'backup-codes'}
+        {#if setupRestarting}
+          <!-- Restarting overlay -->
+          <div class="w-full flex flex-col items-center justify-center py-12">
+            <div class="delegation-spinner w-10 h-10 border-3 border-brand/30 border-t-brand rounded-full mb-4"></div>
+            <p class="text-text-normal text-sm font-medium mb-1">Starting Tiny Claw agent...</p>
+            <p class="text-text-muted text-xs">The server is restarting. You will be redirected automatically.</p>
+          </div>
+        {:else}
         <p class="text-text-muted text-sm mb-4">
           {BACKUP_CODES_INTRO}
         </p>
@@ -1159,12 +1223,15 @@
 
         <button
           onclick={finishSetupAndEnter}
-          class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80"
+          disabled={setupRestarting}
+          class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           I stored my recovery token and backup codes
         </button>
+        {/if}
       {/if}
     </div>
+  </div>
   </div>
 
 {:else if view === 'login'}

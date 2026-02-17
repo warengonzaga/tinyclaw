@@ -4,6 +4,9 @@ import { timingSafeEqual } from 'crypto'
 import { SecurityDatabase } from './security-db'
 import { DEFAULT_PROVIDER, DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core'
 import { logger } from '@tinyclaw/logger'
+
+// Inline ANSI helpers for log highlighting (no external dep needed)
+const highlight = (text: string) => `\x1b[1m\x1b[36m${text}\x1b[39m\x1b[22m`
 import {
   generateRecoveryToken,
   generateBackupCodes,
@@ -535,11 +538,13 @@ export function createWebUI(config) {
       if (!isOwnerClaimed()) {
         // First-time: display bootstrap secret
         const token = getOrCreateClaimToken()
-        logger.info(`Bootstrap secret: ${token}`, 'web')
-        logger.info('Open /setup and enter this to claim ownership (expires in 1 hour)', 'web')
+        logger.info('─'.repeat(52), 'web', { emoji: '' })
+        logger.info(`Bootstrap secret: ${highlight(token)}`, 'web', { emoji: '🔑' })
+        logger.info(`Open ${highlight('/setup')} and enter this to claim ownership (expires in 1 hour)`, 'web', { emoji: '🔗' })
+        logger.info('─'.repeat(52), 'web', { emoji: '' })
       } else {
         // Already claimed: owner can log in via /login
-        logger.info('Owner claimed — open /login to access the dashboard', 'web')
+        logger.info(`Owner claimed — open ${highlight('/login')} to access the dashboard`, 'web', { emoji: '🔗' })
       }
 
       server = Bun.serve({
