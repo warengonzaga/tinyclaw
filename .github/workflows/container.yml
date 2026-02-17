@@ -1,0 +1,33 @@
+name: Container Build
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build and Push Container
+        uses: wgtechlabs/container-build-flow-action@v1
+        with:
+          registry: both
+          dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
+          ghcr-token: ${{ secrets.GITHUB_TOKEN }}
+          platforms: linux/amd64,linux/arm64
+          trivy-severity: HIGH,CRITICAL
+          fail-on-vulnerability: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}

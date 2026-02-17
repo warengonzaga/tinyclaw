@@ -1,0 +1,47 @@
+# Dependencies (re-installed in container)
+node_modules/
+
+# Build output (rebuilt in container)
+dist/
+build/
+*.tsbuildinfo
+
+# Data directory
+.tinyclaw/
+
+# Version control
+.git/
+.gitignore
+
+# CI/CD
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+
+# Testing & coverage
+coverage/
+
+# Environment (secrets should be passed via env vars or Docker secrets)
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in image)
+*.md
+!README.md
+
+# Misc
+*.bak
+*.tmp
+docs/
