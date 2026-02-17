@@ -4,9 +4,12 @@
  * TOTP generation/verification, backup codes, recovery tokens, and
  * related helpers used by both the CLI setup wizard and the web server.
  *
- * Uses only the Web Crypto API (crypto.subtle + crypto.getRandomValues)
- * so it works in Bun, Node 20+, and browsers.
+ * Uses the Web Crypto API (crypto.subtle + crypto.getRandomValues)
+ * plus Node's crypto.timingSafeEqual for constant-time comparisons.
+ * Works in Bun and Node 20+.
  */
+
+import { timingSafeEqual } from 'node:crypto'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -122,15 +125,31 @@ export async function generateTotpCode(secret: string, counter: number): Promise
 }
 
 /**
+ * Timing-safe string comparison — prevents timing attacks on TOTP verification.
+ * Uses Node's crypto.timingSafeEqual for constant-time comparison.
+ */
+function defaultSafeCompare(a: string, b: string): boolean {
+  const encoder = new TextEncoder()
+  const bufA = encoder.encode(a)
+  const bufB = encoder.encode(b)
+  if (bufA.byteLength !== bufB.byteLength) {
+    // Burn the same CPU time so length differences don't leak timing info
+    timingSafeEqual(bufA, bufA)
+    return false
+  }
+  return timingSafeEqual(bufA, bufB)
+}
+
+/**
  * Verify a TOTP code with ±1 step drift tolerance.
  *
- * Requires a timing-safe comparison function from the caller so
- * this module stays free of Node-specific imports (e.g. `crypto.timingSafeEqual`).
+ * Uses a timing-safe comparison by default to prevent timing attacks.
+ * Callers may supply a custom comparator if needed.
  */
 export async function verifyTotpCode(
   secret: string,
   code: string,
-  safeCompare: (a: string, b: string) => boolean = (a, b) => a === b,
+  safeCompare: (a: string, b: string) => boolean = defaultSafeCompare,
 ): Promise<boolean> {
   const normalized = String(code || '').replace(/\s+/g, '')
   if (!/^\d{6}$/.test(normalized)) return false
