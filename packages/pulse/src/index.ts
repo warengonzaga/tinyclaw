@@ -88,13 +88,37 @@ export function createPulseScheduler(): PulseScheduler {
   function startJob(job: PulseJob): void {
     const intervalMs = parseInterval(job.schedule);
 
+    // Fire immediately on start if requested
+    if (job.runOnStart) {
+      (async () => {
+        if (job.isRunning) return;
+        job.isRunning = true;
+        logger.info(`Pulse (immediate): ${job.id}`);
+        job.lastRun = Date.now();
+        try {
+          await job.handler();
+        } catch (err) {
+          logger.error(`Pulse ${job.id} (immediate) failed`, err);
+        } finally {
+          job.isRunning = false;
+        }
+      })();
+    }
+
     const timer = setInterval(async () => {
+      if (job.isRunning) {
+        logger.info(`Pulse: ${job.id} skipped (still running)`);
+        return;
+      }
+      job.isRunning = true;
       logger.info(`Pulse: ${job.id}`);
       job.lastRun = Date.now();
       try {
         await job.handler();
       } catch (err) {
         logger.error(`Pulse ${job.id} failed`, err);
+      } finally {
+        job.isRunning = false;
       }
     }, intervalMs);
 
