@@ -70,7 +70,7 @@ export async function webSetupCommand(): Promise<void> {
 
       // Graceful shutdown: stop web server, then close managers before restart
       try { await setupWebUI.stop(); } catch (err) { logger.warn('Error stopping web server during shutdown', { err }, { emoji: '⚠️' }); }
-      try { configManager.close(); } catch (err) { logger.warn('Error closing config manager during shutdown', { err }, { emoji: '⚠️' }); }
+      try { configManager.close(); } catch (err) { logger.warn('Error closing config manager during shutdown', { err }, { emoji: '⚠️' }); } // sync — ConfigManager.close() returns void
       try { await secretsManager.close(); } catch (err) { logger.warn('Error closing secrets manager during shutdown', { err }, { emoji: '⚠️' }); }
 
       // Exit with restart code so the supervisor respawns as a normal start

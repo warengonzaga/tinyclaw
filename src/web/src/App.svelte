@@ -103,10 +103,14 @@
       ta.style.opacity = '0'
       document.body.appendChild(ta)
       ta.select()
-      document.execCommand('copy')
+      const success = document.execCommand('copy')
       document.body.removeChild(ta)
-      flagSetter(true)
-      setTimeout(() => flagSetter(false), 2000)
+      if (success) {
+        flagSetter(true)
+        setTimeout(() => flagSetter(false), 2000)
+      } else {
+        console.warn('Clipboard copy failed: execCommand returned false')
+      }
     }
   }
 
@@ -361,6 +365,7 @@
     try {
       await checkAuth()
       if (ownerClaimed && isOwner) {
+        setupRestarting = false
         window.history.replaceState({}, '', '/')
         fetchBackgroundTasks()
         fetchSubAgents()
