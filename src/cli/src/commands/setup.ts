@@ -23,6 +23,13 @@ import {
   DEFAULT_PROVIDER,
   DEFAULT_MODEL,
   DEFAULT_BASE_URL,
+  SECURITY_WARNING_TITLE,
+  SECURITY_WARNING_BODY,
+  SECURITY_WARRANTY,
+  SECURITY_SAFETY_TITLE,
+  SECURITY_SAFETY_PRACTICES,
+  SECURITY_CONFIRM,
+  defaultModelNote,
 } from '@tinyclaw/core';
 import { setLogMode } from '@tinyclaw/logger';
 import { showBanner } from '../ui/banner.js';
@@ -54,26 +61,16 @@ export async function setupCommand(): Promise<void> {
   // --- Security warning -----------------------------------------------
 
   p.note(
-    theme.warn('Security warning - please read carefully.') + '\n\n' +
-    'Tiny Claw is an open-source AI agent that runs on your machine.\n' +
-    'It can read files, execute code, and perform actions when tools are enabled.\n' +
-    'A malicious or poorly crafted prompt could trick the agent into\n' +
-    'performing unintended or harmful operations.\n\n' +
-    theme.label('This software is provided "AS IS", without warranty of any kind.') + '\n' +
-    'The authors and contributors are not liable for any damages, data loss,\n' +
-    'or security incidents arising from its use. You assume all risks.\n\n' +
-    theme.label('Recommended safety practices:') + '\n' +
-    '  • Run in a sandboxed or isolated environment when possible.\n' +
-    '  • Never expose Tiny Claw to the public internet without access control.\n' +
-    '  • Keep secrets and sensitive files out of the agent\'s reachable paths.\n' +
-    '  • Review enabled tools and permissions regularly.\n' +
-    '  • Use the strongest available model for any bot with tool access.\n' +
-    '  • Keep Tiny Claw up to date for the latest security patches.',
+    theme.warn(SECURITY_WARNING_TITLE) + '\n\n' +
+    SECURITY_WARNING_BODY + '\n\n' +
+    theme.label(SECURITY_WARRANTY) + '\n\n' +
+    theme.label(SECURITY_SAFETY_TITLE) + '\n' +
+    SECURITY_SAFETY_PRACTICES.map(item => `  • ${item}`).join('\n'),
     'Security',
   );
 
   const accepted = await p.confirm({
-    message: 'I understand the risks and want to proceed',
+    message: SECURITY_CONFIRM,
     initialValue: false,
   });
 
@@ -200,12 +197,7 @@ export async function setupCommand(): Promise<void> {
   // --- Step 3: Default model confirmation -----------------------------
 
   p.note(
-    `Your default built-in model is ${theme.label(DEFAULT_MODEL)}.\n\n` +
-    'This model is always available as your fallback. If your primary\n' +
-    'model is down or hits a rate limit, Tiny Claw automatically falls\n' +
-    'back to this one so you\'re never left without a brain.\n\n' +
-    'You can switch the default model anytime by asking the AI agent\n' +
-    'during a conversation (e.g. "switch to gpt-oss:120b-cloud").',
+    defaultModelNote(theme.label(DEFAULT_MODEL)),
     'Default Model',
   );
 
