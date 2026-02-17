@@ -139,7 +139,7 @@ const discordPlugin: ChannelPlugin = {
 };
 
 /** Split a string into chunks without cutting words at boundaries. */
-function splitIntoChunks(text: string, maxLength: number): string[] {
+export function splitIntoChunks(text: string, maxLength: number): string[] {
   const chunks: string[] = [];
   let remaining = text;
 
