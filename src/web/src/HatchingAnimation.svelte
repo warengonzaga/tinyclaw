@@ -1,37 +1,23 @@
 <script>
   import { onMount } from 'svelte'
+  import { createHatchingScene } from './hatching-scene.js'
 
   let { soulTraits = null, onComplete = () => {} } = $props()
 
-  // Animation phases: 'ants' → 'egg-place' → 'ants-exit' → 'hatch' → 'card'
-  let phase = $state('ants')
+  let canvasEl = $state(null)
+  let phase = $state('init')
+  let showCard = $state(false)
   let showButton = $state(false)
   let prefersReducedMotion = $state(false)
 
-  // Ant configurations — each ant has a unique path, cargo, and timing
-  const antConfigs = [
-    { id: 1, cargo: 'none', startX: -8, startY: 20, endX: 55, endY: 48, delay: 0, duration: 4, exitX: 110, exitY: 15 },
-    { id: 2, cargo: 'food-bread', startX: 110, startY: 35, endX: 65, endY: 52, delay: 0.3, duration: 3.8, exitX: -10, exitY: 30 },
-    { id: 3, cargo: 'none', startX: -5, startY: 65, endX: 40, endY: 55, delay: 0.6, duration: 4.2, exitX: 110, exitY: 70 },
-    { id: 4, cargo: 'food-apple', startX: 110, startY: 75, endX: 60, endY: 58, delay: 0.2, duration: 3.5, exitX: -10, exitY: 80 },
-    { id: 5, cargo: 'egg', startX: -8, startY: 45, endX: 50, endY: 50, delay: 0.8, duration: 4.5, exitX: -10, exitY: 40 },
-    { id: 6, cargo: 'none', startX: 110, startY: 15, endX: 70, endY: 45, delay: 1.0, duration: 3.6, exitX: 110, exitY: 20 },
-    { id: 7, cargo: 'food-bread', startX: -5, startY: 80, endX: 35, endY: 60, delay: 0.4, duration: 4.0, exitX: -10, exitY: 85 },
-    { id: 8, cargo: 'none', startX: 110, startY: 55, endX: 45, endY: 53, delay: 1.2, duration: 3.9, exitX: 110, exitY: 50 },
-    { id: 9, cargo: 'food-apple', startX: -8, startY: 30, endX: 55, endY: 47, delay: 0.5, duration: 4.3, exitX: -10, exitY: 25 },
-    { id: 10, cargo: 'none', startX: 110, startY: 85, endX: 50, endY: 56, delay: 0.7, duration: 3.7, exitX: 110, exitY: 90 },
-    { id: 11, cargo: 'none', startX: -5, startY: 55, endX: 42, endY: 51, delay: 1.1, duration: 4.1, exitX: -10, exitY: 60 },
-    { id: 12, cargo: 'food-bread', startX: 110, startY: 45, endX: 58, endY: 54, delay: 0.9, duration: 3.4, exitX: 110, exitY: 40 },
-  ]
-
-  function getCargoEmoji(cargo) {
-    switch (cargo) {
-      case 'egg': return '🥚'
-      case 'food-bread': return '🍞'
-      case 'food-apple': return '🍎'
-      default: return ''
-    }
-  }
+  // 3D card tilt state (hover-based)
+  let cardRotX = $state(0)
+  let cardRotY = $state(0)
+  let targetRotX = 0
+  let targetRotY = 0
+  let tiltRaf = null
+  let pointerNormX = $state(0) // -0.5 to 0.5
+  let pointerNormY = $state(0)
 
   // Personality trait percentage (0.0-1.0 → 0-100)
   function traitPercent(value) {
@@ -43,7 +29,6 @@
     return '#' + String(seed).padStart(8, '0')
   }
 
-  // Personality trait labels
   const traitLabels = {
     openness: 'Openness',
     conscientiousness: 'Conscientiousness',
@@ -52,53 +37,74 @@
     emotionalSensitivity: 'Sensitivity',
   }
 
+  // ─── Card hover tilt interaction ────────────────────
+  function onCardPointerMove(e) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    // Normalized position: -0.5 to 0.5 from center
+    const px = (e.clientX - rect.left) / rect.width - 0.5
+    const py = (e.clientY - rect.top) / rect.height - 0.5
+    pointerNormX = px
+    pointerNormY = py
+    targetRotY = px * 40     // ±20 degrees horizontal
+    targetRotX = -py * 30    // ±15 degrees vertical (inverted)
+    startTiltLoop()
+  }
+
+  function onCardPointerLeave() {
+    targetRotX = 0
+    targetRotY = 0
+    pointerNormX = 0
+    pointerNormY = 0
+    startTiltLoop()
+  }
+
+  function startTiltLoop() {
+    if (tiltRaf) return
+    const step = () => {
+      // Snappy easing — fast response, smooth settle
+      cardRotX += (targetRotX - cardRotX) * 0.18
+      cardRotY += (targetRotY - cardRotY) * 0.18
+      if (Math.abs(targetRotX - cardRotX) < 0.05 && Math.abs(targetRotY - cardRotY) < 0.05) {
+        cardRotX = targetRotX
+        cardRotY = targetRotY
+        tiltRaf = null
+        return
+      }
+      tiltRaf = requestAnimationFrame(step)
+    }
+    tiltRaf = requestAnimationFrame(step)
+  }
+
+  // ─── Lifecycle ──────────────────────────────────────
   onMount(() => {
-    // Check reduced motion preference
     prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const timers = []
-
     if (prefersReducedMotion) {
-      // Skip directly to card reveal
-      phase = 'card'
-      timers.push(setTimeout(() => { showButton = true }, 800))
-      return () => { timers.forEach(clearTimeout) }
+      showCard = true
+      setTimeout(() => { showButton = true }, 600)
+      return
     }
 
-    // Phase 1: Ants crawl in (already started via 'ants' phase)
-    // Phase 2: After ants arrive, egg ant places egg (5s)
-    timers.push(setTimeout(() => {
-      phase = 'egg-place'
-    }, 5000))
+    const scene = createHatchingScene(canvasEl, {
+      onPhaseChange(p) { phase = p },
+      onReveal() {
+        showCard = true
+        setTimeout(() => { showButton = true }, 1800)
+      },
+    })
+    scene.start()
 
-    // Phase 3: All ants exit (8s mark)
-    timers.push(setTimeout(() => {
-      phase = 'ants-exit'
-    }, 8000))
-
-    // Phase 4: Egg hatches (11s mark)
-    timers.push(setTimeout(() => {
-      phase = 'hatch'
-    }, 11000))
-
-    // Phase 5: Card reveal (14s mark)
-    timers.push(setTimeout(() => {
-      phase = 'card'
-    }, 14000))
-
-    // Show button (15.5s mark)
-    timers.push(setTimeout(() => {
-      showButton = true
-    }, 15500))
-
-    return () => { timers.forEach(clearTimeout) }
+    return () => {
+      scene.destroy()
+      if (tiltRaf) cancelAnimationFrame(tiltRaf)
+    }
   })
 
-  function handleEnterColony() {
+  function handleGreet() {
     onComplete()
   }
 
-  // Derive display values from traits
+  // ─── Derived display values ─────────────────────────
   let agentName = $derived(soulTraits?.character?.suggestedName || 'Tiny Claw Agent')
   let signatureEmoji = $derived(soulTraits?.character?.signatureEmoji || '🐜')
   let creatureType = $derived(soulTraits?.character?.creatureType || 'Ant')
@@ -112,135 +118,123 @@
   let quirks = $derived(soulTraits?.quirks || [])
   let originEvent = $derived(soulTraits?.origin?.awakeningEvent || 'Awakened from digital slumber')
   let coreMotivation = $derived(soulTraits?.origin?.coreMotivation || 'To help and explore')
+
+  // Holo gradient reacts strongly to card tilt
+  let holoAngle = $derived(180 + cardRotY * 4)
+  let holoBgPos = $derived(`${50 + cardRotY * 2.5}% ${50 - cardRotX * 2.5}%`)
+  // Dynamic shadow shifts with tilt
+  let cardShadowX = $derived(Math.round(-cardRotY * 0.8))
+  let cardShadowY = $derived(Math.round(cardRotX * 0.8))
+  // Specular glint position tracks pointer
+  let glintX = $derived(50 + pointerNormX * 80)
+  let glintY = $derived(50 + pointerNormY * 80)
+  let glintOpacity = $derived(Math.min(1, (Math.abs(pointerNormX) + Math.abs(pointerNormY)) * 0.6))
 </script>
 
 <div class="hatching-container">
-  <!-- Background darkness -->
-  <div class="hatching-bg"></div>
+  <!-- Canvas scene — grassy soil, ants, egg -->
+  <canvas
+    bind:this={canvasEl}
+    class="hatching-canvas"
+    class:faded={showCard}
+  ></canvas>
 
-  <!-- Ant Layer -->
-  {#if phase === 'ants' || phase === 'egg-place' || phase === 'ants-exit'}
-    <div class="ant-layer">
-      {#each antConfigs as ant (ant.id)}
-        <div
-          class="ant-entity"
-          class:ant-entering={phase === 'ants'}
-          class:ant-settled={phase === 'egg-place'}
-          class:ant-exiting={phase === 'ants-exit'}
-          style="
-            --start-x: {ant.startX}%;
-            --start-y: {ant.startY}%;
-            --end-x: {ant.endX}%;
-            --end-y: {ant.endY}%;
-            --exit-x: {ant.exitX}%;
-            --exit-y: {ant.exitY}%;
-            --delay: {ant.delay}s;
-            --duration: {ant.duration}s;
-            --flip: {ant.startX > 50 ? '-1' : '1'};
-          "
-        >
-          <span class="ant-sprite" style="transform: scaleX(var(--flip));">🐜</span>
-          {#if ant.cargo !== 'none' && !(ant.cargo === 'egg' && (phase === 'egg-place' || phase === 'ants-exit'))}
-            <span class="ant-cargo">{getCargoEmoji(ant.cargo)}</span>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
-
-  <!-- Egg at center -->
-  {#if phase === 'egg-place' || phase === 'ants-exit' || phase === 'hatch'}
-    <div class="egg-center" class:egg-shaking={phase === 'hatch'}>
-      {#if phase !== 'hatch'}
-        <span class="egg-emoji">🥚</span>
-      {:else}
-        <span class="egg-emoji egg-cracking">🥚</span>
-        <span class="egg-hatched">🐣</span>
-      {/if}
-    </div>
-  {/if}
-
-  <!-- Card Reveal -->
-  {#if phase === 'card'}
+  <!-- 3D Draggable Card Reveal -->
+  {#if showCard}
     <div class="card-reveal-container">
-      <div class="soul-card">
-        <!-- Holographic shimmer overlay -->
-        <div class="holo-overlay"></div>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="card-perspective"
+        onpointermove={onCardPointerMove}
+        onpointerleave={onCardPointerLeave}
+      >
+        <div class="card-rise-wrapper">
+        <div
+          class="soul-card"
+          style="transform: rotateX({cardRotX}deg) rotateY({cardRotY}deg); box-shadow: {cardShadowX}px {cardShadowY}px 30px rgba(139,90,43,0.35), 0 0 60px rgba(139,90,43,0.15), {cardShadowX * 0.5}px {cardShadowY * 1.5 + 4}px 24px rgba(0,0,0,0.55);"
+        >
+          <!-- Holographic shimmer overlay — reacts to tilt -->
+          <div
+            class="holo-overlay"
+            style="background-position: {holoBgPos};"
+          ></div>
 
-        <!-- Card content -->
-        <div class="card-content">
-          <!-- Profile header -->
-          <div class="card-header">
-            <div class="card-avatar">
-              <span class="card-avatar-emoji">🐜</span>
-              <span class="card-signature-emoji">{signatureEmoji}</span>
-            </div>
-            <h2 class="card-name">{agentName}</h2>
-            <div class="card-creature-badge">{creatureType}</div>
-          </div>
+          <!-- Specular glint — bright spot following pointer -->
+          <div
+            class="specular-glint"
+            style="background: radial-gradient(circle at {glintX}% {glintY}%, rgba(255,255,255,{glintOpacity * 0.18}) 0%, transparent 55%);"
+          ></div>
 
-          <!-- Catchphrase -->
-          <p class="card-catchphrase">"{catchphrase}"</p>
-
-          <!-- Personality Stats -->
-          <div class="card-stats">
-            <div class="card-section-label">Personality Matrix</div>
-            {#each Object.entries(traitLabels) as [key, label]}
-              <div class="stat-row">
-                <span class="stat-label">{label}</span>
-                <div class="stat-bar-bg">
-                  <div
-                    class="stat-bar-fill"
-                    style="--target-width: {traitPercent(personality[key])}%"
-                  ></div>
-                </div>
-                <span class="stat-value">{traitPercent(personality[key])}</span>
+          <!-- Card content -->
+          <div class="card-content">
+            <div class="card-header">
+              <div class="card-avatar">
+                <span class="card-avatar-emoji">🐜</span>
+                <span class="card-signature-emoji">{signatureEmoji}</span>
               </div>
-            {/each}
-          </div>
-
-          <!-- Flavor Section -->
-          <div class="card-flavor">
-            <div class="flavor-row">
-              <span class="flavor-icon">🎨</span>
-              <span class="flavor-text">{favoriteColor}</span>
+              <h2 class="card-name">{agentName}</h2>
+              <div class="card-creature-badge">{creatureType}</div>
             </div>
-            <div class="flavor-row">
-              <span class="flavor-icon">🌿</span>
-              <span class="flavor-text">{favoriteSeason}</span>
+
+            <p class="card-catchphrase">"{catchphrase}"</p>
+
+            <div class="card-stats">
+              <div class="card-section-label">Personality Matrix</div>
+              {#each Object.entries(traitLabels) as [key, label]}
+                <div class="stat-row">
+                  <span class="stat-label">{label}</span>
+                  <div class="stat-bar-bg">
+                    <div
+                      class="stat-bar-fill"
+                      style="--target-width: {traitPercent(personality[key])}%"
+                    ></div>
+                  </div>
+                  <span class="stat-value">{traitPercent(personality[key])}</span>
+                </div>
+              {/each}
             </div>
-            <div class="flavor-row">
-              <span class="flavor-icon">😄</span>
-              <span class="flavor-text">{humor === 'none' ? 'Serious' : humor.replace('-', ' ')}</span>
+
+            <div class="card-flavor">
+              <div class="flavor-row">
+                <span class="flavor-icon">🎨</span>
+                <span class="flavor-text">{favoriteColor}</span>
+              </div>
+              <div class="flavor-row">
+                <span class="flavor-icon">🌿</span>
+                <span class="flavor-text">{favoriteSeason}</span>
+              </div>
+              <div class="flavor-row">
+                <span class="flavor-icon">😄</span>
+                <span class="flavor-text">{humor === 'none' ? 'Serious' : humor.replace('-', ' ')}</span>
+              </div>
             </div>
-          </div>
 
-          <!-- Origin -->
-          <div class="card-origin">
-            <div class="card-section-label">Origin</div>
-            <p class="origin-text">{originEvent}</p>
-            <p class="origin-motivation">"{coreMotivation}"</p>
-          </div>
+            <div class="card-origin">
+              <div class="card-section-label">Origin</div>
+              <p class="origin-text">{originEvent}</p>
+              <p class="origin-motivation">"{coreMotivation}"</p>
+            </div>
 
-          <!-- Values & Quirks -->
-          <div class="card-tags">
-            {#each values as val}
-              <span class="tag tag-value">{val}</span>
-            {/each}
-            {#each quirks as quirk}
-              <span class="tag tag-quirk">{quirk}</span>
-            {/each}
-          </div>
+            <div class="card-tags">
+              {#each values as val}
+                <span class="tag tag-value">{val}</span>
+              {/each}
+              {#each quirks as quirk}
+                <span class="tag tag-quirk">{quirk}</span>
+              {/each}
+            </div>
 
-          <!-- Serial Number -->
-          <div class="card-serial">{seedSerial}</div>
+            <div class="card-serial">{seedSerial}</div>
+          </div>
+        </div>
         </div>
       </div>
 
-      <!-- Enter Colony button -->
+      <p class="drag-hint">hover over the card to tilt</p>
+
       {#if showButton}
-        <button class="enter-colony-btn" onclick={handleEnterColony}>
-          Enter Colony →
+        <button class="greet-btn" onclick={handleGreet}>
+          Say hi to your new friend 👋
         </button>
       {/if}
     </div>
@@ -256,92 +250,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .hatching-bg {
-    position: absolute;
-    inset: 0;
     background: #050505;
   }
 
   /* ============================================
-     Ant Layer
+     Canvas
      ============================================ */
-  .ant-layer {
+  .hatching-canvas {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    width: 100%;
+    height: 100%;
+    transition: opacity 1.2s ease-out;
   }
 
-  .ant-entity {
-    position: absolute;
-    font-size: 1.8rem;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    z-index: 2;
-  }
-
-  .ant-entity.ant-entering {
-    left: var(--start-x);
-    top: var(--start-y);
-    animation: ant-crawl-in var(--duration) var(--delay) ease-in-out forwards;
-  }
-
-  .ant-entity.ant-settled {
-    left: var(--end-x);
-    top: var(--end-y);
-    animation: ant-idle 2s ease-in-out infinite;
-  }
-
-  .ant-entity.ant-exiting {
-    left: var(--end-x);
-    top: var(--end-y);
-    animation: ant-crawl-out 2.5s ease-in forwards;
-  }
-
-  .ant-sprite {
-    display: inline-block;
-  }
-
-  .ant-cargo {
-    font-size: 1rem;
-    position: relative;
-    top: -8px;
-  }
-
-  /* ============================================
-     Egg
-     ============================================ */
-  .egg-center {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 5;
-    font-size: 3rem;
-    animation: egg-settle 0.6s ease-out forwards;
-  }
-
-  .egg-emoji {
-    display: inline-block;
-  }
-
-  .egg-shaking .egg-emoji {
-    animation: egg-shake 2s ease-in-out forwards;
-  }
-
-  .egg-cracking {
-    animation: egg-crack 1.5s 1.5s ease-out forwards !important;
-  }
-
-  .egg-hatched {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    font-size: 3.5rem;
-    animation: chick-emerge 0.8s 2.5s ease-out forwards;
+  .hatching-canvas.faded {
+    opacity: 0.15;
   }
 
   /* ============================================
@@ -353,11 +277,24 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
-    animation: card-container-fade 0.5s ease-out forwards;
+    gap: 1rem;
+    animation: card-container-fade 0.8s ease-out forwards;
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 1rem;
+    touch-action: pan-y;
+  }
+
+  .card-perspective {
+    perspective: 800px;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .card-rise-wrapper {
+    animation: card-rise-in 1s ease-out forwards;
   }
 
   .soul-card {
@@ -366,11 +303,13 @@
     max-width: 90vw;
     border-radius: 16px;
     overflow: hidden;
-    animation: card-rise-in 1s ease-out forwards;
+    transform-style: preserve-3d;
+    transition: transform 0.06s ease-out, box-shadow 0.15s ease;
     box-shadow:
       0 0 30px rgba(139, 90, 43, 0.3),
       0 0 60px rgba(139, 90, 43, 0.15),
       0 4px 24px rgba(0, 0, 0, 0.5);
+    will-change: transform, box-shadow;
   }
 
   /* Holographic shimmer border */
@@ -397,18 +336,27 @@
     inset: 0;
     background: linear-gradient(
       135deg,
-      rgba(255, 107, 107, 0.05) 0%,
-      rgba(255, 217, 61, 0.05) 20%,
-      rgba(107, 203, 119, 0.05) 40%,
-      rgba(77, 150, 255, 0.05) 60%,
-      rgba(155, 89, 182, 0.05) 80%,
-      rgba(255, 107, 107, 0.05) 100%
+      rgba(255, 107, 107, 0.08) 0%,
+      rgba(255, 217, 61, 0.08) 20%,
+      rgba(107, 203, 119, 0.08) 40%,
+      rgba(77, 150, 255, 0.08) 60%,
+      rgba(155, 89, 182, 0.08) 80%,
+      rgba(255, 107, 107, 0.08) 100%
     );
-    background-size: 200% 200%;
-    animation: holo-bg-shift 4s ease-in-out infinite;
+    background-size: 300% 300%;
+    transition: background-position 0.05s linear;
     z-index: 2;
     pointer-events: none;
     border-radius: 16px;
+  }
+
+  .specular-glint {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    border-radius: 16px;
+    mix-blend-mode: overlay;
   }
 
   .card-content {
@@ -423,7 +371,6 @@
     gap: 0.75rem;
   }
 
-  /* Card Header */
   .card-header {
     text-align: center;
     animation: card-content-stagger 0.6s 0.3s ease-out both;
@@ -469,7 +416,6 @@
     letter-spacing: 0.06em;
   }
 
-  /* Catchphrase */
   .card-catchphrase {
     text-align: center;
     font-style: italic;
@@ -479,7 +425,6 @@
     animation: card-content-stagger 0.6s 0.5s ease-out both;
   }
 
-  /* Stats Section */
   .card-stats {
     animation: card-content-stagger 0.6s 0.7s ease-out both;
   }
@@ -532,7 +477,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Flavor */
   .card-flavor {
     display: flex;
     gap: 0.75rem;
@@ -556,7 +500,6 @@
     text-transform: capitalize;
   }
 
-  /* Origin */
   .card-origin {
     animation: card-content-stagger 0.6s 1.1s ease-out both;
   }
@@ -575,7 +518,6 @@
     margin: 0;
   }
 
-  /* Tags */
   .card-tags {
     display: flex;
     flex-wrap: wrap;
@@ -603,7 +545,6 @@
     border: 1px solid rgba(155, 89, 182, 0.2);
   }
 
-  /* Serial Number */
   .card-serial {
     text-align: center;
     font-size: 0.6rem;
@@ -615,8 +556,17 @@
     animation: card-content-stagger 0.6s 1.5s ease-out both;
   }
 
-  /* Enter Colony Button */
-  .enter-colony-btn {
+  /* Drag hint */
+  .drag-hint {
+    font-size: 0.65rem;
+    color: #5a5a5a;
+    letter-spacing: 0.04em;
+    margin: 0;
+    animation: card-content-stagger 0.6s 1.8s ease-out both;
+  }
+
+  /* Greet Button */
+  .greet-btn {
     padding: 0.75rem 2rem;
     border: 1px solid rgba(139, 90, 43, 0.4);
     border-radius: 8px;
@@ -630,120 +580,19 @@
     letter-spacing: 0.02em;
   }
 
-  .enter-colony-btn:hover {
+  .greet-btn:hover {
     background: rgba(139, 90, 43, 0.25);
     border-color: rgba(139, 90, 43, 0.6);
     box-shadow: 0 0 20px rgba(139, 90, 43, 0.2);
   }
 
-  .enter-colony-btn:active {
+  .greet-btn:active {
     transform: scale(0.97);
   }
 
   /* ============================================
      Keyframe Animations
      ============================================ */
-
-  @keyframes ant-crawl-in {
-    0% {
-      left: var(--start-x);
-      top: var(--start-y);
-      opacity: 0;
-    }
-    10% {
-      opacity: 1;
-    }
-    100% {
-      left: var(--end-x);
-      top: var(--end-y);
-      opacity: 1;
-    }
-  }
-
-  @keyframes ant-idle {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
-  }
-
-  @keyframes ant-crawl-out {
-    0% {
-      left: var(--end-x);
-      top: var(--end-y);
-      opacity: 1;
-    }
-    90% {
-      opacity: 1;
-    }
-    100% {
-      left: var(--exit-x);
-      top: var(--exit-y);
-      opacity: 0;
-    }
-  }
-
-  @keyframes egg-settle {
-    0% {
-      transform: translate(-50%, -50%) scale(0.3);
-      opacity: 0;
-    }
-    60% {
-      transform: translate(-50%, -50%) scale(1.1);
-      opacity: 1;
-    }
-    100% {
-      transform: translate(-50%, -50%) scale(1);
-      opacity: 1;
-    }
-  }
-
-  @keyframes egg-shake {
-    0%   { transform: translate(-50%, -50%) rotate(0deg); }
-    10%  { transform: translate(-50%, -50%) rotate(3deg); }
-    20%  { transform: translate(-50%, -50%) rotate(-3deg); }
-    30%  { transform: translate(-50%, -50%) rotate(5deg); }
-    40%  { transform: translate(-50%, -50%) rotate(-5deg); }
-    50%  { transform: translate(-50%, -50%) rotate(8deg); }
-    60%  { transform: translate(-50%, -50%) rotate(-8deg); }
-    70%  { transform: translate(-50%, -50%) rotate(10deg); }
-    80%  { transform: translate(-50%, -50%) rotate(-10deg); }
-    85%  { transform: translate(-50%, -50%) rotate(12deg); }
-    90%  { transform: translate(-50%, -50%) rotate(-12deg); }
-    95%  { transform: translate(-50%, -50%) rotate(0deg) scale(1.1); }
-    100% { transform: translate(-50%, -50%) rotate(0deg) scale(1.15); }
-  }
-
-  @keyframes egg-crack {
-    0% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.6;
-      transform: scale(1.2);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(1.5);
-    }
-  }
-
-  @keyframes chick-emerge {
-    0% {
-      transform: translate(-50%, -50%) scale(0);
-      opacity: 0;
-    }
-    50% {
-      transform: translate(-50%, -50%) scale(1.3);
-      opacity: 1;
-    }
-    70% {
-      transform: translate(-50%, -50%) scale(0.9);
-    }
-    100% {
-      transform: translate(-50%, -50%) scale(1);
-      opacity: 1;
-    }
-  }
 
   @keyframes card-container-fade {
     from { opacity: 0; }
@@ -752,18 +601,18 @@
 
   @keyframes card-rise-in {
     0% {
-      transform: scale(0.3) rotateY(30deg);
+      transform: scale(0.3) rotateY(30deg) translateY(40px);
       opacity: 0;
     }
     60% {
-      transform: scale(1.05) rotateY(-5deg);
+      transform: scale(1.05) rotateY(-5deg) translateY(-8px);
       opacity: 1;
     }
     80% {
-      transform: scale(0.98) rotateY(2deg);
+      transform: scale(0.98) rotateY(2deg) translateY(2px);
     }
     100% {
-      transform: scale(1) rotateY(0deg);
+      transform: scale(1) rotateY(0deg) translateY(0);
       opacity: 1;
     }
   }
@@ -785,11 +634,6 @@
     }
   }
 
-  @keyframes holo-bg-shift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-
   @keyframes stat-fill-anim {
     from { width: 0%; }
     to { width: var(--target-width); }
@@ -806,7 +650,6 @@
     }
   }
 
-  /* Register custom property for conic gradient animation */
   @property --holo-angle {
     syntax: '<angle>';
     initial-value: 0deg;
@@ -819,16 +662,13 @@
   @media (prefers-reduced-motion: reduce) {
     .soul-card,
     .card-content *,
-    .enter-colony-btn,
+    .greet-btn,
     .card-reveal-container {
       animation-duration: 0.01s !important;
       animation-delay: 0s !important;
     }
 
-    .soul-card::before {
-      animation: none;
-    }
-
+    .soul-card::before,
     .holo-overlay {
       animation: none;
     }
@@ -836,6 +676,10 @@
     .stat-bar-fill {
       animation-duration: 0.01s !important;
       animation-delay: 0s !important;
+    }
+
+    .hatching-canvas {
+      transition-duration: 0.01s !important;
     }
   }
 </style>
