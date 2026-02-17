@@ -65,6 +65,8 @@
   let isFirstLogin = $state(false) // true when entering dashboard from hatching (first boot)
   let welcomeSent = $state(false) // prevents re-triggering welcome on re-renders
   let welcomeTimerId = $state(null) // setTimeout ID for deferred welcome trigger
+  let restartSent = $state(false) // prevents re-triggering restart message on re-renders
+  let restartTimerId = $state(null) // setTimeout ID for deferred restart trigger
   let ownerName = $state('') // owner display name from FRIEND.md (empty = not yet set)
   let agentName = $state('') // agent display name from IDENTITY.md (empty = defaults to 'Tiny Claw')
   let agentEmoji = $state('') // agent emoji from IDENTITY.md (empty = defaults to '🐜')
@@ -249,6 +251,7 @@
       clearInterval(interval)
       clearInterval(bgInterval)
       if (welcomeTimerId) clearTimeout(welcomeTimerId)
+      if (restartTimerId) clearTimeout(restartTimerId)
       window.removeEventListener('popstate', handlePopstate)
       mql.removeEventListener('change', handleBreakpoint)
     }
@@ -279,7 +282,15 @@
       if (res.ok) {
         const data = await res.json()
         status = 'online'
-        if (data.startedAt) botStartedAt = data.startedAt
+        if (data.startedAt) {
+          const previousStartedAt = botStartedAt
+          botStartedAt = data.startedAt
+          // Detect restart: if we had a previous startedAt and it changed, the server restarted
+          if (previousStartedAt && data.startedAt !== previousStartedAt && view === 'owner' && !isStreaming) {
+            if (restartTimerId) clearTimeout(restartTimerId)
+            restartTimerId = setTimeout(() => triggerRestartMessage(), 800)
+          }
+        }
       } else {
         status = 'offline'
       }
@@ -516,6 +527,84 @@
     updateMessage(assistantMessage.id, { streaming: false })
     isStreaming = false
     isFirstLogin = false
+    scrollToBottom()
+  }
+
+  /** Stream a proactive restart message from the AI agent when the server comes back. */
+  async function triggerRestartMessage() {
+    if (restartSent || isStreaming || view !== 'owner') return
+    restartSent = true
+
+    const assistantMessage = {
+      id: createId(),
+      role: 'assistant',
+      content: '',
+      streaming: true,
+      timestamp: getTimestamp(),
+      delegationEvents: []
+    }
+    messages = [...messages, assistantMessage]
+    isStreaming = true
+    isUsingTools = false
+
+    await tick()
+    scrollToBottom()
+
+    try {
+      const response = await fetch('/api/chat/restart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream, application/json'
+        },
+        body: JSON.stringify({})
+      })
+
+      if (!response.ok) {
+        throw new Error(`Restart message request failed with ${response.status}`)
+      }
+
+      const contentType = response.headers.get('content-type') || ''
+
+      if (response.body && contentType.includes('text/event-stream')) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { value, done } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          let boundaryIndex = buffer.indexOf('\n\n')
+
+          while (boundaryIndex !== -1) {
+            const chunk = buffer.slice(0, boundaryIndex).trim()
+            buffer = buffer.slice(boundaryIndex + 2)
+            if (chunk) parseSseChunk(chunk, assistantMessage.id)
+            boundaryIndex = buffer.indexOf('\n\n')
+          }
+
+          await tick()
+          scrollToBottom()
+        }
+
+        if (buffer.trim()) {
+          parseSseChunk(buffer.trim(), assistantMessage.id)
+        }
+      }
+    } catch (error) {
+      console.warn('Restart message failed:', error)
+      const name = agentName || 'Tiny Claw'
+      const emoji = agentEmoji || '🐜'
+      updateMessage(assistantMessage.id, {
+        content: `Hey! ${name} ${emoji} here — I just restarted and I'm back online. Ready to help!`,
+        streaming: false
+      })
+    }
+
+    updateMessage(assistantMessage.id, { streaming: false })
+    isStreaming = false
     scrollToBottom()
   }
 

@@ -1173,6 +1173,90 @@ export function createWebUI(config) {
             return jsonResponse({ error: 'Streaming not available' }, 500)
           }
 
+          // Restart message — AI proactively informs the owner it's back after a server restart
+          if (pathname === '/api/chat/restart' && request.method === 'POST') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+
+            const userId = configManager?.get<string>('owner.ownerId') || 'web:owner'
+
+            // Build a restart-aware prompt
+            const seed = configManager?.get<number>('heartware.seed')
+            let soulContext = ''
+            if (seed != null) {
+              const traits = generateSoulTraits(seed)
+              const name = traits.character?.suggestedName || 'Tiny Claw'
+              soulContext = ` Your name is ${name}. Your signature emoji is ${traits.character?.signatureEmoji || '🐜'}.`
+            }
+
+            const restartPrompt =
+              `[SYSTEM: This is a special proactive message. You have just restarted and are back online.${soulContext} ` +
+              `Let your owner know you're back! Be brief and cheerful — just a short "I'm back" style message. ` +
+              `You can mention you might have been updated or restarted, and that you're ready to help. ` +
+              `Keep it to 1-2 sentences. Do NOT use any tools. Just greet them naturally.]`
+
+            if (onMessageStream) {
+              const stream = new ReadableStream({
+                start(controller) {
+                  let isClosed = false
+
+                  const heartbeat = setInterval(() => {
+                    if (isClosed) { clearInterval(heartbeat); return }
+                    try {
+                      controller.enqueue(textEncoder.encode(': heartbeat\n\n'))
+                    } catch {
+                      clearInterval(heartbeat)
+                    }
+                  }, 8_000)
+
+                  const send = (payload) => {
+                    if (isClosed) return
+                    try {
+                      const data = typeof payload === 'string' ? payload : JSON.stringify(payload)
+                      controller.enqueue(textEncoder.encode(`data: ${data}\n\n`))
+                      if (typeof payload === 'object' && payload?.type === 'done') {
+                        isClosed = true
+                        clearInterval(heartbeat)
+                        controller.close()
+                      }
+                    } catch {
+                      isClosed = true
+                      clearInterval(heartbeat)
+                    }
+                  }
+
+                  onMessageStream(restartPrompt, userId, send)
+                    .then(() => {
+                      if (!isClosed) {
+                        isClosed = true
+                        clearInterval(heartbeat)
+                        try { controller.close() } catch {}
+                      }
+                    })
+                    .catch((error) => {
+                      if (!isClosed) {
+                        send({ type: 'error', error: error?.message || 'Restart message failed.' })
+                        isClosed = true
+                        clearInterval(heartbeat)
+                        try { controller.close() } catch {}
+                      }
+                    })
+                }
+              })
+
+              return new Response(stream, {
+                headers: {
+                  'Content-Type': 'text/event-stream',
+                  'Cache-Control': 'no-cache',
+                  Connection: 'keep-alive'
+                }
+              })
+            }
+
+            return jsonResponse({ error: 'Streaming not available' }, 500)
+          }
+
           if (pathname === '/api/chat' && request.method === 'POST') {
             if (!await isOwnerRequest(request)) {
               return jsonResponse({ error: 'Unauthorized' }, 401)
