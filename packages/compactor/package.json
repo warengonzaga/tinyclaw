@@ -1,14 +1,24 @@
 {
   "name": "@tinyclaw/compactor",
-  "version": "0.0.1",
-  "description": "Context compaction engine for Tiny Claw",
-  "license": "MIT",
-  "private": true,
+  "version": "1.0.0",
+  "description": "Layered conversation compaction and token optimization for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "files": [
     "dist"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "packages/compactor"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/packages/compactor#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "context", "compaction", "compression"],
   "engines": {
     "node": ">=18"
   },

@@ -1,9 +1,22 @@
 {
   "name": "@tinyclaw/shell",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "Controlled shell execution with permission engine for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "packages/shell"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/packages/shell#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "shell", "command-execution"],
   "dependencies": {
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/logger": "workspace:*"

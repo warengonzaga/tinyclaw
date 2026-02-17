@@ -1,7 +1,20 @@
 {
   "name": "@tinyclaw/matcher",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "Hybrid semantic text matching engine for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "packages/matcher"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/packages/matcher#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "text-matching", "semantic", "fuzzy"]
 }

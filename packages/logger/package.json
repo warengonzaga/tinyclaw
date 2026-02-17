@@ -1,9 +1,22 @@
 {
   "name": "@tinyclaw/logger",
   "version": "1.0.0",
+  "description": "Context-aware structured logging for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "packages/logger"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/packages/logger#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "logging", "structured-logging"],
   "dependencies": {
     "@wgtechlabs/log-engine": "^2.3.0"
   }

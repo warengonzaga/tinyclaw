@@ -1,7 +1,10 @@
 {
-  "name": "@tinyclaw/ui",
+  "name": "@tinyclaw/web",
   "private": true,
   "version": "1.0.0",
+  "description": "Web user interface for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "./src/server.ts",
   "exports": {

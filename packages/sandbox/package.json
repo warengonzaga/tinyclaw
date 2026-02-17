@@ -1,7 +1,20 @@
 {
   "name": "@tinyclaw/sandbox",
   "version": "1.0.0",
+  "description": "Lightweight sandboxed code execution for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "packages/sandbox"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/packages/sandbox#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "sandbox", "code-execution", "isolation"]
 }

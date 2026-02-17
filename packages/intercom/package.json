@@ -1,7 +1,20 @@
 {
   "name": "@tinyclaw/intercom",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "Lightweight pub/sub event bus for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "src/index.ts",
-  "types": "src/index.ts"
+  "types": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "packages/intercom"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/packages/intercom#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "pubsub", "events", "inter-agent"]
 }

@@ -1,9 +1,22 @@
 {
   "name": "@tinyclaw/router",
   "version": "1.0.0",
+  "description": "Multi-provider LLM routing and query classification for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "packages/router"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/packages/router#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "routing", "llm", "multi-provider"],
   "dependencies": {
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/logger": "workspace:*"

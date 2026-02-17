@@ -1,12 +1,23 @@
 {
   "name": "@tinyclaw/plugin-provider-openai",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "OpenAI provider plugin for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
-  "description": "OpenAI provider plugin for Tiny Claw",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "plugins/provider/plugin-provider-openai"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/plugins/provider/plugin-provider-openai#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
   "keywords": ["tinyclaw", "plugin", "provider", "openai"],
   "dependencies": {
     "@tinyclaw/logger": "workspace:*",

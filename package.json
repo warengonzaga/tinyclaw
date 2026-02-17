@@ -1,6 +1,9 @@
 {
   "name": "tinyclaw-monorepo",
   "version": "1.0.0",
+  "description": "Your autonomous AI companion",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "private": true,
   "workspaces": [
     "packages/*",

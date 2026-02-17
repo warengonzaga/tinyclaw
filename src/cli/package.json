@@ -1,10 +1,23 @@
 {
   "name": "tinyclaw",
   "version": "1.0.0",
+  "description": "Command-line interface for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "bin": {
     "tinyclaw": "./dist/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "src/cli"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "ai", "agent", "cli", "companion"],
   "scripts": {
     "build": "bun build src/index.ts --outdir ./dist --target bun",
     "dev": "bun run --watch src/index.ts",
@@ -32,7 +45,7 @@
     "@tinyclaw/shell": "workspace:*",
     "@tinyclaw/shield": "workspace:*",
     "@tinyclaw/types": "workspace:*",
-    "@tinyclaw/ui": "workspace:*",
+    "@tinyclaw/web": "workspace:*",
     "@wgtechlabs/log-engine": "^2.3.0",
     "figlet": "^1.10.0",
     "picocolors": "^1.1.1",

@@ -1,12 +1,23 @@
 {
   "name": "@tinyclaw/plugin-channel-friends",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Friends web chat channel plugin for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
-  "description": "Friends web chat channel plugin for Tiny Claw — invite-based public chat",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "plugins/channel/plugin-channel-friends"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/plugins/channel/plugin-channel-friends#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
   "keywords": ["tinyclaw", "plugin", "channel", "friends", "chat"],
   "dependencies": {
     "@tinyclaw/logger": "workspace:*",

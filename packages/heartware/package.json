@@ -1,9 +1,22 @@
 {
   "name": "@tinyclaw/heartware",
   "version": "1.0.0",
+  "description": "Personality and self-configuration system for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "packages/heartware"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/packages/heartware#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": ["tinyclaw", "personality", "self-configuration"],
   "dependencies": {
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/logger": "workspace:*"
