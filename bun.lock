@@ -15,7 +15,7 @@
     },
     "packages/compactor": {
       "name": "@tinyclaw/compactor",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -50,7 +50,7 @@
     },
     "packages/delegation": {
       "name": "@tinyclaw/delegation",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/router": "workspace:*",
@@ -72,7 +72,7 @@
     },
     "packages/intercom": {
       "name": "@tinyclaw/intercom",
-      "version": "0.0.1",
+      "version": "1.0.0",
     },
     "packages/learning": {
       "name": "@tinyclaw/learning",
@@ -90,7 +90,7 @@
     },
     "packages/matcher": {
       "name": "@tinyclaw/matcher",
-      "version": "0.0.1",
+      "version": "1.0.0",
     },
     "packages/memory": {
       "name": "@tinyclaw/memory",
@@ -104,7 +104,7 @@
     },
     "packages/plugins": {
       "name": "@tinyclaw/plugins",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -112,7 +112,7 @@
     },
     "packages/pulse": {
       "name": "@tinyclaw/pulse",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -120,7 +120,7 @@
     },
     "packages/queue": {
       "name": "@tinyclaw/queue",
-      "version": "0.0.1",
+      "version": "1.0.0",
     },
     "packages/router": {
       "name": "@tinyclaw/router",
@@ -145,7 +145,7 @@
     },
     "packages/shell": {
       "name": "@tinyclaw/shell",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -153,7 +153,7 @@
     },
     "packages/shield": {
       "name": "@tinyclaw/shield",
-      "version": "0.0.1",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -165,7 +165,7 @@
     },
     "plugins/channel/plugin-channel-discord": {
       "name": "@tinyclaw/plugin-channel-discord",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -174,7 +174,7 @@
     },
     "plugins/channel/plugin-channel-friends": {
       "name": "@tinyclaw/plugin-channel-friends",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -182,7 +182,7 @@
     },
     "plugins/provider/plugin-provider-openai": {
       "name": "@tinyclaw/plugin-provider-openai",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -215,7 +215,7 @@
         "@tinyclaw/shell": "workspace:*",
         "@tinyclaw/shield": "workspace:*",
         "@tinyclaw/types": "workspace:*",
-        "@tinyclaw/ui": "workspace:*",
+        "@tinyclaw/web": "workspace:*",
         "@wgtechlabs/log-engine": "^2.3.0",
         "figlet": "^1.10.0",
         "picocolors": "^1.1.1",
@@ -227,7 +227,7 @@
       },
     },
     "src/web": {
-      "name": "@tinyclaw/ui",
+      "name": "@tinyclaw/web",
       "version": "1.0.0",
       "dependencies": {
         "@tinyclaw/core": "workspace:*",
@@ -465,7 +465,7 @@
 
     "@tinyclaw/types": ["@tinyclaw/types@workspace:packages/types"],
 
-    "@tinyclaw/ui": ["@tinyclaw/ui@workspace:src/web"],
+    "@tinyclaw/web": ["@tinyclaw/web@workspace:src/web"],
 
     "@types/bun": ["@types/bun@1.3.8", "", { "dependencies": { "bun-types": "1.3.8" } }, "sha512-3LvWJ2q5GerAXYxO2mffLTqOzEu5qnhEAlh48Vnu8WQfnmSwbgagjGZV6BoHKJztENYEDn6QmVd949W4uESRJA=="],
 
