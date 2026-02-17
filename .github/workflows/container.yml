@@ -5,6 +5,8 @@ on:
     branches: [main, dev]
   push:
     branches: [main, dev]
+  release:
+    types: [published]
 
 permissions:
   contents: read
