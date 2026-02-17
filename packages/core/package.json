@@ -6,7 +6,8 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./messages": "./src/messages.ts"
+    "./messages": "./src/messages.ts",
+    "./owner-auth": "./src/owner-auth.ts"
   },
   "scripts": {
     "build": "bun build src/index.ts --outdir ./dist --target bun",

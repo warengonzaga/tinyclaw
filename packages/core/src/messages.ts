@@ -23,6 +23,10 @@ export const SECURITY_WARNING_BODY =
   'A malicious or poorly crafted prompt could trick the agent into ' +
   'performing unintended or harmful operations.'
 
+export const SECURITY_LICENSE =
+  'This software is licensed under the GNU General Public License v3.0 (GPLv3). ' +
+  'You are free to use, modify, and distribute it under the terms of that license.'
+
 export const SECURITY_WARRANTY =
   'This software is provided "AS IS", without warranty of any kind. ' +
   'The authors and contributors are not liable for any damages, data loss, ' +
@@ -59,3 +63,26 @@ export function defaultModelNote(modelTag: string): string {
     'during a conversation (e.g. "switch to gpt-oss:120b-cloud").'
   )
 }
+
+// ---------------------------------------------------------------------------
+// TOTP setup
+// ---------------------------------------------------------------------------
+
+export const TOTP_SETUP_TITLE = 'Set up TOTP'
+
+export const TOTP_SETUP_BODY =
+  'Add this key in your authenticator app, then enter the code it generates.'
+
+// ---------------------------------------------------------------------------
+// Backup codes & recovery
+// ---------------------------------------------------------------------------
+
+export const BACKUP_CODES_INTRO =
+  'Save these backup codes and your recovery token now. ' +
+  'You will need both to recover access if you lose your authenticator.'
+
+export const BACKUP_CODES_HINT =
+  'Each backup code can only be used once. Keep them in a secure place separate from your authenticator.'
+
+export const RECOVERY_TOKEN_HINT =
+  'Go to /recovery and enter this token to start the recovery process.'
