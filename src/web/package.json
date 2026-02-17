@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:hatching": "vite --open /preview-hatching.html",
     "build": "vite build",
     "preview": "vite preview",
     "test": "bun test"

@@ -868,9 +868,10 @@ export function createHatchingScene(canvas, callbacks = {}) {
   }
 
   function loop(ts) {
-    if (destroyed) return
+    if (destroyed || paused) return
     if (!startTs) { startTs = ts; prevTs = ts }
-    const elapsed = (ts - startTs) / 1000
+    const adjustedTs = ts - pausedTotal
+    const elapsed = (adjustedTs - startTs) / 1000
     const dt = Math.min((ts - prevTs) / 1000, 0.05) // cap delta
     prevTs = ts
 
@@ -932,5 +933,59 @@ export function createHatchingScene(canvas, callbacks = {}) {
     window.removeEventListener('resize', onResize)
   }
 
-  return { start, destroy }
+  // ─── Dev controls ─────────────────────────────────────────
+  let paused = false
+  let pausedAt = 0     // performance.now() when paused
+  let pausedTotal = 0  // accumulated paused ms
+
+  function pause() {
+    if (paused || destroyed) return
+    paused = true
+    pausedAt = performance.now()
+    if (animId) cancelAnimationFrame(animId)
+  }
+
+  function resume() {
+    if (!paused || destroyed) return
+    pausedTotal += performance.now() - pausedAt
+    paused = false
+    animId = requestAnimationFrame(loop)
+  }
+
+  function restart() {
+    destroyed = false
+    paused = false
+    if (animId) cancelAnimationFrame(animId)
+    startTs = 0
+    prevTs = 0
+    currentPhase = 'init'
+    fadeIn = 0
+    sceneFadeOut = 0
+    emittedCrack = false
+    eggPlacedAt = 0
+    egg = null
+    eggCarrier = null
+    particles = new ParticleSystem()
+    pausedTotal = 0
+    pausedAt = 0
+    resize()
+    buildAnts()
+    animId = requestAnimationFrame(loop)
+  }
+
+  function getElapsed() {
+    if (!startTs) return 0
+    const now = paused ? pausedAt : performance.now()
+    return (now - startTs - pausedTotal) / 1000
+  }
+
+  function getPhase() {
+    return currentPhase
+  }
+
+  function isPaused() {
+    return paused
+  }
+
+  return { start, destroy, pause, resume, restart, getElapsed, getPhase, isPaused }
 }
