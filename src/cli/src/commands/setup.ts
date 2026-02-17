@@ -472,10 +472,17 @@ export async function setupCommand(): Promise<void> {
       p.log.warn('Could not access clipboard.');
     }
 
-    await p.confirm({
+    const copyCodesConfirm = await p.confirm({
       message: 'I\'ve saved the recovery token — copy backup codes next',
       initialValue: true,
     });
+
+    // Handle cancellation or "no" — abort early
+    if (p.isCancel(copyCodesConfirm) || !copyCodesConfirm) {
+      p.outro(theme.dim('Setup cancelled — please save your codes before continuing.'));
+      await cleanup(secretsManager, configManager);
+      return;
+    }
 
     // Now copy backup codes
     const codesText = backupCodes.map((c, i) => `${i + 1}. ${c}`).join('\n');
@@ -520,7 +527,7 @@ export async function setupCommand(): Promise<void> {
 
     configManager.set('owner.ownerId', ownerId);
     configManager.set('owner.claimedAt', Date.now());
-    configManager.set('owner.totpSecret', totpSecret);
+    await secretsManager.store('owner.totpSecret', totpSecret);
     configManager.set('owner.backupCodeHashes', backupCodeHashes);
     configManager.set('owner.backupCodesRemaining', backupCodeHashes.length);
     configManager.set('owner.recoveryTokenHash', recoveryTokenHash);
