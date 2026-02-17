@@ -14,8 +14,6 @@
 
 /// <reference lib="webworker" />
 
-declare const self: Worker;
-
 interface WorkerMessage {
   code: string;
   input?: unknown;
