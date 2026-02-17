@@ -383,9 +383,10 @@ async function exportBackup(args: string[]): Promise<void> {
 
 /**
  * Parse a tar buffer and extract entries.
+ * @internal Exported for testing only.
  */
-function parseTar(buffer: Buffer): { name: string; type: 'file' | 'directory'; data: Buffer }[] {
-  const entries: { name: string; type: 'file' | 'directory'; data: Buffer }[] = [];
+export function parseTar(buffer: Buffer): { name: string; type: 'file' | 'directory' | 'symlink' | 'hardlink'; data: Buffer; linkname?: string }[] {
+  const entries: { name: string; type: 'file' | 'directory' | 'symlink' | 'hardlink'; data: Buffer; linkname?: string }[] = [];
   let offset = 0;
 
   while (offset + TAR_BLOCK <= buffer.length) {
@@ -400,13 +401,20 @@ function parseTar(buffer: Buffer): { name: string; type: 'file' | 'directory'; d
 
     // Parse header
     const name = header.subarray(0, 100).toString('utf-8').replace(/\0/g, '');
+    const linkname = header.subarray(157, 257).toString('utf-8').replace(/\0/g, '');
     const sizeStr = header.subarray(124, 136).toString('utf-8').replace(/\0/g, '').trim();
     const size = parseInt(sizeStr, 8) || 0;
     const typeFlag = header.subarray(156, 157).toString('utf-8');
 
     offset += TAR_BLOCK;
 
-    if (typeFlag === '5' || name.endsWith('/')) {
+    if (typeFlag === '2') {
+      // Symbolic link
+      entries.push({ name, type: 'symlink', data: Buffer.alloc(0), linkname });
+    } else if (typeFlag === '1') {
+      // Hard link
+      entries.push({ name, type: 'hardlink', data: Buffer.alloc(0), linkname });
+    } else if (typeFlag === '5' || name.endsWith('/')) {
       entries.push({ name, type: 'directory', data: Buffer.alloc(0) });
     } else {
       const data = buffer.subarray(offset, offset + size);
@@ -534,9 +542,9 @@ async function importBackup(args: string[]): Promise<void> {
   for (const entry of entries) {
     if (entry.name === 'manifest.json') continue;
 
-    // Path traversal protection: reject absolute paths, symlinks, and '..' segments
-    if (entry.type === 'symlink') {
-      errors.push(`${entry.name}: skipped (symlink)`);
+    // Path traversal protection: reject absolute paths, symlinks, hardlinks, and '..' segments
+    if (entry.type === 'symlink' || entry.type === 'hardlink') {
+      errors.push(`${entry.name}: skipped (${entry.type})`);
       continue;
     }
 
