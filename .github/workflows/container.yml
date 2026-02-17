@@ -31,5 +31,5 @@ jobs:
           dockerhub-token: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
           ghcr-token: ${{ secrets.GITHUB_TOKEN }}
           platforms: linux/amd64,linux/arm64
-          trivy-severity: HIGH,CRITICAL
-          fail-on-vulnerability: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}
+          trivy-severity: CRITICAL
+          fail-on-vulnerability: true
