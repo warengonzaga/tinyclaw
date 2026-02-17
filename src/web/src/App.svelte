@@ -84,6 +84,61 @@
   let reenrollBackupCodes = $state([])
   let reenrollRecoveryToken = $state('')
 
+  // Copy/download feedback state
+  let copiedRecoveryToken = $state(false)
+  let copiedBackupCodes = $state(false)
+  let copiedReenrollRecoveryToken = $state(false)
+  let copiedReenrollBackupCodes = $state(false)
+
+  async function copyToClipboard(text, flagSetter) {
+    try {
+      await navigator.clipboard.writeText(text)
+      flagSetter(true)
+      setTimeout(() => flagSetter(false), 2000)
+    } catch {
+      // Fallback for older browsers
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      flagSetter(true)
+      setTimeout(() => flagSetter(false), 2000)
+    }
+  }
+
+  function downloadCredentials(recoveryToken, backupCodes) {
+    const lines = [
+      'Tiny Claw — Recovery Credentials',
+      '=================================',
+      '',
+      'RECOVERY TOKEN',
+      '──────────────',
+      recoveryToken,
+      '',
+      'BACKUP CODES',
+      '────────────',
+      ...backupCodes.map((code, i) => `${i + 1}. ${code}`),
+      '',
+      '─────────────────────────────────',
+      'Store this file in a secure location.',
+      'Each backup code can only be used once.',
+      `Generated: ${new Date().toISOString()}`,
+    ]
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'tinyclaw-recovery-credentials.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   // View: 'loading' | 'setup' | 'login' | 'recovery' | 'owner'
   // Owner dashboard is the default authenticated view
   let view = $derived(
@@ -1205,13 +1260,29 @@
         </p>
 
         <div class="w-full p-4 rounded-lg bg-bg-secondary border border-brand/30 text-left mb-4">
-          <p class="text-xs text-brand font-semibold uppercase tracking-wider mb-2">Recovery Token</p>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-brand font-semibold uppercase tracking-wider">Recovery Token</p>
+            <button
+              onclick={() => copyToClipboard(setupRecoveryToken, v => copiedRecoveryToken = v)}
+              class="text-xs px-2 py-1 rounded transition-colors {copiedRecoveryToken ? 'bg-green/20 text-green' : 'bg-bg-primary text-text-muted hover:text-text-normal hover:bg-bg-modifier-active'}"
+            >
+              {copiedRecoveryToken ? '✓ Copied' : 'Copy'}
+            </button>
+          </div>
           <div class="text-sm font-mono text-text-normal break-all select-all bg-bg-primary px-3 py-2 rounded">{setupRecoveryToken}</div>
           <p class="text-xs text-text-muted mt-2">{RECOVERY_TOKEN_HINT}</p>
         </div>
 
         <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4 max-h-72 overflow-y-auto">
-          <p class="text-xs text-text-muted font-semibold uppercase tracking-wider mb-2">Backup Codes</p>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-text-muted font-semibold uppercase tracking-wider">Backup Codes</p>
+            <button
+              onclick={() => copyToClipboard(setupBackupCodes.map((c, i) => `${i + 1}. ${c}`).join('\n'), v => copiedBackupCodes = v)}
+              class="text-xs px-2 py-1 rounded transition-colors {copiedBackupCodes ? 'bg-green/20 text-green' : 'bg-bg-primary text-text-muted hover:text-text-normal hover:bg-bg-modifier-active'}"
+            >
+              {copiedBackupCodes ? '✓ Copied' : 'Copy'}
+            </button>
+          </div>
           {#each setupBackupCodes as code, idx}
             <div class="text-sm font-mono text-text-normal py-1">{idx + 1}. {code}</div>
           {/each}
@@ -1221,13 +1292,22 @@
           {BACKUP_CODES_HINT}
         </p>
 
-        <button
-          onclick={finishSetupAndEnter}
-          disabled={setupRestarting}
-          class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          I stored my recovery token and backup codes
-        </button>
+        <div class="w-full flex flex-col gap-2">
+          <button
+            onclick={() => downloadCredentials(setupRecoveryToken, setupBackupCodes)}
+            class="w-full px-5 py-3 bg-bg-secondary text-text-normal rounded-lg font-medium text-sm transition-colors hover:bg-bg-modifier-active border border-bg-modifier-active"
+          >
+            ⬇ Download recovery credentials
+          </button>
+
+          <button
+            onclick={finishSetupAndEnter}
+            disabled={setupRestarting}
+            class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            I stored my recovery token and backup codes
+          </button>
+        </div>
         {/if}
       {/if}
     </div>
@@ -1378,13 +1458,29 @@
         </p>
 
         <div class="w-full p-4 rounded-lg bg-bg-secondary border border-brand/30 text-left mb-4">
-          <p class="text-xs text-brand font-semibold uppercase tracking-wider mb-2">Recovery Token</p>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-brand font-semibold uppercase tracking-wider">Recovery Token</p>
+            <button
+              onclick={() => copyToClipboard(reenrollRecoveryToken, v => copiedReenrollRecoveryToken = v)}
+              class="text-xs px-2 py-1 rounded transition-colors {copiedReenrollRecoveryToken ? 'bg-green/20 text-green' : 'bg-bg-primary text-text-muted hover:text-text-normal hover:bg-bg-modifier-active'}"
+            >
+              {copiedReenrollRecoveryToken ? '✓ Copied' : 'Copy'}
+            </button>
+          </div>
           <div class="text-sm font-mono text-text-normal break-all select-all bg-bg-primary px-3 py-2 rounded">{reenrollRecoveryToken}</div>
           <p class="text-xs text-text-muted mt-2">Go to <span class="text-brand font-mono">/recovery</span> and enter this token to start the recovery process.</p>
         </div>
 
         <div class="w-full p-4 rounded-lg bg-bg-secondary border border-bg-modifier-active text-left mb-4 max-h-72 overflow-y-auto">
-          <p class="text-xs text-text-muted font-semibold uppercase tracking-wider mb-2">Backup Codes</p>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-text-muted font-semibold uppercase tracking-wider">Backup Codes</p>
+            <button
+              onclick={() => copyToClipboard(reenrollBackupCodes.map((c, i) => `${i + 1}. ${c}`).join('\n'), v => copiedReenrollBackupCodes = v)}
+              class="text-xs px-2 py-1 rounded transition-colors {copiedReenrollBackupCodes ? 'bg-green/20 text-green' : 'bg-bg-primary text-text-muted hover:text-text-normal hover:bg-bg-modifier-active'}"
+            >
+              {copiedReenrollBackupCodes ? '✓ Copied' : 'Copy'}
+            </button>
+          </div>
           {#each reenrollBackupCodes as code, idx}
             <div class="text-sm font-mono text-text-normal py-1">{idx + 1}. {code}</div>
           {/each}
@@ -1394,12 +1490,21 @@
           Each backup code can only be used once. Your old codes are no longer valid.
         </p>
 
-        <button
-          onclick={finishReenrollAndEnter}
-          class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80"
-        >
-          I stored my recovery token and backup codes
-        </button>
+        <div class="w-full flex flex-col gap-2">
+          <button
+            onclick={() => downloadCredentials(reenrollRecoveryToken, reenrollBackupCodes)}
+            class="w-full px-5 py-3 bg-bg-secondary text-text-normal rounded-lg font-medium text-sm transition-colors hover:bg-bg-modifier-active border border-bg-modifier-active"
+          >
+            ⬇ Download recovery credentials
+          </button>
+
+          <button
+            onclick={finishReenrollAndEnter}
+            class="w-full px-5 py-3 bg-brand text-white rounded-lg font-medium text-sm transition-colors hover:bg-brand/80"
+          >
+            I stored my recovery token and backup codes
+          </button>
+        </div>
 
       {:else if recoveryPhase === 'token'}
         <h1 class="text-2xl font-bold text-text-normal mb-2">Account Recovery</h1>
