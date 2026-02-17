@@ -1,0 +1,85 @@
+/**
+ * Web Setup Command
+ *
+ * Launches a setup-only web server at /setup for browser-based onboarding.
+ * Once the owner completes setup, the web server stops and the agent
+ * starts automatically via the supervisor restart mechanism.
+ */
+
+import { join } from 'path';
+import { homedir } from 'os';
+import { logger, setLogMode } from '@tinyclaw/logger';
+import { SecretsManager } from '@tinyclaw/secrets';
+import { ConfigManager } from '@tinyclaw/config';
+import { createWebUI } from '@tinyclaw/ui';
+import type { StreamCallback } from '@tinyclaw/types';
+import { theme } from '../ui/theme.js';
+import { RESTART_EXIT_CODE } from '../supervisor.js';
+
+/**
+ * Run the web-based setup flow.
+ *
+ * Starts a minimal web server that serves only the /setup page.
+ * When the owner completes setup, the process exits with RESTART_EXIT_CODE
+ * so the supervisor respawns it as a normal `start` — this time with all
+ * config in place, so the agent boots fully.
+ */
+export async function webSetupCommand(): Promise<void> {
+  setLogMode('info');
+
+  logger.log('Tiny Claw — Small agent, mighty friend', undefined, { emoji: '🐜' });
+
+  const dataDir = process.env.TINYCLAW_DATA_DIR || join(homedir(), '.tinyclaw');
+  logger.info('Data directory:', { dataDir }, { emoji: '📂' });
+
+  // --- Initialize engines -----------------------------------------------
+
+  const secretsManager = await SecretsManager.create();
+  logger.info('Secrets engine initialized', {
+    storagePath: secretsManager.storagePath,
+  }, { emoji: '✅' });
+
+  const configManager = await ConfigManager.create();
+  logger.info('Config engine initialized', { configPath: configManager.path }, { emoji: '✅' });
+
+  // --- Launch setup-only web server -------------------------------------
+
+  const port = parseInt(process.env.PORT || '3000', 10);
+  const setupOnlyMessage =
+    'Tiny Claw setup is not complete yet. Open /setup to finish onboarding, or run tinyclaw setup in the CLI.';
+
+  logger.info('─'.repeat(52), undefined, { emoji: '' });
+  logger.info('Web setup mode enabled (--web)', undefined, { emoji: '⚠️' });
+  logger.info('─'.repeat(52), undefined, { emoji: '' });
+
+  const setupWebUI = createWebUI({
+    port,
+    configManager,
+    secretsManager,
+    configDbPath: configManager.path,
+    dataDir,
+    onOwnerClaimed: (ownerId: string) => {
+      logger.info('Owner claimed via web setup flow', { ownerId }, { emoji: '🔑' });
+      logger.info('Setup complete — starting Tiny Claw agent...', undefined, { emoji: '🚀' });
+
+      // Clean up managers before restart
+      try { configManager.close(); } catch { /* ignore */ }
+      secretsManager.close().catch(() => {}).finally(() => {
+        // Exit with restart code so the supervisor respawns as a normal start
+        process.exit(RESTART_EXIT_CODE);
+      });
+    },
+    onMessage: async () => setupOnlyMessage,
+    onMessageStream: async (_message: string, _userId: string, callback: StreamCallback) => {
+      callback({ type: 'text', content: setupOnlyMessage });
+      callback({ type: 'done' });
+    },
+    getBackgroundTasks: () => [],
+    getSubAgents: () => [],
+  });
+
+  await setupWebUI.start();
+
+  logger.info('Setup-only web server is running', 'web', { emoji: '🛠️' });
+  logger.info(`Open: ${theme.brand(`http://localhost:${port}/setup`)}`, 'web', { emoji: '🔗' });
+}

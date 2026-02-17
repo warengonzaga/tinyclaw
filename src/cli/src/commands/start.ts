@@ -48,7 +48,6 @@ import { RESTART_EXIT_CODE } from '../supervisor.js';
 export async function startCommand(): Promise<void> {
   // Apply --verbose flag (overrides stored config level)
   const isVerbose = process.argv.includes('--verbose');
-  const forceWebSetup = process.argv.includes('--web');
   if (!isVerbose) {
     // Default to info; config override is applied below after config loads
     setLogMode('info');
@@ -129,50 +128,6 @@ export async function startCommand(): Promise<void> {
     }
   }
 
-  // --- Pre-flight: check for provider API key --------------------------
-
-  const launchSetupOnlyWebMode = async (reason: string): Promise<void> => {
-    const port = parseInt(process.env.PORT || '3000', 10);
-    const setupOnlyMessage =
-      'Tiny Claw setup is not complete yet. Open /setup to finish onboarding, or run tinyclaw setup in the CLI.';
-
-    console.log();
-    console.log(theme.warn(`  ⚠ ${reason}`));
-    console.log('');
-    console.log(`    ${theme.label('Choose your onboarding path:')}`);
-    console.log(`    1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`);
-    console.log(`    2. ${theme.cmd('tinyclaw start --web')} + open ${theme.cmd(`http://localhost:${port}/setup`)} ${theme.dim('(Web setup)')}`);
-    console.log();
-
-    const setupWebUI = createWebUI({
-      port,
-      configManager,
-      secretsManager,
-      configDbPath: configManager.path,
-      dataDir,
-      onOwnerClaimed: (ownerId: string) => {
-        logger.info('Owner claimed via web setup flow', { ownerId }, { emoji: '🔑' });
-      },
-      onMessage: async () => setupOnlyMessage,
-      onMessageStream: async (_message: string, _userId: string, callback: StreamCallback) => {
-        callback({ type: 'text', content: setupOnlyMessage });
-        callback({ type: 'done' });
-      },
-      getBackgroundTasks: () => [],
-      getSubAgents: () => [],
-    });
-
-    await setupWebUI.start();
-
-    logger.log('Setup-only web server is running', undefined, { emoji: '🛠️' });
-    logger.log(`   Open: http://localhost:${port}/setup`);
-  };
-
-  if (forceWebSetup) {
-    await launchSetupOnlyWebMode('Web setup mode enabled (--web).');
-    return;
-  }
-
   // --- Pre-flight: validate that setup has been completed ---------------
   // Check for API key, soul seed, and owner authority config. All three
   // must be present for the agent to run. After a purge, the config DB
@@ -191,15 +146,13 @@ export async function startCommand(): Promise<void> {
     if (!hasOwnerAuth) missing.push('owner authentication');
 
     const reason = `Setup not completed yet — missing: ${missing.join(', ')}.`;
-    const port = parseInt(process.env.PORT || '3000', 10);
 
-    console.log();
-    console.log(theme.warn(`  ⚠ ${reason}`));
-    console.log();
-    console.log(`    ${theme.label('Choose your onboarding path:')}`);
-    console.log(`    1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`);
-    console.log(`    2. ${theme.cmd('tinyclaw start --web')} + open ${theme.cmd(`http://localhost:${port}/setup`)} ${theme.dim('(Web setup)')}`);
-    console.log();
+    logger.info('─'.repeat(52), undefined, { emoji: '' });
+    logger.warn(reason, undefined, { emoji: '⚠️' });
+    logger.info('Choose your onboarding path:', undefined, { emoji: '📋' });
+    logger.info(`1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`, undefined, { emoji: '📋' });
+    logger.info(`2. ${theme.cmd('tinyclaw setup --web')} ${theme.dim('(Web setup)')}`, undefined, { emoji: '📋' });
+    logger.info('─'.repeat(52), undefined, { emoji: '' });
 
     // Clean up managers before exiting
     configManager.close();

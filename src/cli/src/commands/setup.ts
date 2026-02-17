@@ -15,6 +15,8 @@
  */
 
 import { execSync } from 'child_process';
+import { join } from 'path';
+import { homedir } from 'os';
 import * as p from '@clack/prompts';
 import QRCode from 'qrcode';
 import { createOllamaProvider } from '@tinyclaw/core';
@@ -46,7 +48,9 @@ import {
   sha256,
   BACKUP_CODES_COUNT,
 } from '@tinyclaw/core';
-import { setLogMode } from '@tinyclaw/logger';
+import { logger, setLogMode } from '@tinyclaw/logger';
+import { createWebUI } from '@tinyclaw/ui';
+import type { StreamCallback } from '@tinyclaw/types';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
 
@@ -82,6 +86,63 @@ async function isAlreadyConfigured(
   secrets: SecretsManager
 ): Promise<boolean> {
   return await secrets.check(buildProviderKeyName('ollama'));
+}
+
+/**
+ * Run the web-based setup flow (--web flag)
+ *
+ * Launches a setup-only web server so the user can complete onboarding
+ * via the browser at /setup instead of the CLI wizard.
+ */
+export async function setupWebCommand(): Promise<void> {
+  setLogMode('info');
+
+  logger.log('Tiny Claw \u2014 Small agent, mighty friend', undefined, { emoji: '\ud83d\udc1c' });
+
+  const dataDir = process.env.TINYCLAW_DATA_DIR || join(homedir(), '.tinyclaw');
+  logger.info('Data directory:', { dataDir }, { emoji: '\ud83d\udcc2' });
+
+  const secretsManager = await SecretsManager.create();
+  logger.info('Secrets engine initialized', {
+    storagePath: secretsManager.storagePath,
+  }, { emoji: '\u2705' });
+
+  const configManager = await ConfigManager.create();
+  logger.info('Config engine initialized', { configPath: configManager.path }, { emoji: '\u2705' });
+
+  const port = parseInt(process.env.PORT || '3000', 10);
+  const setupOnlyMessage =
+    'Tiny Claw setup is not complete yet. Open /setup to finish onboarding, or run tinyclaw setup in the CLI.';
+
+  logger.info('\u2500'.repeat(52), undefined, { emoji: '' });
+  logger.warn('Web setup mode enabled (--web).', undefined, { emoji: '\u26a0\ufe0f' });
+  logger.info('Choose your onboarding path:', undefined, { emoji: '\ud83d\udccb' });
+  logger.info(`1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`, undefined, { emoji: '\ud83d\udccb' });
+  logger.info(`2. ${theme.cmd('tinyclaw setup --web')} ${theme.dim('(Web setup)')}`, undefined, { emoji: '\ud83d\udccb' });
+  logger.info('\u2500'.repeat(52), undefined, { emoji: '' });
+
+  const setupWebUI = createWebUI({
+    port,
+    configManager,
+    secretsManager,
+    configDbPath: configManager.path,
+    dataDir,
+    onOwnerClaimed: (ownerId: string) => {
+      logger.info('Owner claimed via web setup flow', { ownerId }, { emoji: '\ud83d\udd11' });
+    },
+    onMessage: async () => setupOnlyMessage,
+    onMessageStream: async (_message: string, _userId: string, callback: StreamCallback) => {
+      callback({ type: 'text', content: setupOnlyMessage });
+      callback({ type: 'done' });
+    },
+    getBackgroundTasks: () => [],
+    getSubAgents: () => [],
+  });
+
+  await setupWebUI.start();
+
+  logger.info('Setup-only web server is running', 'web', { emoji: '\ud83d\udee0\ufe0f' });
+  logger.info(`Open: ${theme.brand(`http://localhost:${port}/setup`)}`, 'web', { emoji: '\ud83d\udd17' });
 }
 
 /**
