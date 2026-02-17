@@ -28,5 +28,8 @@
   },
   "dependencies": {
     "@wgtechlabs/log-engine": "^2.3.1"
+  },
+  "overrides": {
+    "undici": "6.23.0"
   }
 }
