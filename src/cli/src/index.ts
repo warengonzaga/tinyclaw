@@ -31,6 +31,7 @@ function showHelp(): void {
   console.log(`    ${theme.cmd('start')}    Start the Tiny Claw agent`);
   console.log(`    ${theme.cmd('config')}   Manage models, providers, and settings`);
   console.log(`    ${theme.cmd('seed')}     Show your Tiny Claw's soul seed`);
+  console.log(`    ${theme.cmd('backup')}   Export or import a .tinyclaw backup archive`);
   console.log(`    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`);
   console.log();
   console.log('  ' + theme.label('Options'));
@@ -82,6 +83,12 @@ async function main(): Promise<void> {
     case 'config': {
       const { configCommand } = await import('./commands/config.js');
       await configCommand(args.slice(1));
+      break;
+    }
+
+    case 'backup': {
+      const { backupCommand } = await import('./commands/backup.js');
+      await backupCommand(args.slice(1));
       break;
     }
 
