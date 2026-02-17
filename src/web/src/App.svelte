@@ -158,6 +158,14 @@
       }
     }, 3000)
 
+    // Sync view state on back/forward navigation
+    const handlePopstate = () => {
+      const p = window.location.pathname
+      wantsLogin = p === '/login' && ownerClaimed && !isOwner
+      wantsRecovery = p === '/recovery' && ownerClaimed && !isOwner
+    }
+    window.addEventListener('popstate', handlePopstate)
+
     // Auto-close panel when crossing from desktop → mobile breakpoint
     const mql = window.matchMedia('(min-width: 768px)')
     const handleBreakpoint = (e) => {
@@ -168,6 +176,7 @@
     return () => {
       clearInterval(interval)
       clearInterval(bgInterval)
+      window.removeEventListener('popstate', handlePopstate)
       mql.removeEventListener('change', handleBreakpoint)
     }
   })
