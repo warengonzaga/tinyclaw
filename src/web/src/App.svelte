@@ -918,20 +918,25 @@
   function injectBackgroundResult(task) {
     const agent = subAgents.find(a => a.id === task.agentId)
     const roleName = agent?.role || 'Sub-agent'
+    const succeeded = task.status === 'completed'
+    const fullResult = succeeded
+      ? task.result || 'Task completed successfully.'
+      : task.result || 'Unknown error'
 
     const resultMessage = {
       id: createId(),
       role: 'assistant',
-      content: task.status === 'completed'
-        ? task.result || 'Task completed successfully.'
-        : `The background task failed: ${task.result || 'Unknown error'}`,
+      content: succeeded
+        ? `**${roleName}** has completed the delegated task.`
+        : `**${roleName}** failed to complete the delegated task.`,
       streaming: false,
       timestamp: getTimestamp(),
       delegationEvents: [{
         type: 'result',
         role: roleName,
-        success: task.status === 'completed',
+        success: succeeded,
         task: task.taskDescription,
+        resultContent: fullResult,
         timestamp: getTimestamp()
       }]
     }
@@ -2070,29 +2075,43 @@
                       {/if}
 
                       {#if event.type === 'result'}
-                        <div class="delegation-card flex items-start gap-3 p-3 rounded-lg {event.success ? 'bg-green/10 border border-green/20' : 'bg-red/10 border border-red/20'}">
-                          <div class="flex-shrink-0 w-8 h-8 rounded-full {event.success ? 'bg-green/20' : 'bg-red/20'} flex items-center justify-center">
-                            {#if event.success}
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green">
-                                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
-                              </svg>
-                            {:else}
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-red">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd" />
-                              </svg>
-                            {/if}
-                          </div>
-                          <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2">
-                              <span class="text-sm font-medium {event.success ? 'text-green' : 'text-red'}">
-                                {event.success ? 'Sub-Agent Completed' : 'Sub-Agent Failed'}
-                              </span>
+                        <div class="delegation-card rounded-lg {event.success ? 'bg-green/10 border border-green/20' : 'bg-red/10 border border-red/20'}">
+                          <div class="flex items-start gap-3 p-3">
+                            <div class="flex-shrink-0 w-8 h-8 rounded-full {event.success ? 'bg-green/20' : 'bg-red/20'} flex items-center justify-center">
+                              {#if event.success}
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green">
+                                  <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+                                </svg>
+                              {:else}
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-red">
+                                  <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd" />
+                                </svg>
+                              {/if}
                             </div>
-                            <p class="text-sm text-text-muted mt-0.5">{event.role}</p>
-                            {#if event.task}
-                              <p class="text-xs text-text-muted mt-1 line-clamp-2">{event.task}</p>
-                            {/if}
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium {event.success ? 'text-green' : 'text-red'}">
+                                  {event.success ? 'Sub-Agent Completed' : 'Sub-Agent Failed'}
+                                </span>
+                              </div>
+                              <p class="text-sm text-text-muted mt-0.5">{event.role}</p>
+                              {#if event.task}
+                                <p class="text-xs text-text-muted mt-1 line-clamp-2">{event.task}</p>
+                              {/if}
+                            </div>
                           </div>
+                          {#if event.resultContent}
+                            <details class="delegation-result-details">
+                              <summary class="px-3 py-2 text-xs font-medium cursor-pointer select-none border-t {event.success ? 'border-green/20 text-green/80 hover:text-green' : 'border-red/20 text-red/80 hover:text-red'} transition-colors">
+                                Show full result
+                              </summary>
+                              <div class="px-3 pb-3 pt-1">
+                                <div class="markdown-content text-sm text-text-normal">
+                                  {@html renderMarkdown(event.resultContent)}
+                                </div>
+                              </div>
+                            </details>
+                          {/if}
                         </div>
                       {/if}
 

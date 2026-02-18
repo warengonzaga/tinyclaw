@@ -332,6 +332,32 @@ html, body {
   animation: card-enter 0.3s ease-out;
 }
 
+/* Collapsible delegation result details */
+.delegation-result-details summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.delegation-result-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.delegation-result-details summary::before {
+  content: '▶';
+  font-size: 0.6rem;
+  transition: transform 0.2s ease;
+}
+
+.delegation-result-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.delegation-result-details[open] summary {
+  margin-bottom: 0;
+}
+
 @keyframes card-enter {
   from {
     opacity: 0;
