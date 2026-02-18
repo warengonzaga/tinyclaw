@@ -19,6 +19,8 @@ import {
   DEFAULT_MODEL,
   DEFAULT_BASE_URL,
   BUILTIN_MODEL_TAGS,
+  checkForUpdate,
+  buildUpdateContext,
 } from '@tinyclaw/core';
 import { loadPlugins } from '@tinyclaw/plugins';
 import { createPulseScheduler } from '@tinyclaw/pulse';
@@ -823,6 +825,19 @@ export async function startCommand(): Promise<void> {
   // Load persisted owner ID (if already claimed)
   const persistedOwnerId = configManager.get<string>('owner.ownerId');
 
+  // --- Check for software updates (non-blocking) -------------------------
+
+  let updateContext: string | undefined;
+  try {
+    const { getVersion } = await import('../ui/banner.js');
+    const currentVersion = getVersion();
+    const updateInfo = await checkForUpdate(currentVersion, dataDir);
+    const ctx = buildUpdateContext(updateInfo);
+    if (ctx) updateContext = ctx;
+  } catch (err) {
+    logger.debug('Update check skipped', err);
+  }
+
   const context = {
     db,
     provider: routerDefaultProvider,
@@ -842,6 +857,7 @@ export async function startCommand(): Promise<void> {
     shield,
     compactor,
     ownerId: persistedOwnerId || undefined,
+    updateContext,
   };
 
   // --- Initialize pulse scheduler -----------------------------------------
