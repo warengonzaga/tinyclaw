@@ -88,6 +88,12 @@ mock.module('@tinyclaw/config', () => ({
 // ── Mock @tinyclaw/core ─────────────────────────────────────────────
 
 const mockIsAvailable = mock(() => Promise.resolve(true));
+const mockGenerateTotpSecret = mock(() => 'JBSWY3DPEHPK3PXP');
+const mockCreateTotpUri = mock(() => 'otpauth://totp/TinyClaw?secret=JBSWY3DPEHPK3PXP');
+const mockVerifyTotpCode = mock(() => Promise.resolve(true));
+const mockGenerateBackupCodes = mock(() => Array.from({ length: 10 }, (_, i) => `BACKUP${String(i).padStart(2, '0')}`));
+const mockGenerateRecoveryToken = mock(() => 'RECOVERYTOKEN'.repeat(5));
+const mockSha256 = mock(() => Promise.resolve('abc123'));
 
 mock.module('@tinyclaw/core', () => ({
   createOllamaProvider: mock(() => ({
@@ -96,6 +102,49 @@ mock.module('@tinyclaw/core', () => ({
   DEFAULT_PROVIDER: 'ollama',
   DEFAULT_MODEL: 'kimi-k2.5:cloud',
   DEFAULT_BASE_URL: 'https://ollama.com',
+  SECURITY_WARNING_TITLE: 'Security Warning',
+  SECURITY_WARNING_BODY: 'Test body',
+  SECURITY_LICENSE: 'Test license',
+  SECURITY_WARRANTY: 'Test warranty',
+  SECURITY_SAFETY_TITLE: 'Safety',
+  SECURITY_SAFETY_PRACTICES: ['Practice 1'],
+  SECURITY_CONFIRM: 'Do you accept?',
+  defaultModelNote: mock((model: string) => `Using ${model}`),
+  TOTP_SETUP_TITLE: 'TOTP Setup',
+  TOTP_SETUP_BODY: 'Set up 2FA',
+  BACKUP_CODES_INTRO: 'Save these codes',
+  BACKUP_CODES_HINT: 'Keep them safe',
+  RECOVERY_TOKEN_HINT: 'Store securely',
+  generateTotpSecret: mockGenerateTotpSecret,
+  createTotpUri: mockCreateTotpUri,
+  verifyTotpCode: mockVerifyTotpCode,
+  generateBackupCodes: mockGenerateBackupCodes,
+  generateRecoveryToken: mockGenerateRecoveryToken,
+  sha256: mockSha256,
+  BACKUP_CODES_COUNT: 10,
+}));
+
+// ── Mock @tinyclaw/web ──────────────────────────────────────────────
+
+mock.module('@tinyclaw/web', () => ({
+  createWebUI: mock(() => ({
+    start: mock(() => Promise.resolve()),
+    stop: mock(() => Promise.resolve()),
+  })),
+}));
+
+// ── Mock qrcode ─────────────────────────────────────────────────────
+
+mock.module('qrcode', () => ({
+  default: {
+    toString: mock(() => Promise.resolve('██ QR CODE ██')),
+  },
+}));
+
+// ── Mock child_process (prevents execSync clipboard calls) ──────────
+
+mock.module('child_process', () => ({
+  execSync: mock(() => {}),
 }));
 
 // ── Mock @tinyclaw/heartware ────────────────────────────────────────
@@ -171,6 +220,12 @@ beforeEach(() => {
   mockConfigSet.mockClear();
   mockConfigClose.mockClear();
   mockIsAvailable.mockClear();
+  mockGenerateTotpSecret.mockClear();
+  mockCreateTotpUri.mockClear();
+  mockVerifyTotpCode.mockClear();
+  mockGenerateBackupCodes.mockClear();
+  mockGenerateRecoveryToken.mockClear();
+  mockSha256.mockClear();
   mockParseSeed.mockClear();
   mockGenerateRandomSeed.mockClear();
   mockGenerateSoul.mockClear();
@@ -183,6 +238,12 @@ beforeEach(() => {
   mockText.mockImplementation(() => '');
   mockSelect.mockImplementation(() => 'keep');
   mockIsAvailable.mockImplementation(() => Promise.resolve(true));
+  mockGenerateTotpSecret.mockImplementation(() => 'JBSWY3DPEHPK3PXP');
+  mockCreateTotpUri.mockImplementation(() => 'otpauth://totp/TinyClaw?secret=JBSWY3DPEHPK3PXP');
+  mockVerifyTotpCode.mockImplementation(() => Promise.resolve(true));
+  mockGenerateBackupCodes.mockImplementation(() => Array.from({ length: 10 }, (_, i) => `BACKUP${String(i).padStart(2, '0')}`));
+  mockGenerateRecoveryToken.mockImplementation(() => 'RECOVERYTOKEN'.repeat(5));
+  mockSha256.mockImplementation(() => Promise.resolve('abc123'));
   mockParseSeed.mockImplementation((input: unknown) => {
     const n = Number(input);
     if (!input || isNaN(n)) return 42;

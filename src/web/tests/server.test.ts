@@ -75,8 +75,8 @@ async function generateTotp(secret: string): Promise<string> {
 }
 
 function extractBootstrapSecret(logs: string[]): string {
-  const full = logs.join('\n');
-  const match = full.match(/Secret:\s+([A-Z2-9]{30})/);
+  const full = logs.join('\n').replace(/\x1b\[[0-9;]*m/g, '');
+  const match = full.match(/secret:\s+([A-Z2-9]{30})/i);
   if (!match) throw new Error('bootstrap secret not found in logs');
   return match[1];
 }
@@ -133,6 +133,10 @@ describe('setup and MFA flow', () => {
   const secretsManager = {
     async store(key: string, value: string) {
       storedSecrets.push({ key, value });
+    },
+    async retrieve(key: string): Promise<string | undefined> {
+      const entry = [...storedSecrets].reverse().find(s => s.key === key);
+      return entry?.value;
     },
   };
 
@@ -202,9 +206,8 @@ describe('setup and MFA flow', () => {
     expect(configStore.get('heartware.seed')).toBe(8675309);
     expect(configStore.get('owner.backupCodesRemaining')).toBe(10);
     expect(typeof configStore.get('owner.recoveryTokenHash')).toBe('string');
-    expect(storedSecrets).toEqual([
-      { key: 'provider.ollama.apiKey', value: 'ollama-test-key' },
-    ]);
+    expect(storedSecrets.some(s => s.key === 'provider.ollama.apiKey' && s.value === 'ollama-test-key')).toBe(true);
+    expect(storedSecrets.some(s => s.key === 'owner.totpSecret')).toBe(true);
   });
 
   test('login only accepts TOTP — rejects backup code via login endpoint', async () => {

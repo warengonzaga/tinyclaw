@@ -8,20 +8,6 @@
 
 import { afterEach, beforeAll, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
 
-// ── Mock picocolors (used by local CLI theme) ───────────────────────
-
-mock.module('picocolors', () => ({
-  default: {
-    cyan: (text: string) => text,
-    green: (text: string) => text,
-    yellow: (text: string) => text,
-    red: (text: string) => text,
-    dim: (text: string) => text,
-    bold: (text: string) => text,
-    white: (text: string) => text,
-  },
-}));
-
 // ── Mock @tinyclaw/secrets ───────────────────────────────────────────
 
 const mockSecretsCheck = mock(() => Promise.resolve(true));
@@ -46,6 +32,8 @@ mock.module('@tinyclaw/secrets', () => ({
 const mockConfigGet = mock((key: string) => {
   if (key === 'providers.starterBrain.model') return 'kimi-k2.5:cloud';
   if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
+  if (key === 'heartware.seed') return 42;
+  if (key === 'owner.ownerId') return 'cli:owner';
   return undefined;
 });
 const mockConfigClose = mock(() => {});
@@ -129,10 +117,10 @@ mock.module('@tinyclaw/queue', () => ({
 
 mock.module('@tinyclaw/logger', () => ({
   logger: {
-    log: mock(() => {}),
-    info: mock(() => {}),
-    warn: mock(() => {}),
-    error: mock(() => {}),
+    log: mock((...args: any[]) => { console.log(...args); }),
+    info: mock((...args: any[]) => { console.log(...args); }),
+    warn: mock((...args: any[]) => { console.log(...args); }),
+    error: mock((...args: any[]) => { console.log(...args); }),
     debug: mock(() => {}),
   },
   setLogMode: mock(() => {}),
@@ -290,11 +278,17 @@ beforeEach(() => {
 
   process.exit = ((code?: number) => {
     exitCode = code ?? 0;
-    throw new Error(`process.exit(${code})`);
   }) as never;
 
   // Reset to defaults
   mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
+  mockConfigGet.mockImplementation((key: string) => {
+    if (key === 'providers.starterBrain.model') return 'kimi-k2.5:cloud';
+    if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
+    if (key === 'heartware.seed') return 42;
+    if (key === 'owner.ownerId') return 'cli:owner';
+    return undefined;
+  });
 });
 
 afterEach(() => {
