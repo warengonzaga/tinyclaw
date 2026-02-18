@@ -1,13 +1,15 @@
 /**
  * Delegation Tools (v2)
  *
- * Creates 6 agent tools for the delegation system:
- *   1. delegate_task       — Create/reuse sub-agent for a foreground task
- *   2. delegate_background — Same but runs in the background
- *   3. delegate_to_existing — Send follow-up to an existing sub-agent
- *   4. list_sub_agents     — List active sub-agents
- *   5. manage_sub_agent    — Dismiss, revive, or kill a sub-agent
- *   6. manage_template     — CRUD on role templates
+ * Creates 8 agent tools for the delegation system:
+ *   1. delegate_task        — Create/reuse sub-agent for a single task
+ *   2. delegate_tasks       — Batch-delegate multiple tasks in one call
+ *   3. delegate_background  — Same as delegate_task (explicit background alias)
+ *   4. delegate_to_existing — Send follow-up to an existing sub-agent
+ *   5. list_sub_agents      — List active sub-agents
+ *   6. manage_sub_agent     — Dismiss, revive, or kill a sub-agent
+ *   7. manage_template      — CRUD on role templates
+ *   8. confirm_task         — Acknowledge a completed background task
  */
 
 import type { Tool, Provider } from '@tinyclaw/types';
@@ -224,7 +226,138 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   };
 
   // =========================================================================
-  // 2. delegate_background
+  // 2. delegate_tasks (batch)
+  // =========================================================================
+
+  const delegateTasks: Tool = {
+    name: 'delegate_tasks',
+    description:
+      'Delegate multiple tasks to sub-agents in one call. Each task gets its own sub-agent ' +
+      '(reused when possible). All tasks run in the background in parallel. ' +
+      'Use this when you need to fan out work to several specialists at once.',
+    parameters: {
+      type: 'object',
+      properties: {
+        tasks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              task: { type: 'string', description: 'The task to delegate' },
+              role: { type: 'string', description: 'Role description (e.g. "Technical Research Analyst")' },
+              tier: { type: 'string', description: 'Provider tier: simple, moderate, complex, reasoning, or auto' },
+              tools: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Additional tool names to grant beyond the default safe set',
+              },
+              template_id: { type: 'string', description: 'Optional: use a specific role template' },
+            },
+            required: ['task', 'role'],
+          },
+          description: 'Array of tasks to delegate, each with its own role and configuration',
+        },
+        user_id: { type: 'string', description: 'User ID (injected by system)' },
+      },
+      required: ['tasks'],
+    },
+    async execute(args) {
+      const tasksInput = args.tasks as Array<Record<string, unknown>> | undefined;
+      const userId = String(args.user_id || 'default-user');
+
+      if (!Array.isArray(tasksInput) || tasksInput.length === 0) {
+        return 'Error: tasks array is required and must contain at least one task.';
+      }
+
+      const results: string[] = [];
+      let successCount = 0;
+
+      for (const entry of tasksInput) {
+        const task = String(entry.task || '');
+        const role = String(entry.role || '');
+        const tier = String(entry.tier || 'auto');
+        const additionalTools = (entry.tools as string[]) || [];
+        const templateId = entry.template_id as string | undefined;
+
+        if (!task || !role) {
+          results.push(`- [skipped] Missing task or role`);
+          continue;
+        }
+
+        try {
+          const orientation = getOrientation(userId);
+          const provider = await selectProvider(tier);
+          const subTools = filterToolsForSubAgent(allTools, additionalTools, safeToolSet);
+
+          // Check for template match
+          let usedTemplateId = templateId;
+          if (!usedTemplateId) {
+            const match = templates.findBestMatch(userId, `${role} ${task}`);
+            if (match) {
+              usedTemplateId = match.id;
+            }
+          }
+
+          // Check for reusable sub-agent
+          let agent = lifecycle.findReusable(userId, role);
+          let isReuse = false;
+
+          if (agent) {
+            isReuse = true;
+            if (agent.status === 'suspended' || agent.status === 'soft_deleted') {
+              agent = lifecycle.revive(agent.id) ?? agent;
+            }
+          } else {
+            agent = lifecycle.create({
+              userId,
+              role,
+              toolsGranted: [...safeToolSet, ...additionalTools],
+              tierPreference: tier !== 'auto' ? (tier as any) : undefined,
+              templateId: usedTemplateId,
+              orientation,
+            });
+          }
+
+          const existingMessages = isReuse ? lifecycle.getMessages(agent.id) : [];
+
+          const taskId = background.start({
+            userId,
+            agentId: agent.id,
+            task,
+            provider,
+            tools: subTools,
+            orientation,
+            existingMessages,
+            templateId: usedTemplateId,
+            templateAutoCreate: usedTemplateId
+              ? undefined
+              : {
+                  role,
+                  defaultTools: [...safeToolSet, ...additionalTools],
+                  defaultTier: tier !== 'auto' ? tier : undefined,
+                },
+          });
+
+          successCount++;
+          results.push(
+            `- [${isReuse ? 'reused' : 'new'}] "${role}" → ${task.slice(0, 60)}${task.length > 60 ? '…' : ''} (agent: ${agent.id}, task: ${taskId})`,
+          );
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          results.push(`- [error] "${role}" → ${task.slice(0, 40)}: ${msg}`);
+        }
+      }
+
+      return (
+        `Delegated ${successCount}/${tasksInput.length} tasks to sub-agents:\n` +
+        results.join('\n') +
+        '\nAll tasks are running in the background. Results will be delivered when ready.'
+      );
+    },
+  };
+
+  // =========================================================================
+  // 3. delegate_background
   // =========================================================================
 
   const delegateBackground: Tool = {
@@ -304,7 +437,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   };
 
   // =========================================================================
-  // 3. delegate_to_existing
+  // 4. delegate_to_existing
   // =========================================================================
 
   const delegateToExisting: Tool = {
@@ -366,7 +499,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   };
 
   // =========================================================================
-  // 4. list_sub_agents
+  // 5. list_sub_agents
   // =========================================================================
 
   const listSubAgents: Tool = {
@@ -406,7 +539,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   };
 
   // =========================================================================
-  // 5. manage_sub_agent
+  // 6. manage_sub_agent
   // =========================================================================
 
   const manageSubAgent: Tool = {
@@ -456,7 +589,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   };
 
   // =========================================================================
-  // 6. manage_template
+  // 7. manage_template
   // =========================================================================
 
   const manageTemplate: Tool = {
@@ -523,7 +656,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   };
 
   // =========================================================================
-  // 7. confirm_task
+  // 8. confirm_task
   // =========================================================================
 
   const confirmTask: Tool = {
@@ -587,6 +720,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   return {
     tools: [
       delegateTask,
+      delegateTasks,
       delegateBackground,
       delegateToExisting,
       listSubAgents,

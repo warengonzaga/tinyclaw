@@ -1,5 +1,5 @@
 /**
- * Tests for the 7 delegation tools factory.
+ * Tests for the 8 delegation tools factory.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -125,12 +125,13 @@ function findTool(tools: Tool[], name: string): Tool {
 // ---------------------------------------------------------------------------
 
 describe('createDelegationTools', () => {
-  test('returns 7 tools', () => {
+  test('returns 8 tools', () => {
     const { result } = setup();
-    expect(result.tools.length).toBe(7);
+    expect(result.tools.length).toBe(8);
 
     const names = result.tools.map((t) => t.name);
     expect(names).toContain('delegate_task');
+    expect(names).toContain('delegate_tasks');
     expect(names).toContain('delegate_background');
     expect(names).toContain('delegate_to_existing');
     expect(names).toContain('list_sub_agents');
@@ -254,6 +255,82 @@ describe('delegate_task', () => {
 
     const emptyRole = await tool.execute({ task: 'Do something', role: '' });
     expect(emptyRole).toContain('Error');
+
+    db.close();
+  });
+});
+
+describe('delegate_tasks', () => {
+  test('delegates multiple tasks to separate sub-agents', async () => {
+    const { result, db } = setup([
+      { type: 'text', content: 'Research result.' },
+      { type: 'text', content: 'Analysis result.' },
+    ]);
+
+    const tool = findTool(result.tools, 'delegate_tasks');
+    const output = await tool.execute({
+      tasks: [
+        { task: 'Research quantum computing', role: 'Quantum Physics Researcher' },
+        { task: 'Analyze market trends', role: 'Market Data Analyst' },
+      ],
+      user_id: 'user-1',
+    });
+
+    expect(output).toContain('Delegated 2/2 tasks');
+    expect(output).toContain('Quantum Physics Researcher');
+    expect(output).toContain('Market Data Analyst');
+    expect(output).toContain('running in the background');
+
+    // Both sub-agents should be persisted
+    const agents = result.lifecycle.listActive('user-1');
+    expect(agents.length).toBe(2);
+
+    // Wait for background tasks to complete
+    await Bun.sleep(400);
+
+    db.close();
+  });
+
+  test('skips entries with missing task or role', async () => {
+    const { result, db } = setup([
+      { type: 'text', content: 'Done.' },
+    ]);
+
+    const tool = findTool(result.tools, 'delegate_tasks');
+    const output = await tool.execute({
+      tasks: [
+        { task: '', role: 'Worker' },
+        { task: 'Valid task', role: '' },
+        { task: 'Real task', role: 'Real Worker' },
+      ],
+      user_id: 'user-1',
+    });
+
+    expect(output).toContain('Delegated 1/3 tasks');
+    expect(output).toContain('skipped');
+    expect(output).toContain('Real Worker');
+
+    db.close();
+  });
+
+  test('returns error when tasks array is empty', async () => {
+    const { result, db } = setup();
+
+    const tool = findTool(result.tools, 'delegate_tasks');
+    const output = await tool.execute({ tasks: [], user_id: 'user-1' });
+
+    expect(output).toContain('Error');
+
+    db.close();
+  });
+
+  test('returns error when tasks is not provided', async () => {
+    const { result, db } = setup();
+
+    const tool = findTool(result.tools, 'delegate_tasks');
+    const output = await tool.execute({ user_id: 'user-1' });
+
+    expect(output).toContain('Error');
 
     db.close();
   });

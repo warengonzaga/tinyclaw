@@ -194,6 +194,7 @@ function getWorkingMessage(toolName: string): string {
 
 const DELEGATION_TOOLS = new Set([
   'delegate_task',
+  'delegate_tasks',
   'delegate_background',
   'delegate_to_existing',
 ]);
@@ -227,6 +228,23 @@ function emitDelegationStart(
 ): void {
   if (!onStream || !isDelegationTool(toolCall.name)) return;
   const args = toolCall.arguments || {};
+
+  // delegate_tasks (batch) — emit one start event summarising all tasks
+  if (toolCall.name === 'delegate_tasks') {
+    const tasks = (args.tasks as Array<Record<string, unknown>>) || [];
+    const summary = tasks.map(t => String(t.role || 'Sub-agent')).join(', ');
+    onStream({
+      type: 'delegation_start',
+      tool: toolCall.name,
+      delegation: {
+        role: summary,
+        task: `${tasks.length} tasks`,
+        tier: 'auto',
+      },
+    });
+    return;
+  }
+
   onStream({
     type: 'delegation_start',
     tool: toolCall.name,
@@ -253,6 +271,7 @@ function emitDelegationComplete(
   //   delegate_task:        "... [new, agent: <uuid>, task: <uuid>] ..."
   //   delegate_background:  "... [id: <uuid>]\nSub-agent: Role (uuid) ..."
   //   delegate_to_existing: "... (<uuid>) [task: <uuid>] ..."
+  //   delegate_tasks:       multi-line output with multiple agent:/task: pairs
   const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
   const allUUIDs = result.match(UUID_RE) || [];
 
@@ -267,12 +286,20 @@ function emitDelegationComplete(
   const agentId = agentIdMatch?.[1]?.trim();
   const taskId = taskIdMatch?.[1]?.trim();
 
+  // delegate_tasks (batch) — summarise all dispatched tasks
+  const role = toolCall.name === 'delegate_tasks'
+    ? ((args.tasks as Array<Record<string, unknown>>) || []).map(t => String(t.role || 'Sub-agent')).join(', ')
+    : String(args.role || args.agent_id || '');
+  const taskDesc = toolCall.name === 'delegate_tasks'
+    ? `${((args.tasks as Array<Record<string, unknown>>) || []).length} tasks`
+    : String(args.task || '');
+
   onStream({
     type: 'delegation_complete',
     tool: toolCall.name,
     delegation: {
-      role: String(args.role || args.agent_id || ''),
-      task: String(args.task || ''),
+      role,
+      task: taskDesc,
       success,
       isReuse: result.includes('reused'),
       agentId: agentId || undefined,

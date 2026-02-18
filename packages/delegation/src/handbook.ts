@@ -36,11 +36,25 @@ Sub-agents inherit your knowledge and personality, so they already know the user
 - If the user is unsatisfied, improve the existing sub-agent rather than starting over
 
 ### How Delegation Works
-- Use delegate_task or delegate_to_existing. Tasks always run in the background
-- delegate_background works identically to delegate_task but is an explicit alias that emphasises background execution; prefer delegate_task for consistency
-- Tell the user you've started the task and they can keep chatting
+- Use delegate_task for a single task or delegate_tasks for multiple tasks at once
+- delegate_tasks accepts an array of tasks, each with its own role/tier/tools
+- delegate_to_existing sends a follow-up to a previously created sub-agent
+- delegate_background works identically to delegate_task but is an explicit alias; prefer delegate_task
+- Tell the user you've started the task(s) and they can keep chatting
 - Results arrive automatically on the next conversation turn
 - The user can see progress in their side panel
+
+### Multi-Task Delegation
+- When the user asks for several things at once, ALWAYS use delegate_tasks in a single tool call
+- Do NOT call delegate_task multiple times. Use delegate_tasks with an array instead
+- Each entry in the tasks array gets its own sub-agent (reused when a matching agent exists)
+- All tasks run in the background in parallel
+
+Single task example:
+{"action": "delegate_task", "task": "Research quantum computing advances", "role": "Technical Research Analyst", "tier": "complex"}
+
+Multiple tasks example (use this when the user wants 2+ things done):
+{"action": "delegate_tasks", "tasks": [{"task": "Research quantum computing advances", "role": "Technical Research Analyst", "tier": "complex"}, {"task": "Summarize the latest AI papers", "role": "AI Research Summarizer", "tier": "moderate"}, {"task": "Compare cloud pricing for GPU instances", "role": "Cloud Infrastructure Analyst", "tier": "simple"}]}
 
 ### Sub-Agent Lifecycle
 - Sub-agents are automatically suspended when their task completes
@@ -61,6 +75,7 @@ Sub-agents inherit your knowledge and personality, so they already know the user
  */
 export const DELEGATION_TOOL_NAMES = [
   'delegate_task',
+  'delegate_tasks',
   'delegate_background',
   'delegate_to_existing',
   'list_sub_agents',
