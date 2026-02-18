@@ -334,6 +334,51 @@ describe('delegate_tasks', () => {
 
     db.close();
   });
+
+  test('creates separate agents for tasks with the same role', async () => {
+    const { result, db } = setup([
+      { type: 'text', content: 'Result A.' },
+      { type: 'text', content: 'Result B.' },
+    ]);
+
+    const tool = findTool(result.tools, 'delegate_tasks');
+    const output = await tool.execute({
+      tasks: [
+        { task: 'Task A', role: 'Same Role' },
+        { task: 'Task B', role: 'Same Role' },
+      ],
+      user_id: 'user-1',
+    });
+
+    expect(output).toContain('Delegated 2/2 tasks');
+
+    // Both should be "new" — not reused, since they share a role within the same batch
+    const lines = (output as string).split('\n').filter((l: string) => l.includes('['));
+    expect(lines.every((l: string) => l.includes('[new]'))).toBe(true);
+
+    // Two distinct sub-agents should exist
+    const agents = result.lifecycle.listActive('user-1');
+    expect(agents.length).toBe(2);
+
+    await Bun.sleep(400);
+    db.close();
+  });
+
+  test('returns error when batch exceeds max size', async () => {
+    const { result, db } = setup();
+
+    const tool = findTool(result.tools, 'delegate_tasks');
+    const tasks = Array.from({ length: 11 }, (_, i) => ({
+      task: `Task ${i}`,
+      role: `Role ${i}`,
+    }));
+    const output = await tool.execute({ tasks, user_id: 'user-1' });
+
+    expect(output).toContain('Error');
+    expect(output).toContain('exceeds maximum');
+
+    db.close();
+  });
 });
 
 describe('list_sub_agents', () => {
