@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+  packages: write
+  security-events: write
+  pull-requests: write
+
+jobs:
+  package:
+    if: github.event.workflow_run.conclusion == 'success'
+    uses: ./.github/workflows/package.yml
+    secrets: inherit
+
+  container:
+    if: github.event.workflow_run.conclusion == 'success'
+    uses: ./.github/workflows/container.yml
+    secrets: inherit
+
+  release:
+    needs: [package, container]
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Release
+        uses: wgtechlabs/release-build-flow-action@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          monorepo: 'true'
+          workspace-detection: 'true'
+          package-manager: 'bun'
+          change-detection: 'both'
+          unified-version: 'false'
+          per-package-changelog: 'true'
+          root-changelog: 'true'
+          changelog-enabled: 'true'
+          create-release: 'true'
+          release-draft: 'false'
+          release-name-template: 'Release {version}'
+          exclude-types: 'docs,style,test,ci,build'
+          minor-keywords: 'feat,new,add'
+          patch-keywords: 'fix,bugfix,security,perf,setup'
+          dry-run: 'false'
