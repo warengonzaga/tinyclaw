@@ -250,7 +250,7 @@ function emitDelegationStart(
       delegation: {
         role: roles,
         task: `${count} tasks`,
-        tier: 'auto',
+        tier: 'mixed',
       },
     });
     return;
