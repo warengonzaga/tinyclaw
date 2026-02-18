@@ -17,8 +17,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.8'
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -36,8 +34,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.8'
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -48,5 +44,9 @@ jobs:
       - name: Build plugins
         run: bun run build:plugins
 
-      - name: Run tests
-        run: bun test
+      - name: Run tests (with retry for Bun runtime segfaults)
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 10
+          command: bun test
