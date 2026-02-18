@@ -222,6 +222,18 @@ function checkToolAuthority(toolName: string, userId: string, ownerId: string | 
   return null; // Non-sensitive tool — allowed for friends
 }
 
+/**
+ * Safely extract a summary from a delegate_tasks batch.
+ * Returns the joined role names and the task count.
+ */
+function extractBatchTasksSummary(
+  tasks: unknown,
+): { roles: string; count: number } {
+  const arr: Array<Record<string, unknown>> = Array.isArray(tasks) ? tasks : [];
+  const roles = arr.map(t => String(t.role || 'Sub-agent')).join(', ');
+  return { roles, count: arr.length };
+}
+
 function emitDelegationStart(
   onStream: ((event: import('@tinyclaw/types').StreamEvent) => void) | undefined,
   toolCall: ToolCall,
@@ -231,14 +243,13 @@ function emitDelegationStart(
 
   // delegate_tasks (batch) — emit one start event summarising all tasks
   if (toolCall.name === 'delegate_tasks') {
-    const tasks = (args.tasks as Array<Record<string, unknown>>) || [];
-    const summary = tasks.map(t => String(t.role || 'Sub-agent')).join(', ');
+    const { roles, count } = extractBatchTasksSummary(args.tasks);
     onStream({
       type: 'delegation_start',
       tool: toolCall.name,
       delegation: {
-        role: summary,
-        task: `${tasks.length} tasks`,
+        role: roles,
+        task: `${count} tasks`,
         tier: 'auto',
       },
     });
@@ -287,12 +298,11 @@ function emitDelegationComplete(
   const taskId = taskIdMatch?.[1]?.trim();
 
   // delegate_tasks (batch) — summarise all dispatched tasks
-  const role = toolCall.name === 'delegate_tasks'
-    ? ((args.tasks as Array<Record<string, unknown>>) || []).map(t => String(t.role || 'Sub-agent')).join(', ')
-    : String(args.role || args.agent_id || '');
-  const taskDesc = toolCall.name === 'delegate_tasks'
-    ? `${((args.tasks as Array<Record<string, unknown>>) || []).length} tasks`
-    : String(args.task || '');
+  const batchSummary = toolCall.name === 'delegate_tasks'
+    ? extractBatchTasksSummary(args.tasks)
+    : null;
+  const role = batchSummary ? batchSummary.roles : String(args.role || args.agent_id || '');
+  const taskDesc = batchSummary ? `${batchSummary.count} tasks` : String(args.task || '');
 
   onStream({
     type: 'delegation_complete',
