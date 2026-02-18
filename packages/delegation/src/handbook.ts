@@ -48,7 +48,8 @@ Sub-agents inherit your knowledge and personality, so they already know the user
 - When the user asks for several things at once, ALWAYS use delegate_tasks in a single tool call
 - Do NOT call delegate_task multiple times. Use delegate_tasks with an array instead
 - Each entry in the tasks array gets its own sub-agent (reused when a matching agent exists)
-- All tasks run in the background in parallel
+- Tasks are dispatched sequentially but execute concurrently in the background
+- Maximum of 10 tasks per batch
 
 Single task example:
 {"action": "delegate_task", "task": "Research quantum computing advances", "role": "Technical Research Analyst", "tier": "complex"}

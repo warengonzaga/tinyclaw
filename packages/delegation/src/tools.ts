@@ -12,7 +12,7 @@
  *   8. confirm_task         — Acknowledge a completed background task
  */
 
-import type { Tool, Provider } from '@tinyclaw/types';
+import type { Tool, Provider, QueryTier } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
 import type { DelegationStore, DelegationQueue } from './store.js';
 import type {
@@ -42,6 +42,9 @@ const DEFAULT_SAFE_TOOLS = new Set([
   'memory_recall',
   'execute_code',
 ]);
+
+/** Maximum number of tasks allowed in a single delegate_tasks batch. */
+const MAX_BATCH_SIZE = 10;
 
 /** Fallback background sub-agent timeout (used when no estimator). */
 const BACKGROUND_TIMEOUT_MS_FALLBACK = 60_000;
@@ -186,7 +189,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
             userId,
             role,
             toolsGranted: [...safeToolSet, ...additionalTools],
-            tierPreference: tier !== 'auto' ? (tier as any) : undefined,
+            tierPreference: tier !== 'auto' ? (tier as QueryTier) : undefined,
             templateId: usedTemplateId,
             orientation,
           });
@@ -233,7 +236,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
     name: 'delegate_tasks',
     description:
       'Delegate multiple tasks to sub-agents in one call. Each task gets its own sub-agent ' +
-      '(reused when possible). All tasks run in the background in parallel. ' +
+      '(reused when possible). Tasks are dispatched sequentially but execute concurrently in the background. ' +
       'Use this when you need to fan out work to several specialists at once.',
     parameters: {
       type: 'object',
@@ -267,6 +270,10 @@ export function createDelegationTools(config: DelegationToolsConfig): {
 
       if (!Array.isArray(tasksInput) || tasksInput.length === 0) {
         return 'Error: tasks array is required and must contain at least one task.';
+      }
+
+      if (tasksInput.length > MAX_BATCH_SIZE) {
+        return `Error: batch size exceeds maximum of ${MAX_BATCH_SIZE} tasks. Split into smaller batches.`;
       }
 
       const results: string[] = [];
@@ -320,7 +327,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
               userId,
               role,
               toolsGranted: [...safeToolSet, ...additionalTools],
-              tierPreference: tier !== 'auto' ? (tier as any) : undefined,
+              tierPreference: tier !== 'auto' ? (tier as QueryTier) : undefined,
               templateId: usedTemplateId,
               orientation,
             });
