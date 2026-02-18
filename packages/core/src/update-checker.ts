@@ -93,7 +93,12 @@ export function detectRuntime(): UpdateRuntime {
  */
 export function isNewerVersion(current: string, latest: string): boolean {
   const parse = (v: string): number[] =>
-    v.replace(/^v/, '').split('.').map(Number).slice(0, 3);
+    v
+      .replace(/^v/, '')
+      .replace(/[-+].*$/, '')
+      .split('.')
+      .map((s) => { const n = Number(s); return isNaN(n) ? 0 : n; })
+      .slice(0, 3);
   const [cMaj = 0, cMin = 0, cPat = 0] = parse(current);
   const [lMaj = 0, lMin = 0, lPat = 0] = parse(latest);
   if (lMaj !== cMaj) return lMaj > cMaj;
