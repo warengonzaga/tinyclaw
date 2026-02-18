@@ -40,7 +40,8 @@ export class ConfigManager implements ConfigManagerInterface {
    * @returns Initialized ConfigManager
    */
   static async create(config?: ConfigManagerConfig): Promise<ConfigManager> {
-    const cwd = config?.cwd ?? join(homedir(), '.tinyclaw', 'data');
+    const dataDir = process.env.TINYCLAW_DATA_DIR || join(homedir(), '.tinyclaw');
+    const cwd = config?.cwd ?? join(dataDir, 'data');
 
     const engine = await ConfigEngine.open<TinyClawConfigData>({
       projectName: 'tinyclaw',
