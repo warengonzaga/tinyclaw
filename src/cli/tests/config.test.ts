@@ -12,6 +12,18 @@ import { tmpdir } from 'node:os';
 
 const CLI_ENTRY = resolve(__dirname, '../src/index.ts');
 
+/** Temp directory used per-test so we never touch the real ~/.tinyclaw config. */
+let tempDataDir: string;
+
+beforeEach(() => {
+  tempDataDir = join(tmpdir(), `tinyclaw-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  mkdirSync(tempDataDir, { recursive: true });
+});
+
+afterEach(() => {
+  try { rmSync(tempDataDir, { recursive: true, force: true }); } catch { /* best effort */ }
+});
+
 /**
  * Helper: run the CLI with given args and return stdout, stderr, exitCode.
  * Uses a temp directory for config to avoid touching real ~/.tinyclaw.
@@ -28,6 +40,7 @@ async function runCLI(
       ...process.env,
       NO_COLOR: '1',
       FORCE_COLOR: '0',
+      TINYCLAW_DATA_DIR: tempDataDir,
       ...env,
     },
   });
