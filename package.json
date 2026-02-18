@@ -9,8 +9,7 @@
     "packages/*",
     "src/*",
     "plugins/channel/*",
-    "plugins/provider/*",
-    "plugins/tool/*"
+    "plugins/provider/*"
   ],
   "scripts": {
     "dev": "bun run --cwd src/cli dev",
