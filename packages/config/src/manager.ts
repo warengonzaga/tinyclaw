@@ -5,6 +5,14 @@
  * storage for Tiny Claw. Configuration is stored as a SQLite database
  * at ~/.tinyclaw/data/config.db by default.
  *
+ * Data directory resolution:
+ *   1. An explicit `cwd` passed via ConfigManagerConfig takes priority.
+ *   2. Otherwise, `dataDir` is resolved from the TINYCLAW_DATA_DIR
+ *      environment variable (e.g. `/data` in Docker) or falls back
+ *      to `~/.tinyclaw`.
+ *   3. The final `cwd` defaults to `<dataDir>/data`, so the database
+ *      path becomes `<dataDir>/data/config.db`.
+ *
  * Non-sensitive settings only — API keys and tokens belong in
  * secrets-engine via the SecretsManager.
  *
