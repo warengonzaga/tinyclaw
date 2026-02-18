@@ -1,6 +1,7 @@
 {
   "name": "@tinyclaw/intercom",
-  "version": "1.0.0",
+  "private": true,
+  "version": "1.0.1",
   "description": "Lightweight pub/sub event bus for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",

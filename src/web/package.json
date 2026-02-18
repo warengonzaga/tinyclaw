@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/web",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Web user interface for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",

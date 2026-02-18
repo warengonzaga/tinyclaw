@@ -1,6 +1,7 @@
 {
   "name": "@tinyclaw/pulse",
-  "version": "1.0.0",
+  "private": true,
+  "version": "1.0.1",
   "description": "Cron-like recurring task scheduler for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",

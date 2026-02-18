@@ -1,6 +1,7 @@
 {
   "name": "@tinyclaw/heartware",
-  "version": "1.0.0",
+  "private": true,
+  "version": "1.0.1",
   "description": "Personality and self-configuration system for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
