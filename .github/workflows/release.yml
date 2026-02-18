@@ -21,10 +21,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - id: version
+        env:
+          BEFORE_SHA: ${{ github.event.workflow_run.head_commit.id }}
         run: |
-          if git diff HEAD~1 HEAD --name-only | grep -qE 'package\.json$'; then
+          # Prefer GitHub-provided refs when available, fall back to HEAD~1
+          if [ -n "$BEFORE_SHA" ] && git cat-file -e "${BEFORE_SHA}^" 2>/dev/null; then
+            BASE="${BEFORE_SHA}~1"
+          elif git cat-file -e HEAD~1 2>/dev/null; then
+            BASE="HEAD~1"
+          else
+            # Initial commit or unreachable parent — treat as changed
+            echo "changed=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          if git diff "$BASE" HEAD --name-only | grep -qE 'package\.json$'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
