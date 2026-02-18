@@ -3,6 +3,8 @@ name: Container Build
 on:
   workflow_call:
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read

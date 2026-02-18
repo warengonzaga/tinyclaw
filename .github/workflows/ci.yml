@@ -9,6 +9,9 @@ on:
 
 permissions:
   contents: read
+  packages: write
+  security-events: write
+  pull-requests: write
 
 jobs:
   build:
@@ -50,3 +53,13 @@ jobs:
           max_attempts: 3
           timeout_minutes: 10
           command: bun test
+
+  package:
+    needs: test
+    uses: ./.github/workflows/package.yml
+    secrets: inherit
+
+  container:
+    needs: test
+    uses: ./.github/workflows/container.yml
+    secrets: inherit

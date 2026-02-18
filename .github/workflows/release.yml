@@ -42,20 +42,8 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
-  package:
-    needs: check-version
-    if: needs.check-version.outputs.changed == 'true'
-    uses: ./.github/workflows/package.yml
-    secrets: inherit
-
-  container:
-    needs: check-version
-    if: needs.check-version.outputs.changed == 'true'
-    uses: ./.github/workflows/container.yml
-    secrets: inherit
-
   release:
-    needs: [check-version, package, container]
+    needs: check-version
     if: needs.check-version.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:

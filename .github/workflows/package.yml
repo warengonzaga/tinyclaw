@@ -8,6 +8,8 @@ on:
         description: 'Perform dry run without publishing'
         type: boolean
         default: true
+  release:
+    types: [published]
 
 permissions:
   contents: read
