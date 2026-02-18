@@ -272,6 +272,10 @@ export function createDelegationTools(config: DelegationToolsConfig): {
       const results: string[] = [];
       let successCount = 0;
 
+      // Track agents already assigned within this batch to prevent
+      // concurrent reuse of the same agent when tasks share a role.
+      const batchAssignedAgents = new Set<string>();
+
       for (const entry of tasksInput) {
         const task = String(entry.task || '');
         const role = String(entry.role || '');
@@ -298,8 +302,12 @@ export function createDelegationTools(config: DelegationToolsConfig): {
             }
           }
 
-          // Check for reusable sub-agent
-          let agent = lifecycle.findReusable(userId, role);
+          // Check for reusable sub-agent, but only if one hasn't already
+          // been claimed for this userId+role combination in this batch.
+          const batchKey = `${userId}:${role}`;
+          let agent = batchAssignedAgents.has(batchKey)
+            ? undefined
+            : lifecycle.findReusable(userId, role);
           let isReuse = false;
 
           if (agent) {
@@ -317,6 +325,10 @@ export function createDelegationTools(config: DelegationToolsConfig): {
               orientation,
             });
           }
+
+          // Mark this agent's key as assigned so subsequent batch tasks
+          // with the same role will not reuse it concurrently.
+          batchAssignedAgents.add(batchKey);
 
           const existingMessages = isReuse ? lifecycle.getMessages(agent.id) : [];
 
