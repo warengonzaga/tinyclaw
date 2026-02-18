@@ -19,6 +19,8 @@
  *     provider in the smart router
  */
 
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { ConfigManager } from '@tinyclaw/config';
 import {
   DEFAULT_MODEL,
@@ -295,8 +297,9 @@ export async function configCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  // Open config engine
-  const configManager = await ConfigManager.create();
+  // Open config engine — respect TINYCLAW_DATA_DIR for consistent data dir usage
+  const dataDir = process.env.TINYCLAW_DATA_DIR || join(homedir(), '.tinyclaw');
+  const configManager = await ConfigManager.create({ cwd: join(dataDir, 'data') });
 
   try {
     // ---- logging ----
