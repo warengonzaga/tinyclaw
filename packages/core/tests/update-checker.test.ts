@@ -14,6 +14,7 @@ import {
   detectRuntime,
   buildUpdateContext,
   checkForUpdate,
+  sanitizeForPrompt,
   type UpdateInfo,
 } from '../src/update-checker.js';
 
@@ -173,12 +174,16 @@ describe('buildUpdateContext', () => {
 
 describe('checkForUpdate', () => {
   let tempDir: string;
+  const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
     tempDir = createTempDir('check');
+    // Default mock: simulate network failure so tests are deterministic
+    globalThis.fetch = (() => Promise.reject(new Error('mock network failure'))) as typeof fetch;
   });
 
   afterEach(() => {
+    globalThis.fetch = originalFetch;
     try {
       rmSync(tempDir, { recursive: true, force: true });
     } catch {
@@ -214,36 +219,77 @@ describe('checkForUpdate', () => {
   });
 
   test('returns null on network failure with no cache', async () => {
-    // No cache file, and registry will naturally fail or return data
-    // This tests the graceful fallback — should never throw
+    // No cache file, fetch mock rejects — should return null
     const result = await checkForUpdate('1.0.0', tempDir);
-    // Result depends on network availability — just ensure no throw
-    expect(result === null || typeof result === 'object').toBe(true);
+    expect(result).toBeNull();
   });
 
   test('handles corrupt cache file gracefully', async () => {
     writeFileSync(join(tempDir, 'data', 'update-check.json'), 'not json!!!');
 
-    // Should not throw, will attempt fresh fetch
+    // Corrupt cache is unreadable and fetch mock rejects — should return null
     const result = await checkForUpdate('1.0.0', tempDir);
-    expect(result === null || typeof result === 'object').toBe(true);
+    expect(result).toBeNull();
   });
 
   test('creates data dir if missing', async () => {
     const freshDir = join(tmpdir(), `tinyclaw-update-nodatadir-${Date.now()}`);
     mkdirSync(freshDir, { recursive: true });
 
+    // Mock a successful fetch so cache gets written
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ version: '1.1.0' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )) as typeof fetch;
+
     try {
       const result = await checkForUpdate('1.0.0', freshDir);
-      // If fetch succeeded, cache file should have been written;
-      // otherwise, the cache file should not exist.
-      if (result) {
-        expect(existsSync(join(freshDir, 'data', 'update-check.json'))).toBe(true);
-      } else {
-        expect(existsSync(join(freshDir, 'data', 'update-check.json'))).toBe(false);
-      }
+      expect(result).not.toBeNull();
+      expect(existsSync(join(freshDir, 'data', 'update-check.json'))).toBe(true);
     } finally {
       rmSync(freshDir, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sanitizeForPrompt
+// ---------------------------------------------------------------------------
+
+describe('sanitizeForPrompt', () => {
+  test('accepts valid semver version', () => {
+    expect(sanitizeForPrompt('1.2.3', 'version')).toBe('1.2.3');
+  });
+
+  test('accepts v-prefixed version', () => {
+    expect(sanitizeForPrompt('v1.2.3', 'version')).toBe('v1.2.3');
+  });
+
+  test('strips trailing garbage from version', () => {
+    expect(sanitizeForPrompt('1.2.3-evil\nprompt', 'version')).toBe('1.2.3');
+  });
+
+  test('returns unknown for non-semver version', () => {
+    expect(sanitizeForPrompt('not-a-version', 'version')).toBe('unknown');
+  });
+
+  test('accepts valid https URL', () => {
+    const url = 'https://github.com/warengonzaga/tinyclaw/releases/tag/v1.0.0';
+    expect(sanitizeForPrompt(url, 'url')).toBe(
+      'https://github.com/warengonzaga/tinyclaw/releases/tag/v1.0.0',
+    );
+  });
+
+  test('returns unavailable for non-http URL', () => {
+    expect(sanitizeForPrompt('javascript:alert(1)', 'url')).toBe('(unavailable)');
+  });
+
+  test('strips markdown/injection characters from URL', () => {
+    const url = 'https://example.com/path`injection`';
+    const result = sanitizeForPrompt(url, 'url');
+    expect(result).not.toContain('`');
   });
 });
