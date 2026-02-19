@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/logger",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Context-aware structured logging for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",

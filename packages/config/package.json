@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/config",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "SQLite-backed persistent configuration for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
