@@ -30,7 +30,8 @@ jobs:
             GITHUB_EVENT_BEFORE="${{ github.event.before }}"
             GITHUB_EVENT_AFTER="${{ github.event.after }}"
             if [ "$GITHUB_EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
-              COMMITS=$(git log --format="%s" "$GITHUB_EVENT_AFTER" -1)
+              # Initial push has no valid "before" SHA, so capture all reachable commits
+              COMMITS=$(git log --format="%s" "$GITHUB_EVENT_AFTER")
             else
               COMMITS=$(git log --format="%s" "${GITHUB_EVENT_BEFORE}..${GITHUB_EVENT_AFTER}")
             fi

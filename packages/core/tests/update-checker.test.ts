@@ -235,9 +235,12 @@ describe('checkForUpdate', () => {
 
     try {
       const result = await checkForUpdate('1.0.0', freshDir);
-      // If fetch succeeded, cache file should have been written
+      // If fetch succeeded, cache file should have been written;
+      // otherwise, the cache file should not exist.
       if (result) {
         expect(existsSync(join(freshDir, 'data', 'update-check.json'))).toBe(true);
+      } else {
+        expect(existsSync(join(freshDir, 'data', 'update-check.json'))).toBe(false);
       }
     } finally {
       rmSync(freshDir, { recursive: true, force: true });
