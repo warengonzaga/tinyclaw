@@ -25,6 +25,7 @@
     "test": "bun test",
     "cli": "bun run src/cli/src/index.ts",
     "dev:purge": "bun run cli purge --force",
+    "dev:landing": "bun run --cwd src/landing dev",
     "prepare": "husky"
   },
   "devDependencies": {
