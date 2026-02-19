@@ -23,11 +23,14 @@
     "start": "bun run --cwd src/cli start",
     "test": "bun test",
     "cli": "bun run src/cli/src/index.ts",
-    "dev:purge": "bun run cli purge --force"
+    "dev:purge": "bun run cli purge --force",
+    "prepare": "husky",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^22.10.0",
+    "husky": "^9.1.7",
     "typescript": "^5.7.0"
   },
   "dependencies": {
