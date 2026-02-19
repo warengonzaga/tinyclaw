@@ -46,7 +46,7 @@
         <div class="flex-1">
           <h3 class="text-lg font-semibold text-text-normal mb-2">Open</h3>
           <p class="text-text-muted mb-3">
-            Visit <code class="rounded bg-bg-code px-2 py-0.5 text-brand-light text-sm">http://localhost:3000</code> and Tiny Claw will walk you through setup. No config files needed.
+            Visit <code class="rounded bg-bg-code px-2 py-0.5 text-brand-light text-sm">http://localhost:3000</code> and Tiny Claw will guide you through the initial setup interactively.
           </p>
         </div>
       </div>
