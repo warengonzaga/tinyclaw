@@ -227,6 +227,19 @@
         "@types/qrcode": "^1.5.6",
       },
     },
+    "src/landing": {
+      "name": "@tinyclaw/landing",
+      "version": "1.0.1",
+      "dependencies": {
+        "svelte": "^5.20.1",
+      },
+      "devDependencies": {
+        "@sveltejs/vite-plugin-svelte": "^6.1.4",
+        "@tailwindcss/vite": "^4.1.18",
+        "tailwindcss": "^4.1.18",
+        "vite": "^7.2.4",
+      },
+    },
     "src/web": {
       "name": "@tinyclaw/web",
       "version": "1.0.1",
@@ -433,6 +446,8 @@
     "@tinyclaw/heartware": ["@tinyclaw/heartware@workspace:packages/heartware"],
 
     "@tinyclaw/intercom": ["@tinyclaw/intercom@workspace:packages/intercom"],
+
+    "@tinyclaw/landing": ["@tinyclaw/landing@workspace:src/landing"],
 
     "@tinyclaw/learning": ["@tinyclaw/learning@workspace:packages/learning"],
 

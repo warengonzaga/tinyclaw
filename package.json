@@ -19,6 +19,7 @@
     "build:plugins": "bun run --filter './plugins/**/*' build",
     "build:apps": "bun run --cwd src/web build && bun run --cwd src/cli build",
     "build:ui": "bun run --cwd src/web build",
+    "build:landing": "bun run --cwd src/landing build",
     "build:all": "bun run build:packages && bun run build:plugins && bun run build:apps",
     "start": "bun run --cwd src/cli start",
     "test": "bun test",
