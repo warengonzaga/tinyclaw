@@ -86,6 +86,33 @@ export function detectRuntime(): UpdateRuntime {
 // Semver comparison (minimal — avoids pulling a full semver library)
 // ---------------------------------------------------------------------------
 
+/** Matches a semver-like version string (with optional v-prefix). */
+const SEMVER_RE = /^v?\d+\.\d+\.\d+/;
+
+/** Matches a safe HTTPS URL. */
+const SAFE_URL_RE = /^https?:\/\/[^\s]+$/;
+
+/**
+ * Sanitize a string for safe interpolation into a system prompt.
+ * Validates against an expected pattern and strips characters that could
+ * be used for prompt injection (newlines, backticks, markdown markers).
+ */
+export function sanitizeForPrompt(
+  value: string,
+  kind: 'version' | 'url',
+): string {
+  const trimmed = value.trim();
+  if (kind === 'version') {
+    if (!SEMVER_RE.test(trimmed)) return 'unknown';
+    // Strip everything after the patch number to remove injected text
+    return trimmed.replace(/^(v?\d+\.\d+\.\d+)[\s\S]*$/, '$1');
+  }
+  // kind === 'url'
+  if (!SAFE_URL_RE.test(trimmed)) return '(unavailable)';
+  // Remove characters that could break prompt formatting
+  return trimmed.replace(/[`\n\r\[\](){}#*_~>|]/g, '');
+}
+
 /**
  * Compare two semver strings. Returns true when `latest` is strictly newer
  * than `current`. Only handles `MAJOR.MINOR.PATCH`; pre-release suffixes
@@ -192,7 +219,18 @@ export async function checkForUpdate(
 
     // Fetch latest version from npm
     const latest = await fetchLatestVersion();
-    if (!latest) return cached ?? null; // Network failure — use stale cache if available
+    if (!latest) {
+      // Network failure — use stale cache if available, but recompute
+      // against the caller-supplied currentVersion
+      if (cached) {
+        return {
+          ...cached,
+          current: currentVersion,
+          updateAvailable: isNewerVersion(currentVersion, cached.latest),
+        };
+      }
+      return null;
+    }
 
     const runtime = detectRuntime();
     const info: UpdateInfo = {
@@ -228,6 +266,9 @@ export async function checkForUpdate(
 export function buildUpdateContext(info: UpdateInfo | null): string {
   if (!info?.updateAvailable) return '';
 
+  const safeLatest = sanitizeForPrompt(info.latest, 'version');
+  const safeReleaseUrl = sanitizeForPrompt(info.releaseUrl, 'url');
+
   const upgradeInstructions =
     info.runtime === 'npm'
       ? `Since you are running as an npm global install, you can upgrade yourself using the shell tool:
@@ -246,9 +287,9 @@ Then restart using the tinyclaw_restart tool.`;
 
 ## Software Update Available
 - **Current version:** ${info.current}
-- **Latest version:** ${info.latest}
+- **Latest version:** ${safeLatest}
 - **Runtime:** ${info.runtime}
-- **Release notes:** ${info.releaseUrl}
+- **Release notes:** ${safeReleaseUrl}
 
 ${upgradeInstructions}
 
