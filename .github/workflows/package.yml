@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build workspace packages
+        run: bun run build:packages
+
       - name: Build & Publish Packages
         uses: wgtechlabs/package-build-flow-action@v2.0.1
         with:
