@@ -118,7 +118,7 @@ function readCache(dataDir: string): UpdateInfo | null {
   try {
     const raw = readFileSync(getCachePath(dataDir), 'utf-8');
     const cached = JSON.parse(raw) as UpdateInfo;
-    if (cached && typeof cached.checkedAt === 'number') return cached;
+    if (cached && typeof cached.checkedAt === 'number' && typeof cached.latest === 'string' && typeof cached.runtime === 'string') return cached;
   } catch {
     // Missing or corrupt — will re-check
   }

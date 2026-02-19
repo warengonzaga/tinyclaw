@@ -9,9 +9,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
-  security-events: write
-  pull-requests: write
 
 jobs:
   build:
@@ -56,10 +53,19 @@ jobs:
 
   package:
     needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      packages: write
+      pull-requests: write
     uses: ./.github/workflows/package.yml
     secrets: inherit
 
   container:
     needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      packages: write
+      security-events: write
+      pull-requests: write
     uses: ./.github/workflows/container.yml
     secrets: inherit

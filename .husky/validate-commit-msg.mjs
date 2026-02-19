@@ -1,6 +1,10 @@
 import { readFileSync } from "fs";
 
 const msgFile = process.argv[2];
+if (!msgFile) {
+  console.error("Error: No commit message file path provided.");
+  process.exit(1);
+}
 const raw = readFileSync(msgFile, "utf8");
 const firstLine = raw.replace(/\r/g, "").split("\n")[0].trim();
 
@@ -10,7 +14,7 @@ if (/^Merge /.test(firstLine)) process.exit(0);
 // Clean Commit convention pattern
 // Format: <emoji> <type>[(<scope>)]: <description>
 const pattern =
-  /^(📦|🔧|🗑️|🔒|⚙️|☕|🧪|📖|🚀) (new|update|remove|security|setup|chore|test|docs|release)( \([a-z0-9][a-z0-9-]*\))?: .{1,72}$/u;
+  /^(📦|🔧|🗑\uFE0F?|🔒|⚙\uFE0F?|☕|🧪|📖|🚀) (new|update|remove|security|setup|chore|test|docs|release)( \([a-z0-9][a-z0-9-]*\))?: .{1,72}$/u;
 
 if (!pattern.test(firstLine)) {
   console.error("");
