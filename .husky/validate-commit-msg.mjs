@@ -5,11 +5,19 @@ if (!msgFile) {
   console.error("Error: No commit message file path provided.");
   process.exit(1);
 }
-const raw = readFileSync(msgFile, "utf8");
+let raw;
+try {
+  raw = readFileSync(msgFile, "utf8");
+} catch (err) {
+  console.error(
+    `Error: Could not read commit message file "${msgFile}": ${err.message}`,
+  );
+  process.exit(1);
+}
 const firstLine = raw.replace(/\r/g, "").split("\n")[0].trim();
 
-// Allow merge commits
-if (/^Merge /.test(firstLine)) process.exit(0);
+// Allow merge and revert commits
+if (/^Merge /.test(firstLine) || /^Revert /.test(firstLine)) process.exit(0);
 
 // Clean Commit convention pattern
 // Format: <emoji> <type>[(<scope>)]: <description>
