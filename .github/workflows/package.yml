@@ -37,7 +37,7 @@ jobs:
         run: bun run build
 
       - name: Build & Publish Packages
-        uses: wgtechlabs/package-build-flow-action@v2.0.0
+        uses: wgtechlabs/package-build-flow-action@v2.0.1
         with:
           monorepo: 'true'
           workspace-detection: 'true'
