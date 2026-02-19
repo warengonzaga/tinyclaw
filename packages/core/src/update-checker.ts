@@ -145,7 +145,8 @@ function readCache(dataDir: string): UpdateInfo | null {
   try {
     const raw = readFileSync(getCachePath(dataDir), 'utf-8');
     const cached = JSON.parse(raw) as UpdateInfo;
-    if (cached && typeof cached.checkedAt === 'number' && typeof cached.latest === 'string' && typeof cached.runtime === 'string') return cached;
+    const validRuntimes: UpdateRuntime[] = ['npm', 'docker', 'source'];
+    if (cached && typeof cached.checkedAt === 'number' && typeof cached.latest === 'string' && validRuntimes.includes(cached.runtime as UpdateRuntime)) return cached;
   } catch {
     // Missing or corrupt — will re-check
   }
@@ -155,7 +156,7 @@ function readCache(dataDir: string): UpdateInfo | null {
 function writeCache(dataDir: string, info: UpdateInfo): void {
   try {
     const dir = join(dataDir, 'data');
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true });
     writeFileSync(getCachePath(dataDir), JSON.stringify(info, null, 2), 'utf-8');
   } catch (err) {
     logger.debug('Failed to write update cache', err);
@@ -167,15 +168,13 @@ function writeCache(dataDir: string, info: UpdateInfo): void {
 // ---------------------------------------------------------------------------
 
 async function fetchLatestVersion(): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
     const res = await fetch(NPM_REGISTRY_URL, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
     });
-    clearTimeout(timeout);
 
     if (!res.ok) return null;
     const data = (await res.json()) as { version?: string };
@@ -183,6 +182,8 @@ async function fetchLatestVersion(): Promise<string | null> {
   } catch {
     // Network error, timeout, or offline — silently return null
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -266,6 +267,7 @@ export async function checkForUpdate(
 export function buildUpdateContext(info: UpdateInfo | null): string {
   if (!info?.updateAvailable) return '';
 
+  const safeCurrent = sanitizeForPrompt(info.current, 'version');
   const safeLatest = sanitizeForPrompt(info.latest, 'version');
   const safeReleaseUrl = sanitizeForPrompt(info.releaseUrl, 'url');
 
@@ -286,7 +288,7 @@ Then restart using the tinyclaw_restart tool.`;
   return `
 
 ## Software Update Available
-- **Current version:** ${info.current}
+- **Current version:** ${safeCurrent}
 - **Latest version:** ${safeLatest}
 - **Runtime:** ${info.runtime}
 - **Release notes:** ${safeReleaseUrl}
