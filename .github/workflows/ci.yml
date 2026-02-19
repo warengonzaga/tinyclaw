@@ -50,15 +50,3 @@ jobs:
           max_attempts: 3
           timeout_minutes: 10
           command: bun test
-
-  package:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/package.yml
-    secrets: inherit
-
-  container:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/container.yml
-    secrets: inherit
