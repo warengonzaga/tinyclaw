@@ -9,6 +9,8 @@ Reference: https://github.com/wgtechlabs/clean-commit
 ```text
 <emoji> <type>: <description>
 <emoji> <type> (<scope>): <description>
+<emoji> <type>!: <description>
+<emoji> <type>! (<scope>): <description>
 ```
 
 ## The 9 Types
@@ -28,6 +30,7 @@ Reference: https://github.com/wgtechlabs/clean-commit
 ## Rules
 
 - Use lowercase for type
+- Use `!` immediately after type (no space) to signal a breaking change — only for `new`, `update`, `remove`, `security`
 - Use present tense ("add" not "added")
 - No period at the end
 - Keep description under 72 characters
@@ -43,3 +46,5 @@ Reference: https://github.com/wgtechlabs/clean-commit
 - `🧪 test: add unit tests for auth service`
 - `📖 docs: update installation instructions`
 - `🚀 release: version 1.0.0`
+- `📦 new!: completely redesign authentication system`
+- `🔧 update! (api): change response format for all endpoints`
