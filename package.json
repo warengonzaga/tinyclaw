@@ -1,6 +1,6 @@
 {
   "name": "tinyclaw-monorepo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Your autonomous AI companion",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
@@ -19,15 +19,19 @@
     "build:plugins": "bun run --filter './plugins/**/*' build",
     "build:apps": "bun run --cwd src/web build && bun run --cwd src/cli build",
     "build:ui": "bun run --cwd src/web build",
+    "build:landing": "bun run --cwd src/landing build",
     "build:all": "bun run build:packages && bun run build:plugins && bun run build:apps",
     "start": "bun run --cwd src/cli start",
     "test": "bun test",
     "cli": "bun run src/cli/src/index.ts",
-    "dev:purge": "bun run cli purge --force"
+    "dev:purge": "bun run cli purge --force",
+    "dev:landing": "bun run --cwd src/landing dev",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^22.10.0",
+    "husky": "^9.1.7",
     "typescript": "^5.7.0"
   },
   "dependencies": {

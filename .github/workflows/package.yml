@@ -1,6 +1,10 @@
 name: Package Build
 
 on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
   workflow_call:
   workflow_dispatch:
     inputs:
@@ -8,6 +12,8 @@ on:
         description: 'Perform dry run without publishing'
         type: boolean
         default: true
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -31,8 +37,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build workspace packages
+        run: bun run build:packages
+
       - name: Build & Publish Packages
-        uses: wgtechlabs/package-build-flow-action@v2.0.0
+        uses: wgtechlabs/package-build-flow-action@v2.0.1
         with:
           monorepo: 'true'
           workspace-detection: 'true'

@@ -1,5 +1,5 @@
 # ── Stage 1: Install + Build ────────────────────────────────────────
-FROM oven/bun:1 AS builder
+FROM oven/bun:1.3.9 AS builder
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ COPY plugins/channel/plugin-channel-friends/package.json ./plugins/channel/plugi
 COPY plugins/provider/plugin-provider-openai/package.json ./plugins/provider/plugin-provider-openai/
 
 # Install all deps (dev included — needed to build)
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Copy source
 COPY . .
@@ -40,7 +40,7 @@ COPY . .
 RUN bun run build
 
 # ── Stage 2: Production ─────────────────────────────────────────────
-FROM oven/bun:1-slim AS production
+FROM oven/bun:1.3.9-slim AS production
 
 WORKDIR /app
 

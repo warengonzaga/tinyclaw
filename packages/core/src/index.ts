@@ -49,3 +49,12 @@ export {
   BACKUP_CODE_LENGTH,
   RECOVERY_TOKEN_LENGTH,
 } from './owner-auth.js';
+
+// Update checker — npm registry polling + system prompt context
+export {
+  checkForUpdate,
+  buildUpdateContext,
+  detectRuntime,
+  isNewerVersion,
+} from './update-checker.js';
+export type { UpdateInfo, UpdateRuntime } from './update-checker.js';

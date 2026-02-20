@@ -760,6 +760,11 @@ export async function agentLoop(
     }
   }
 
+  // Inject software update context (if an update is available)
+  if (context.updateContext) {
+    basePrompt += context.updateContext;
+  }
+
   const systemPrompt = learning.injectIntoPrompt(basePrompt, learnedContext);
 
   // Sanitize user message for prompt injection defense (friends only)

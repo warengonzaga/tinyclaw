@@ -191,6 +191,8 @@ export interface AgentContext {
     getLatestSummary(userId: string): string | null;
     estimateTokens(text: string): number;
   };
+  /** Pre-built system prompt section about available software updates. */
+  updateContext?: string;
 }
 
 // ---------------------------------------------------------------------------

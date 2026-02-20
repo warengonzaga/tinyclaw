@@ -49,7 +49,7 @@ Tiny Claw is inspired by personal AI companions from science fiction like **Cods
 - **Self-configuring.** No manual config files. The agent configures itself through conversation.
 - **Own personality.** Ships with a personality (Heartware system) that's uniquely its own.
 - **Native, not wrapped.** Every component is built from scratch with zero dependency on external AI frameworks.
-- **Easy to start.** Uses Ollama Cloud with two built-in models — kimi-k2.5 (default) and gpt-oss:120b. Choose your model during setup and switch anytime via conversation.
+- **Easy to start.** Uses Ollama Cloud with two built-in models — kimi-k2.5:cloud (default) and gpt-oss:120b-cloud. Choose your model during setup and switch anytime via conversation.
 - **Cost-conscious.** Smart routing tiers queries across your installed providers. Cheap models handle simple stuff, powerful models only fire when needed.
 
 ## ✨ Features
@@ -120,6 +120,7 @@ tinyclaw/
     router/          Smart provider routing (8-dim classifier)
     learning/        Behavioral pattern detection
     sandbox/         Bun Worker code execution
+    shell/           Controlled shell execution with permission engine
     shield/          Runtime SHIELD.md enforcement + anti-malware
     pulse/           Cron-like proactive scheduler
     queue/           Per-session message locking queue
@@ -129,11 +130,11 @@ tinyclaw/
     secrets/         Encrypted secrets management (AES-256-GCM)
     plugins/         Plugin discovery and loading
   plugins/           Plugin packages (keep the core tiny)
-    channel/         Messaging integrations (Discord, etc.)
+    channel/         Messaging integrations (Discord, Friends, etc.)
     provider/        LLM providers (OpenAI, etc.)
-    tool/            Additional agent tools
   src/
     cli/             CLI entry point
+    landing/         Official landing page (Svelte + Vite)
     web/             Web UI (Svelte 5, Discord-like experience)
 ```
 
@@ -157,7 +158,7 @@ Read the project's [code of conduct](https://github.com/warengonzaga/tinyclaw/bl
 
 ## 📃 License
 
-This project is licensed under [MIT License](https://opensource.org/license/MIT).
+This project is licensed under [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html).
 
 ## 🙏 Credits
 
