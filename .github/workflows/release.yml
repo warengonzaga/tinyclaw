@@ -11,60 +11,16 @@ permissions:
   pull-requests: write
 
 jobs:
-  check-version:
+  release:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    outputs:
-      changed: ${{ steps.version.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: version
-        env:
-          BEFORE_SHA: ${{ github.event.workflow_run.head_commit.id }}
-        run: |
-          # Prefer GitHub-provided refs when available, fall back to HEAD~1
-          if [ -n "$BEFORE_SHA" ] && git cat-file -e "${BEFORE_SHA}^" 2>/dev/null; then
-            BASE="${BEFORE_SHA}~1"
-          elif git cat-file -e HEAD~1 2>/dev/null; then
-            BASE="HEAD~1"
-          else
-            # Initial commit or unreachable parent — treat as changed
-            echo "changed=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          if git diff "$BASE" HEAD --name-only | grep -qE 'package\.json$'; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-  release:
-    needs: check-version
-    if: needs.check-version.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
       - name: Create Release
-        uses: wgtechlabs/release-build-flow-action@799974c8dec094fbe94a92b2764365d3a8f9ce5f # v1.2.1
+        uses: wgtechlabs/release-build-flow-action@849220473bb8656723d3528d4b705641cffaa5cd # v1.3.0
         with:
           github-token: ${{ secrets.GH_PAT }}
           monorepo: 'true'
-          workspace-detection: 'true'
-          package-manager: 'bun'
-          change-detection: 'both'
-          unified-version: 'false'
-          per-package-changelog: 'true'
-          root-changelog: 'true'
-          changelog-enabled: 'true'
-          create-release: 'true'
-          release-draft: 'false'
-          release-name-template: 'Release {version}'
-          exclude-types: 'docs,style,test,ci,build'
-          minor-keywords: 'feat,new,add'
-          patch-keywords: 'fix,bugfix,security,perf,setup'
-          dry-run: 'false'
