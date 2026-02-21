@@ -46,6 +46,7 @@ mock.module('@tinyclaw/config', () => ({
         set: mock(() => {}),
         close: mockConfigClose,
         path: '/tmp/test-config/data/config.db',
+        onDidAnyChange: mock(() => mock(() => {})),
       }),
     ),
   },
@@ -264,6 +265,22 @@ mock.module('@tinyclaw/web', () => ({
       broadcast: mock(() => Promise.resolve()),
     })),
   })),
+}));
+
+// ── Mock @tinyclaw/nudge ──────────────────────────────────────────────
+
+mock.module('@tinyclaw/nudge', () => ({
+  createNudgeEngine: mock(() => ({
+    schedule: mock(() => 'nudge-1'),
+    flush: mock(() => Promise.resolve()),
+    pending: mock(() => []),
+    cancel: mock(() => true),
+    setPreferences: mock(() => {}),
+    getPreferences: mock(() => ({ enabled: true, maxPerHour: 5, suppressedCategories: [] })),
+    stop: mock(() => {}),
+  })),
+  wireNudgeToIntercom: mock(() => mock(() => {})),
+  createNudgeTools: mock(() => []),
 }));
 
 // ── Import after mocks ───────────────────────────────────────────────

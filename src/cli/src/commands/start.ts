@@ -42,6 +42,7 @@ import { createShellEngine, createShellTools } from '@tinyclaw/shell';
 import type { ChannelPlugin, Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
 import { createGateway } from '@tinyclaw/gateway';
+import { createNudgeEngine, wireNudgeToIntercom, createNudgeTools } from '@tinyclaw/nudge';
 import { theme } from '../ui/theme.js';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 
@@ -794,6 +795,7 @@ export async function startCommand(): Promise<void> {
     learning,
     queue,
     timeoutEstimator,
+    intercom,
     getCompactedContext: (userId: string) => compactor.getLatestSummary(userId),
   });
 
@@ -1065,6 +1067,87 @@ export async function startCommand(): Promise<void> {
   // Register web UI as a channel sender (SSE push)
   gateway.register('web', webUI.getChannelSender());
 
+  // --- Nudge Engine -------------------------------------------------------
+
+  const nudgePrefs = {
+    enabled: configManager.get<boolean>('nudge.enabled') ?? true,
+    quietHoursStart: configManager.get<string>('nudge.quietHoursStart'),
+    quietHoursEnd: configManager.get<string>('nudge.quietHoursEnd'),
+    maxPerHour: configManager.get<number>('nudge.maxPerHour') ?? 5,
+    suppressedCategories: configManager.get<string[]>('nudge.suppressedCategories') ?? [],
+  };
+
+  const nudgeEngine = createNudgeEngine({ gateway, preferences: nudgePrefs });
+  const unwireNudge = wireNudgeToIntercom(nudgeEngine, intercom);
+
+  // Register nudge tools so the agent can proactively reach out
+  allToolsWithDelegation.push(...createNudgeTools(nudgeEngine));
+
+  logger.info('Nudge engine initialized', undefined, { emoji: '✅' });
+
+  // Sync nudge preferences when config changes
+  configManager.onDidAnyChange(() => {
+    nudgeEngine.setPreferences({
+      enabled: configManager.get<boolean>('nudge.enabled') ?? true,
+      quietHoursStart: configManager.get<string>('nudge.quietHoursStart'),
+      quietHoursEnd: configManager.get<string>('nudge.quietHoursEnd'),
+      maxPerHour: configManager.get<number>('nudge.maxPerHour') ?? 5,
+      suppressedCategories: configManager.get<string[]>('nudge.suppressedCategories') ?? [],
+    });
+  });
+
+  // Register nudge flush job with Pulse (every 1 minute)
+  pulse.register({
+    id: 'nudge-flush',
+    schedule: '1m',
+    handler: async () => {
+      await nudgeEngine.flush();
+    },
+  });
+
+  // Register software update check nudge (every 6 hours)
+  pulse.register({
+    id: 'nudge-update-check',
+    schedule: '6h',
+    handler: async () => {
+      try {
+        const { getVersion } = await import('../ui/banner.js');
+        const currentVersion = getVersion();
+        const updateInfo = await checkForUpdate(currentVersion, dataDir);
+        if (!updateInfo?.updateAvailable) return;
+
+        // Deduplicate: skip if a pending nudge already exists for this version
+        const pending = nudgeEngine.pending();
+        const alreadyQueued = pending.some(
+          (n) => n.category === 'software_update' && n.metadata?.latestVersion === updateInfo.latest,
+        );
+        if (alreadyQueued) return;
+
+        const ownerId = configManager.get<string>('owner.ownerId') || 'web:default';
+        nudgeEngine.schedule({
+          userId: ownerId,
+          category: 'software_update',
+          content: `Tiny Claw ${updateInfo.latest} is available (you're on ${updateInfo.current}). Check the release notes at ${updateInfo.releaseUrl}`,
+          priority: 'low',
+          deliverAfter: 0,
+          metadata: {
+            currentVersion: updateInfo.current,
+            latestVersion: updateInfo.latest,
+            runtime: updateInfo.runtime,
+            releaseUrl: updateInfo.releaseUrl,
+          },
+        });
+
+        logger.info('Nudge: software update scheduled', {
+          current: updateInfo.current,
+          latest: updateInfo.latest,
+        });
+      } catch (err) {
+        logger.debug('Nudge: update check skipped', err);
+      }
+    },
+  });
+
   // --- Start channel plugins ---------------------------------------------
 
   const pluginRuntimeContext = {
@@ -1127,6 +1210,15 @@ export async function startCommand(): Promise<void> {
       logger.info('Pulse scheduler and session queue stopped');
     } catch (err) {
       logger.error('Error stopping pulse/queue:', err);
+    }
+
+    // 0.1. Nudge engine
+    try {
+      unwireNudge();
+      nudgeEngine.stop();
+      logger.info('Nudge engine stopped');
+    } catch (err) {
+      logger.error('Error stopping nudge engine:', err);
     }
 
     // 0.5. Cancel background delegation tasks
