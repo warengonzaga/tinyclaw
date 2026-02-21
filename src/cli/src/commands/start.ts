@@ -1009,6 +1009,7 @@ export async function startCommand(): Promise<void> {
   const port = parseInt(process.env.PORT || '3000', 10);
   const webUI = createWebUI({
     port,
+    webRoot,
     configManager,
     secretsManager,
     configDbPath: configManager.path,
