@@ -118,6 +118,7 @@ export async function webSetupCommand(): Promise<void> {
 
   const setupWebUI = createWebUI({
     port,
+    webRoot,
     configManager,
     secretsManager,
     configDbPath: configManager.path,
