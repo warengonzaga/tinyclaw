@@ -1143,6 +1143,59 @@ export function createWebUI(config) {
             return jsonResponse({ tasks })
           }
 
+          // =================================================================
+          // Nudge preference endpoints
+          // =================================================================
+
+          if (pathname === '/api/nudge/preferences' && request.method === 'GET') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+            return jsonResponse({
+              enabled: configManager?.get('nudge.enabled') ?? true,
+              quietHoursStart: configManager?.get('nudge.quietHoursStart') ?? null,
+              quietHoursEnd: configManager?.get('nudge.quietHoursEnd') ?? null,
+              maxPerHour: configManager?.get('nudge.maxPerHour') ?? 5,
+              suppressedCategories: configManager?.get('nudge.suppressedCategories') ?? [],
+            })
+          }
+
+          if (pathname === '/api/nudge/preferences' && request.method === 'POST') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+
+            let body
+            try {
+              body = await request.json()
+            } catch {
+              return jsonResponse({ error: 'Invalid JSON' }, 400)
+            }
+
+            if (!configManager) {
+              return jsonResponse({ error: 'Config not available' }, 500)
+            }
+
+            // Validate and apply each supported field
+            if (typeof body.enabled === 'boolean') {
+              configManager.set('nudge.enabled', body.enabled)
+            }
+            if (typeof body.quietHoursStart === 'string' && /^\d{2}:\d{2}$/.test(body.quietHoursStart)) {
+              configManager.set('nudge.quietHoursStart', body.quietHoursStart)
+            }
+            if (typeof body.quietHoursEnd === 'string' && /^\d{2}:\d{2}$/.test(body.quietHoursEnd)) {
+              configManager.set('nudge.quietHoursEnd', body.quietHoursEnd)
+            }
+            if (typeof body.maxPerHour === 'number' && body.maxPerHour > 0) {
+              configManager.set('nudge.maxPerHour', body.maxPerHour)
+            }
+            if (Array.isArray(body.suppressedCategories)) {
+              configManager.set('nudge.suppressedCategories', body.suppressedCategories)
+            }
+
+            return jsonResponse({ ok: true })
+          }
+
           if (pathname === '/api/sub-agents' && request.method === 'GET') {
             if (!await isOwnerRequest(request)) {
               return jsonResponse({ error: 'Unauthorized' }, 401)
