@@ -787,7 +787,11 @@ export async function agentLoop(
     logger.debug('LLM Response:', { type: response.type, contentLength: response.content?.length, content: response.content?.slice(0, 200) });
     
     if (response.type === 'text') {
-      const toolCall = extractToolCallFromText(response.content || '');
+      const rawToolCall = extractToolCallFromText(response.content || '');
+      // Only treat as a tool call if the extracted name matches a registered tool.
+      // This prevents the LLM's stray JSON from being misinterpreted as tool
+      // invocations, which was causing a "Working on that... Done!" loop.
+      const toolCall = rawToolCall && tools.some(t => t.name === rawToolCall.name) ? rawToolCall : null;
 
       if (toolCall) {
         jsonToolReplies += 1;
@@ -945,23 +949,22 @@ export async function agentLoop(
           continue;
         }
 
-        // For write operations, just return the summary
-        const responseText = summarizeToolResults([toolCall], toolResults);
+        // For write operations, feed the result back to the LLM so it
+        // can craft a natural, conversational response instead of the
+        // generic "Done!" that was causing a feedback loop in the history.
+        const writeResult = toolResults[0]?.result || 'completed';
+        const writeSummary = summarizeToolResults([toolCall], toolResults);
+        messages.push({
+          role: 'assistant',
+          content: `I used ${toolCall.name} and the result was: ${writeResult}`,
+        });
+        messages.push({
+          role: 'user',
+          content: 'Now respond naturally to my original message. Briefly confirm the action you took and be conversational.',
+        });
 
-        if (onStream) {
-          onStream({ type: 'text', content: responseText });
-          onStream({ type: 'done' });
-        }
-
-        db.saveMessage(userId, 'user', message);
-        db.saveMessage(userId, 'assistant', responseText);
-        recordEpisodic(responseText);
-
-        setTimeout(() => {
-          learning.analyze(message, responseText, history);
-        }, 100);
-
-        return responseText;
+        // Continue the loop to get LLM's natural response
+        continue;
       }
 
       // Stream the text response
