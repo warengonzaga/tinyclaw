@@ -40,6 +40,7 @@
     "@tinyclaw/logger": "workspace:*",
     "@tinyclaw/matcher": "workspace:*",
     "@tinyclaw/memory": "workspace:*",
+    "@tinyclaw/nudge": "workspace:*",
     "@tinyclaw/plugins": "workspace:*",
     "@tinyclaw/pulse": "workspace:*",
     "@tinyclaw/queue": "workspace:*",

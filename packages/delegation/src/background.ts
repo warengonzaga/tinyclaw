@@ -8,7 +8,7 @@
 
 import type { Provider, Tool, Message } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
-import type { DelegationStore, DelegationQueue } from './store.js';
+import type { DelegationStore, DelegationQueue, DelegationIntercom } from './store.js';
 import type {
   BackgroundRunner,
   BackgroundTaskRecord,
@@ -39,6 +39,7 @@ export function createBackgroundRunner(
   queue: DelegationQueue,
   timeoutEstimator?: TimeoutEstimator,
   templates?: TemplateManager,
+  intercom?: DelegationIntercom,
 ): BackgroundRunner {
   /** In-flight AbortControllers keyed by taskId. */
   const controllers = new Map<string, AbortController>();
@@ -137,6 +138,13 @@ export function createBackgroundRunner(
               db.updateBackgroundTask(taskId, 'completed', result.response, Date.now());
               lifecycle.recordTaskResult(agentId, true);
 
+              // Emit intercom event for nudge system
+              intercom?.emit('task:completed', userId, {
+                taskId,
+                agentId,
+                summary: result.response?.slice(0, 200),
+              });
+
               // Auto-create/update template on success
               if (templates) {
                 try {
@@ -161,6 +169,13 @@ export function createBackgroundRunner(
             } else {
               db.updateBackgroundTask(taskId, 'failed', result.response, Date.now());
               lifecycle.recordTaskResult(agentId, false);
+
+              // Emit intercom event for nudge system
+              intercom?.emit('task:failed', userId, {
+                taskId,
+                agentId,
+                error: result.response?.slice(0, 200),
+              });
             }
 
             // Auto-dismiss sub-agent once all its tasks are done — moves to History.
@@ -178,6 +193,13 @@ export function createBackgroundRunner(
             db.updateBackgroundTask(taskId, 'failed', errorMsg, Date.now());
             lifecycle.recordTaskResult(agentId, false);
             logger.error('Background task failed', { taskId, error: errorMsg });
+
+            // Emit intercom event for nudge system
+            intercom?.emit('task:failed', userId, {
+              taskId,
+              agentId,
+              error: errorMsg,
+            });
 
             // Auto-dismiss sub-agent on failure — move to History
             const allTasks = db.getUserBackgroundTasks(userId);

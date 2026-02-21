@@ -14,7 +14,7 @@
 
 import type { Tool, Provider, QueryTier } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
-import type { DelegationStore, DelegationQueue } from './store.js';
+import type { DelegationStore, DelegationQueue, DelegationIntercom } from './store.js';
 import type {
   DelegationV2Config,
   LifecycleManager,
@@ -74,6 +74,8 @@ function filterToolsForSubAgent(
 
 export interface DelegationToolsConfig extends DelegationV2Config {
   queue: DelegationQueue;
+  /** Optional intercom for emitting task lifecycle events (nudge system). */
+  intercom?: DelegationIntercom;
 }
 
 export function createDelegationTools(config: DelegationToolsConfig): {
@@ -99,7 +101,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
 
   const lifecycle = createLifecycleManager(db);
   const templates = createTemplateManager(db);
-  const background = createBackgroundRunner(db, lifecycle, queue, timeoutEstimator, templates);
+  const background = createBackgroundRunner(db, lifecycle, queue, timeoutEstimator, templates, config.intercom);
 
   // Helper: build orientation for the current user
   function getOrientation(userId: string): OrientationContext {

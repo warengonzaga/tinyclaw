@@ -28,7 +28,10 @@ export type IntercomTopic =
   | 'memory:updated'
   | 'memory:consolidated'
   | 'blackboard:proposal'
-  | 'blackboard:resolved';
+  | 'blackboard:resolved'
+  | 'nudge:scheduled'
+  | 'nudge:delivered'
+  | 'nudge:suppressed';
 
 export interface IntercomMessage {
   topic: IntercomTopic;
