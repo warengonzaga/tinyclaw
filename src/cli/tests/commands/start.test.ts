@@ -281,6 +281,8 @@ mock.module('@tinyclaw/nudge', () => ({
   })),
   wireNudgeToIntercom: mock(() => mock(() => {})),
   createNudgeTools: mock(() => []),
+  createCompanionJobs: mock(() => []),
+  getCompanionTouchActivity: mock(() => mock(() => {})),
 }));
 
 // ── Import after mocks ───────────────────────────────────────────────
