@@ -80,14 +80,27 @@ function containsInjectionPatterns(text: string): boolean {
 }
 
 /**
+ * Internal system userIds (pulse, companion, etc.) are trusted and should
+ * never be subjected to prompt injection sanitization.
+ */
+const INTERNAL_USER_PREFIXES = ['pulse:', 'companion:', 'system:'];
+
+function isInternalUser(userId: string): boolean {
+  return INTERNAL_USER_PREFIXES.some(prefix => userId.startsWith(prefix));
+}
+
+/**
  * Sanitize a user/friend message for prompt injection defense.
  * - For **owner** messages: no sanitization (owner is trusted).
+ * - For **internal** messages (pulse, companion): no sanitization (system-generated).
  * - For **friend** messages: if injection patterns are detected, wrap in
  *   boundary markers so the LLM treats it as untrusted content.
  */
 function sanitizeMessage(text: string, userId: string, ownerId: string | undefined): string {
   // Owner is fully trusted — no sanitization
   if (ownerId && isOwner(userId, ownerId)) return text;
+  // Internal system users are trusted — no sanitization
+  if (isInternalUser(userId)) return text;
   // No owner set yet — pre-claim, treat cautiously
   if (!ownerId) return text;
 
