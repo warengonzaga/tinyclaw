@@ -30,6 +30,7 @@ import type {
   Tool,
   SecretsManagerInterface,
   ConfigManagerInterface,
+  OutboundMessage,
 } from '@tinyclaw/types';
 import { InviteStore } from './store.js';
 import {
@@ -59,6 +60,7 @@ const friendsPlugin: ChannelPlugin = {
   description: 'Invite-based web chat for friends — powered by FRIENDS.md',
   type: 'channel',
   version: '0.1.0',
+  channelPrefix: 'friend',
 
   getPairingTools(
     _secrets: SecretsManagerInterface,
@@ -117,6 +119,32 @@ const friendsPlugin: ChannelPlugin = {
 
     await friendsServer.start();
     logger.info(`Friends chat available at http://${host}:${port}/chat`);
+  },
+
+  async sendToUser(userId: string, message: OutboundMessage): Promise<void> {
+    if (!friendsServer) {
+      throw new Error('Friends server is not running');
+    }
+
+    // Parse username from the prefixed format "friend:<username>"
+    const username = userId.replace(/^friend:/, '');
+    if (!username) {
+      throw new Error(`Invalid Friends userId: ${userId}`);
+    }
+
+    const delivered = friendsServer.pushToUser(username, {
+      type: 'nudge',
+      content: message.content,
+      source: message.source,
+      priority: message.priority,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (!delivered) {
+      logger.warn(`Friends: user "${username}" has no active push connections`);
+    } else {
+      logger.info(`Friends: sent outbound message to ${userId}`);
+    }
   },
 
   async stop(): Promise<void> {

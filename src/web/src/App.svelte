@@ -224,6 +224,10 @@
       fetchAgentProfile()
     }
     const interval = setInterval(checkHealth, 12000)
+    // Re-check auth status periodically to detect session expiry or revocation.
+    // If the user is no longer recognized as owner, the view will reactively
+    // switch to 'landing', kicking them out of the dashboard.
+    const authInterval = setInterval(checkAuth, 30000)
     // Poll faster (3s) to keep sidebar responsive during background execution
     const bgInterval = setInterval(() => {
       if (view === 'owner') {
@@ -231,6 +235,28 @@
         fetchSubAgents()
       }
     }, 3000)
+
+    // SSE push channel — receive nudges & proactive messages from the server
+    let eventSource = null
+    if (isOwner) {
+      eventSource = new EventSource('/api/events')
+      eventSource.addEventListener('message', (e) => {
+        try {
+          const data = JSON.parse(e.data)
+          if (data.content && !isStreaming) {
+            const nudgeMsg = {
+              id: createId(),
+              role: 'assistant',
+              content: data.content,
+              streaming: false,
+              timestamp: getTimestamp(),
+            }
+            messages = [...messages, nudgeMsg]
+            tick().then(scrollToBottom)
+          }
+        } catch { /* ignore malformed events */ }
+      })
+    }
 
     // Sync view state on back/forward navigation
     const handlePopstate = () => {
@@ -250,6 +276,8 @@
     return () => {
       clearInterval(interval)
       clearInterval(bgInterval)
+      clearInterval(authInterval)
+      if (eventSource) eventSource.close()
       if (welcomeTimerId) clearTimeout(welcomeTimerId)
       if (restartTimerId) clearTimeout(restartTimerId)
       window.removeEventListener('popstate', handlePopstate)
@@ -966,6 +994,10 @@
   async function sendMessage() {
     const message = input.trim()
     if (!message || isStreaming) return
+
+    // Re-verify ownership before every message to prevent stale sessions
+    await checkAuth()
+    if (!isOwner) return
 
     streamError = ''
     input = ''

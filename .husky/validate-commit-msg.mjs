@@ -22,7 +22,7 @@ if (/^Merge /.test(firstLine) || /^Revert /.test(firstLine)) process.exit(0);
 // Clean Commit convention pattern
 // Format: <emoji> <type>[!][(<scope>)]: <description>
 const pattern =
-  /^(📦|🔧|🗑\uFE0F?|🔒|⚙\uFE0F?|☕|🧪|📖|🚀) (new|update|remove|security|setup|chore|test|docs|release)(!?)( \([a-z0-9][a-z0-9-]*\))?: .{1,72}$/u;
+  /^(📦|🔧|🗑\uFE0F?|🔒|⚙\uFE0F?|☕|🧪|📖|🚀) (new|update|remove|security|setup|chore|test|docs|release)(!?)( \([a-zA-Z0-9][a-zA-Z0-9-]*\))?: .{1,72}$/u;
 
 // Only new, update, remove, security may use the breaking change marker
 const breakingMatch = firstLine.match(pattern);

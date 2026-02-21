@@ -9,12 +9,14 @@ COPY packages/compactor/package.json ./packages/compactor/
 COPY packages/config/package.json ./packages/config/
 COPY packages/core/package.json ./packages/core/
 COPY packages/delegation/package.json ./packages/delegation/
+COPY packages/gateway/package.json ./packages/gateway/
 COPY packages/heartware/package.json ./packages/heartware/
 COPY packages/intercom/package.json ./packages/intercom/
 COPY packages/learning/package.json ./packages/learning/
 COPY packages/logger/package.json ./packages/logger/
 COPY packages/matcher/package.json ./packages/matcher/
 COPY packages/memory/package.json ./packages/memory/
+COPY packages/nudge/package.json ./packages/nudge/
 COPY packages/plugins/package.json ./packages/plugins/
 COPY packages/pulse/package.json ./packages/pulse/
 COPY packages/queue/package.json ./packages/queue/

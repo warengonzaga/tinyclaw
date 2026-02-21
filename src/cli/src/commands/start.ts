@@ -41,6 +41,8 @@ import { createCompactor } from '@tinyclaw/compactor';
 import { createShellEngine, createShellTools } from '@tinyclaw/shell';
 import type { ChannelPlugin, Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
+import { createGateway } from '@tinyclaw/gateway';
+import { createNudgeEngine, wireNudgeToIntercom, createNudgeTools, createCompanionJobs, getCompanionTouchActivity } from '@tinyclaw/nudge';
 import { theme } from '../ui/theme.js';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 
@@ -793,6 +795,7 @@ export async function startCommand(): Promise<void> {
     learning,
     queue,
     timeoutEstimator,
+    intercom,
     getCompactedContext: (userId: string) => compactor.getLatestSummary(userId),
   });
 
@@ -987,7 +990,7 @@ export async function startCommand(): Promise<void> {
   if (needsBuild) {
     logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
     try {
-      const buildResult = Bun.spawnSync(['bun', 'run', 'build'], {
+      const buildResult = Bun.spawnSync([process.execPath, 'run', 'build'], {
         cwd: webRoot,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -1009,6 +1012,7 @@ export async function startCommand(): Promise<void> {
   const port = parseInt(process.env.PORT || '3000', 10);
   const webUI = createWebUI({
     port,
+    webRoot,
     configManager,
     secretsManager,
     configDbPath: configManager.path,
@@ -1019,6 +1023,8 @@ export async function startCommand(): Promise<void> {
       logger.info('Owner claimed via web UI', { ownerId }, { emoji: '🔑' });
     },
     onMessage: async (message: string, userId: string) => {
+      // Update companion activity tracker on every user message
+      touchCompanionActivity?.();
       const { provider, classification, failedOver } =
         await orchestrator.routeWithHealth(message);
       logger.debug('Routed query', {
@@ -1040,6 +1046,8 @@ export async function startCommand(): Promise<void> {
       return db.getAllSubAgents(userId, true);
     },
     onMessageStream: async (message: string, userId: string, callback: StreamCallback) => {
+      // Update companion activity tracker on every user message
+      touchCompanionActivity?.();
       const { provider, classification, failedOver } =
         await orchestrator.routeWithHealth(message);
       logger.debug('Routed query (stream)', {
@@ -1056,6 +1064,114 @@ export async function startCommand(): Promise<void> {
 
   await webUI.start();
 
+  // --- Outbound Gateway ---------------------------------------------------
+
+  const gateway = createGateway();
+
+  // Register web UI as a channel sender (SSE push)
+  gateway.register('web', webUI.getChannelSender());
+
+  // --- Nudge Engine -------------------------------------------------------
+
+  const nudgePrefs = {
+    enabled: configManager.get<boolean>('nudge.enabled') ?? true,
+    quietHoursStart: configManager.get<string>('nudge.quietHoursStart'),
+    quietHoursEnd: configManager.get<string>('nudge.quietHoursEnd'),
+    maxPerHour: configManager.get<number>('nudge.maxPerHour') ?? 5,
+    suppressedCategories: (configManager.get<string[]>('nudge.suppressedCategories') ?? []) as import('@tinyclaw/types').NudgeCategory[],
+  };
+
+  const nudgeEngine = createNudgeEngine({ gateway, preferences: nudgePrefs });
+  const unwireNudge = wireNudgeToIntercom(nudgeEngine, intercom);
+
+  // Register nudge tools so the agent can proactively reach out
+  allToolsWithDelegation.push(...createNudgeTools(nudgeEngine));
+
+  logger.info('Nudge engine initialized', undefined, { emoji: '✅' });
+
+  // Sync nudge preferences when config changes
+  configManager.onDidAnyChange(() => {
+    nudgeEngine.setPreferences({
+      enabled: configManager.get<boolean>('nudge.enabled') ?? true,
+      quietHoursStart: configManager.get<string>('nudge.quietHoursStart'),
+      quietHoursEnd: configManager.get<string>('nudge.quietHoursEnd'),
+      maxPerHour: configManager.get<number>('nudge.maxPerHour') ?? 5,
+      suppressedCategories: (configManager.get<string[]>('nudge.suppressedCategories') ?? []) as import('@tinyclaw/types').NudgeCategory[],
+    });
+  });
+
+  // Register nudge flush job with Pulse (every 1 minute)
+  pulse.register({
+    id: 'nudge-flush',
+    schedule: '1m',
+    handler: async () => {
+      await nudgeEngine.flush();
+    },
+  });
+
+  // --- Companion Nudges (AI-generated, Heartware-aligned) ----------------
+
+  const companionJobs = createCompanionJobs({
+    nudgeEngine,
+    queue,
+    context,
+    configManager,
+    db,
+    agentLoop,
+  });
+
+  for (const job of companionJobs) {
+    pulse.register(job);
+  }
+
+  // Wire activity tracking so the companion knows when the owner is active
+  const touchCompanionActivity = getCompanionTouchActivity(companionJobs);
+
+  logger.info('Companion nudges registered', undefined, { emoji: '🐾' });
+
+  // Register software update check nudge (every 6 hours)
+  pulse.register({
+    id: 'nudge-update-check',
+    schedule: '6h',
+    handler: async () => {
+      try {
+        const { getVersion } = await import('../ui/banner.js');
+        const currentVersion = getVersion();
+        const updateInfo = await checkForUpdate(currentVersion, dataDir);
+        if (!updateInfo?.updateAvailable) return;
+
+        // Deduplicate: skip if a pending nudge already exists for this version
+        const pending = nudgeEngine.pending();
+        const alreadyQueued = pending.some(
+          (n) => n.category === 'software_update' && n.metadata?.latestVersion === updateInfo.latest,
+        );
+        if (alreadyQueued) return;
+
+        const ownerId = configManager.get<string>('owner.ownerId') || 'web:default';
+        nudgeEngine.schedule({
+          userId: ownerId,
+          category: 'software_update',
+          content: `Tiny Claw ${updateInfo.latest} is available (you're on ${updateInfo.current}). Check the release notes at ${updateInfo.releaseUrl}`,
+          priority: 'low',
+          deliverAfter: 0,
+          metadata: {
+            currentVersion: updateInfo.current,
+            latestVersion: updateInfo.latest,
+            runtime: updateInfo.runtime,
+            releaseUrl: updateInfo.releaseUrl,
+          },
+        });
+
+        logger.info('Nudge: software update scheduled', {
+          current: updateInfo.current,
+          latest: updateInfo.latest,
+        });
+      } catch (err) {
+        logger.debug('Nudge: update check skipped', err);
+      }
+    },
+  });
+
   // --- Start channel plugins ---------------------------------------------
 
   const pluginRuntimeContext = {
@@ -1069,12 +1185,23 @@ export async function startCommand(): Promise<void> {
     agentContext: context,
     secrets: secretsManager,
     configManager,
+    gateway,
   };
 
   for (const channel of plugins.channels) {
     try {
       await channel.start(pluginRuntimeContext);
       logger.info(`Channel plugin started: ${channel.name}`, undefined, { emoji: '✅' });
+
+      // Register channel plugins that support outbound messaging
+      if (channel.sendToUser && channel.channelPrefix) {
+        gateway.register(channel.channelPrefix, {
+          name: channel.name,
+          async send(userId, message) {
+            await channel.sendToUser!(userId, message);
+          },
+        });
+      }
     } catch (err) {
       logger.error(`Failed to start channel plugin "${channel.name}":`, err);
     }
@@ -1107,6 +1234,15 @@ export async function startCommand(): Promise<void> {
       logger.info('Pulse scheduler and session queue stopped');
     } catch (err) {
       logger.error('Error stopping pulse/queue:', err);
+    }
+
+    // 0.1. Nudge engine
+    try {
+      unwireNudge();
+      nudgeEngine.stop();
+      logger.info('Nudge engine stopped');
+    } catch (err) {
+      logger.error('Error stopping nudge engine:', err);
     }
 
     // 0.5. Cancel background delegation tasks

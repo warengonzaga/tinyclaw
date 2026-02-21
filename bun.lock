@@ -63,6 +63,14 @@
         "@tinyclaw/queue": "workspace:*",
       },
     },
+    "packages/gateway": {
+      "name": "@tinyclaw/gateway",
+      "version": "1.1.0",
+      "dependencies": {
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
+      },
+    },
     "packages/heartware": {
       "name": "@tinyclaw/heartware",
       "version": "1.1.0",
@@ -101,6 +109,14 @@
       },
       "devDependencies": {
         "@tinyclaw/core": "workspace:*",
+      },
+    },
+    "packages/nudge": {
+      "name": "@tinyclaw/nudge",
+      "version": "1.1.0",
+      "dependencies": {
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
       },
     },
     "packages/plugins": {
@@ -201,12 +217,14 @@
         "@tinyclaw/config": "workspace:*",
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/delegation": "workspace:*",
+        "@tinyclaw/gateway": "workspace:*",
         "@tinyclaw/heartware": "workspace:*",
         "@tinyclaw/intercom": "workspace:*",
         "@tinyclaw/learning": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/matcher": "workspace:*",
         "@tinyclaw/memory": "workspace:*",
+        "@tinyclaw/nudge": "workspace:*",
         "@tinyclaw/plugins": "workspace:*",
         "@tinyclaw/pulse": "workspace:*",
         "@tinyclaw/queue": "workspace:*",
@@ -245,6 +263,7 @@
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/heartware": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
         "dompurify": "^3.2.6",
         "marked": "^12.0.2",
         "qrcode": "^1.5.4",
@@ -441,6 +460,8 @@
 
     "@tinyclaw/delegation": ["@tinyclaw/delegation@workspace:packages/delegation"],
 
+    "@tinyclaw/gateway": ["@tinyclaw/gateway@workspace:packages/gateway"],
+
     "@tinyclaw/heartware": ["@tinyclaw/heartware@workspace:packages/heartware"],
 
     "@tinyclaw/intercom": ["@tinyclaw/intercom@workspace:packages/intercom"],
@@ -454,6 +475,8 @@
     "@tinyclaw/matcher": ["@tinyclaw/matcher@workspace:packages/matcher"],
 
     "@tinyclaw/memory": ["@tinyclaw/memory@workspace:packages/memory"],
+
+    "@tinyclaw/nudge": ["@tinyclaw/nudge@workspace:packages/nudge"],
 
     "@tinyclaw/plugin-channel-discord": ["@tinyclaw/plugin-channel-discord@workspace:plugins/channel/plugin-channel-discord"],
 

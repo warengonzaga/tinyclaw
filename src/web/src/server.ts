@@ -5,6 +5,7 @@ import { SecurityDatabase } from './security-db'
 import { DEFAULT_PROVIDER, DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core'
 import { generateSoulTraits } from '@tinyclaw/heartware'
 import { logger } from '@tinyclaw/logger'
+import type { ChannelSender, OutboundMessage } from '@tinyclaw/types'
 
 // Inline ANSI helpers for log highlighting (no external dep needed)
 const highlight = (text: string) => `\x1b[1m\x1b[36m${text}\x1b[39m\x1b[22m`
@@ -367,8 +368,8 @@ function fileResponse(filePath) {
   })
 }
 
-function resolveUiPaths() {
-  const webRoot = resolve(import.meta.dir, '..')
+function resolveUiPaths(overrideWebRoot?: string) {
+  const webRoot = overrideWebRoot || resolve(import.meta.dir, '..')
   return {
     webRoot,
     distDir: join(webRoot, 'dist'),
@@ -376,8 +377,8 @@ function resolveUiPaths() {
   }
 }
 
-function findStaticFile(pathname) {
-  const { distDir, publicDir } = resolveUiPaths()
+function findStaticFile(pathname, overrideWebRoot?: string) {
+  const { distDir, publicDir } = resolveUiPaths(overrideWebRoot)
 
   const candidates = [
     join(distDir, pathname),
@@ -418,11 +419,11 @@ function buildDevNotice() {
       <div class="divider"></div>
       <div class="steps">
         <div class="step"><strong>Development:</strong></div>
-        <div class="step">1. Run <code>bun run --cwd apps/web dev</code></div>
+        <div class="step">1. Run <code>bun run --cwd src/web dev</code></div>
         <div class="step">2. Open <a href="http://localhost:5173">http://localhost:5173</a></div>
         <div class="divider"></div>
         <div class="step"><strong>Production:</strong></div>
-        <div class="step">Run <code>bun run --cwd apps/web build</code></div>
+        <div class="step">Run <code>bun run --cwd src/web build</code></div>
       </div>
     </div>
   </body>
@@ -442,10 +443,32 @@ export function createWebUI(config) {
     onOwnerClaimed,
     configDbPath,
     dataDir,
+    webRoot: configWebRoot,
   } = config
 
   const serverStartedAt = Date.now()
   let server = null
+
+  // ---------------------------------------------------------------------------
+  // SSE push — outbound gateway delivery channel for the web UI
+  // ---------------------------------------------------------------------------
+  type SSEClient = ReadableStreamDefaultController<Uint8Array>
+  const sseClients = new Set<SSEClient>()
+  const sseEncoder = new TextEncoder()
+
+  /** Push an SSE event to all connected web clients. */
+  function pushToAllClients(event: string, data: unknown): void {
+    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+    const encoded = sseEncoder.encode(payload)
+    for (const client of sseClients) {
+      try {
+        client.enqueue(encoded)
+      } catch {
+        // Client disconnected — remove on next heartbeat sweep
+        sseClients.delete(client)
+      }
+    }
+  }
 
   // Initialize persistent security database when dataDir is available
   if (dataDir) {
@@ -1064,6 +1087,53 @@ export function createWebUI(config) {
             return jsonResponse({ name: agentName, emoji: agentEmoji })
           }
 
+          // =================================================================
+          // SSE push endpoint — outbound gateway delivery for web UI
+          // =================================================================
+
+          if (pathname === '/api/events' && request.method === 'GET') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+
+            const stream = new ReadableStream<Uint8Array>({
+              start(controller) {
+                sseClients.add(controller)
+                logger.debug(`SSE: client connected (${sseClients.size} active)`, 'web')
+
+                // Send initial connection confirmation
+                const welcome = sseEncoder.encode(`event: connected\ndata: ${JSON.stringify({ ok: true, ts: Date.now() })}\n\n`)
+                controller.enqueue(welcome)
+
+                // Heartbeat to keep connection alive
+                const heartbeat = setInterval(() => {
+                  try {
+                    controller.enqueue(sseEncoder.encode(': heartbeat\n\n'))
+                  } catch {
+                    clearInterval(heartbeat)
+                    sseClients.delete(controller)
+                  }
+                }, 15_000)
+
+                // Cleanup on abort (client closes tab/connection)
+                request.signal.addEventListener('abort', () => {
+                  clearInterval(heartbeat)
+                  sseClients.delete(controller)
+                  logger.debug(`SSE: client disconnected (${sseClients.size} active)`, 'web')
+                  try { controller.close() } catch { /* already closed */ }
+                })
+              },
+            })
+
+            return new Response(stream, {
+              headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                Connection: 'keep-alive',
+              },
+            })
+          }
+
           if (pathname === '/api/background-tasks' && request.method === 'GET') {
             if (!await isOwnerRequest(request)) {
               return jsonResponse({ error: 'Unauthorized' }, 401)
@@ -1071,6 +1141,59 @@ export function createWebUI(config) {
             const userId = url.searchParams.get('userId') || 'web:owner'
             const tasks = getBackgroundTasks ? getBackgroundTasks(userId) : []
             return jsonResponse({ tasks })
+          }
+
+          // =================================================================
+          // Nudge preference endpoints
+          // =================================================================
+
+          if (pathname === '/api/nudge/preferences' && request.method === 'GET') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+            return jsonResponse({
+              enabled: configManager?.get('nudge.enabled') ?? true,
+              quietHoursStart: configManager?.get('nudge.quietHoursStart') ?? null,
+              quietHoursEnd: configManager?.get('nudge.quietHoursEnd') ?? null,
+              maxPerHour: configManager?.get('nudge.maxPerHour') ?? 5,
+              suppressedCategories: configManager?.get('nudge.suppressedCategories') ?? [],
+            })
+          }
+
+          if (pathname === '/api/nudge/preferences' && request.method === 'POST') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+
+            let body
+            try {
+              body = await request.json()
+            } catch {
+              return jsonResponse({ error: 'Invalid JSON' }, 400)
+            }
+
+            if (!configManager) {
+              return jsonResponse({ error: 'Config not available' }, 500)
+            }
+
+            // Validate and apply each supported field
+            if (typeof body.enabled === 'boolean') {
+              configManager.set('nudge.enabled', body.enabled)
+            }
+            if (typeof body.quietHoursStart === 'string' && /^\d{2}:\d{2}$/.test(body.quietHoursStart)) {
+              configManager.set('nudge.quietHoursStart', body.quietHoursStart)
+            }
+            if (typeof body.quietHoursEnd === 'string' && /^\d{2}:\d{2}$/.test(body.quietHoursEnd)) {
+              configManager.set('nudge.quietHoursEnd', body.quietHoursEnd)
+            }
+            if (typeof body.maxPerHour === 'number' && body.maxPerHour > 0) {
+              configManager.set('nudge.maxPerHour', body.maxPerHour)
+            }
+            if (Array.isArray(body.suppressedCategories)) {
+              configManager.set('nudge.suppressedCategories', body.suppressedCategories)
+            }
+
+            return jsonResponse({ ok: true })
           }
 
           if (pathname === '/api/sub-agents' && request.method === 'GET') {
@@ -1358,7 +1481,7 @@ export function createWebUI(config) {
           }
 
           if (pathname === '/' || pathname === '/index.html') {
-            const { distDir } = resolveUiPaths()
+            const { distDir } = resolveUiPaths(configWebRoot)
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
@@ -1376,7 +1499,7 @@ export function createWebUI(config) {
 
           // Setup route — first-time onboarding flow
           if (pathname === '/setup') {
-            const { distDir } = resolveUiPaths()
+            const { distDir } = resolveUiPaths(configWebRoot)
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
@@ -1392,7 +1515,7 @@ export function createWebUI(config) {
               return Response.redirect(new URL('/setup', request.url).toString(), 302)
             }
 
-            const { distDir } = resolveUiPaths()
+            const { distDir } = resolveUiPaths(configWebRoot)
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
@@ -1414,7 +1537,7 @@ export function createWebUI(config) {
               return Response.redirect(new URL('/recovery', request.url).toString(), 302)
             }
 
-            const { distDir } = resolveUiPaths()
+            const { distDir } = resolveUiPaths(configWebRoot)
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
@@ -1425,13 +1548,13 @@ export function createWebUI(config) {
           }
 
           // Serve static files from dist/ or public/
-          const staticPath = findStaticFile(pathname.replace(/^\//, ''))
+          const staticPath = findStaticFile(pathname.replace(/^\//, ''), configWebRoot)
           if (staticPath) {
             return fileResponse(staticPath)
           }
 
           // SPA fallback: serve index.html for client-side routing
-          const { distDir } = resolveUiPaths()
+          const { distDir } = resolveUiPaths(configWebRoot)
           const distIndex = join(distDir, 'index.html')
           if (existsSync(distIndex)) {
             return fileResponse(distIndex)
@@ -1451,6 +1574,34 @@ export function createWebUI(config) {
 
     getPort() {
       return server?.port || port
-    }
+    },
+
+    /**
+     * Returns a ChannelSender for the web UI channel.
+     * Register this with the outbound gateway using prefix 'web'.
+     */
+    getChannelSender(): ChannelSender {
+      return {
+        name: 'Web UI (SSE)',
+        async send(_userId: string, message: OutboundMessage) {
+          pushToAllClients('message', {
+            content: message.content,
+            priority: message.priority,
+            source: message.source,
+            metadata: message.metadata,
+            ts: Date.now(),
+          })
+        },
+        async broadcast(message: OutboundMessage) {
+          pushToAllClients('broadcast', {
+            content: message.content,
+            priority: message.priority,
+            source: message.source,
+            metadata: message.metadata,
+            ts: Date.now(),
+          })
+        },
+      }
+    },
   }
 }

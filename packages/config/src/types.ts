@@ -147,6 +147,20 @@ export const TinyClawConfigSchema = z.object({
       removeDuplicateLines: z.boolean().optional(),
     }).optional(),
   }).optional(),
+
+  /** Nudge / proactive messaging settings */
+  nudge: z.object({
+    /** Master switch — disables all nudges when false. Default: true */
+    enabled: z.boolean().optional(),
+    /** Quiet hours start (24h format, e.g. '22:00'). */
+    quietHoursStart: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    /** Quiet hours end (24h format, e.g. '08:00'). */
+    quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    /** Max nudges per hour. Default: 5 */
+    maxPerHour: z.number().int().positive().optional(),
+    /** Categories to suppress (opt-out). */
+    suppressedCategories: z.array(z.string()).optional(),
+  }).optional(),
 }).passthrough();
 
 /**
