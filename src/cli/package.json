@@ -27,7 +27,7 @@
     "start": "bun dist/index.js",
     "test": "bun test"
   },
-  "dependencies": {
+  "devDependencies": {
     "@clack/prompts": "^1.0.0",
     "@tinyclaw/compactor": "workspace:*",
     "@tinyclaw/config": "workspace:*",
@@ -50,12 +50,10 @@
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/web": "workspace:*",
     "@wgtechlabs/log-engine": "^2.3.0",
+    "@types/figlet": "^1.7.0",
+    "@types/qrcode": "^1.5.6",
     "figlet": "^1.10.0",
     "picocolors": "^1.1.1",
     "qrcode": "^1.5.4"
-  },
-  "devDependencies": {
-    "@types/figlet": "^1.7.0",
-    "@types/qrcode": "^1.5.6"
   }
 }

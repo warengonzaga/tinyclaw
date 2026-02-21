@@ -16,7 +16,7 @@
     },
     "packages/compactor": {
       "name": "@tinyclaw/compactor",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -28,7 +28,7 @@
     },
     "packages/config": {
       "name": "@tinyclaw/config",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
@@ -39,7 +39,7 @@
     },
     "packages/core": {
       "name": "@tinyclaw/core",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/delegation": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
@@ -51,7 +51,7 @@
     },
     "packages/delegation": {
       "name": "@tinyclaw/delegation",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/router": "workspace:*",
@@ -65,7 +65,7 @@
     },
     "packages/heartware": {
       "name": "@tinyclaw/heartware",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -73,29 +73,29 @@
     },
     "packages/intercom": {
       "name": "@tinyclaw/intercom",
-      "version": "1.0.1",
+      "version": "1.1.0",
     },
     "packages/learning": {
       "name": "@tinyclaw/learning",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/types": "workspace:*",
       },
     },
     "packages/logger": {
       "name": "@tinyclaw/logger",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@wgtechlabs/log-engine": "^2.3.0",
       },
     },
     "packages/matcher": {
       "name": "@tinyclaw/matcher",
-      "version": "1.0.1",
+      "version": "1.1.0",
     },
     "packages/memory": {
       "name": "@tinyclaw/memory",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/types": "workspace:*",
       },
@@ -105,7 +105,7 @@
     },
     "packages/plugins": {
       "name": "@tinyclaw/plugins",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -113,7 +113,7 @@
     },
     "packages/pulse": {
       "name": "@tinyclaw/pulse",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -121,11 +121,11 @@
     },
     "packages/queue": {
       "name": "@tinyclaw/queue",
-      "version": "1.0.1",
+      "version": "1.1.0",
     },
     "packages/router": {
       "name": "@tinyclaw/router",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -133,11 +133,11 @@
     },
     "packages/sandbox": {
       "name": "@tinyclaw/sandbox",
-      "version": "1.0.1",
+      "version": "1.1.0",
     },
     "packages/secrets": {
       "name": "@tinyclaw/secrets",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -146,7 +146,7 @@
     },
     "packages/shell": {
       "name": "@tinyclaw/shell",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -154,7 +154,7 @@
     },
     "packages/shield": {
       "name": "@tinyclaw/shield",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -162,11 +162,11 @@
     },
     "packages/types": {
       "name": "@tinyclaw/types",
-      "version": "1.0.1",
+      "version": "1.1.0",
     },
     "plugins/channel/plugin-channel-discord": {
       "name": "@tinyclaw/plugin-channel-discord",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -175,7 +175,7 @@
     },
     "plugins/channel/plugin-channel-friends": {
       "name": "@tinyclaw/plugin-channel-friends",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -183,7 +183,7 @@
     },
     "plugins/provider/plugin-provider-openai": {
       "name": "@tinyclaw/plugin-provider-openai",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -191,11 +191,11 @@
     },
     "src/cli": {
       "name": "tinyclaw",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "bin": {
         "tinyclaw": "./dist/index.js",
       },
-      "dependencies": {
+      "devDependencies": {
         "@clack/prompts": "^1.0.0",
         "@tinyclaw/compactor": "workspace:*",
         "@tinyclaw/config": "workspace:*",
@@ -217,19 +217,17 @@
         "@tinyclaw/shield": "workspace:*",
         "@tinyclaw/types": "workspace:*",
         "@tinyclaw/web": "workspace:*",
+        "@types/figlet": "^1.7.0",
+        "@types/qrcode": "^1.5.6",
         "@wgtechlabs/log-engine": "^2.3.0",
         "figlet": "^1.10.0",
         "picocolors": "^1.1.1",
         "qrcode": "^1.5.4",
       },
-      "devDependencies": {
-        "@types/figlet": "^1.7.0",
-        "@types/qrcode": "^1.5.6",
-      },
     },
     "src/landing": {
       "name": "@tinyclaw/landing",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "svelte": "^5.20.1",
       },
@@ -242,7 +240,7 @@
     },
     "src/web": {
       "name": "@tinyclaw/web",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "dependencies": {
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/heartware": "workspace:*",
