@@ -887,7 +887,8 @@ export type NudgeCategory =
   | 'insight'             // Agent-initiated insight or suggestion
   | 'system'              // System-level notification (updates, warnings)
   | 'software_update'     // A new Tiny Claw version is available
-  | 'agent_initiated';    // Free-form agent-initiated outreach
+  | 'agent_initiated'     // Free-form agent-initiated outreach
+  | 'companion';          // AI-generated companion nudge (mood roulette)
 
 /** A nudge queued for delivery. */
 export interface Nudge {

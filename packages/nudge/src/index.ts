@@ -87,6 +87,8 @@ function categoryToSource(category: NudgeCategory): string {
     case 'insight':
     case 'agent_initiated':
       return 'agent';
+    case 'companion':
+      return 'companion';
     case 'system':
     case 'software_update':
       return 'system';
@@ -435,6 +437,7 @@ const VALID_CATEGORIES: NudgeCategory[] = [
   'system',
   'software_update',
   'agent_initiated',
+  'companion',
 ];
 
 const VALID_PRIORITIES: OutboundPriority[] = ['urgent', 'normal', 'low'];
@@ -571,3 +574,13 @@ export function createNudgeTools(nudgeEngine: NudgeEngine): Tool[] {
 
   return [sendNudge, checkPendingNudges, cancelNudge];
 }
+
+// ---------------------------------------------------------------------------
+// Companion Nudge System (re-exports)
+// ---------------------------------------------------------------------------
+
+export {
+  createCompanionJobs,
+  getCompanionTouchActivity,
+} from './companion.js';
+export type { CompanionMood, CompanionNudgeOptions } from './companion.js';

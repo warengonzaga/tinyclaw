@@ -42,7 +42,7 @@ import { createShellEngine, createShellTools } from '@tinyclaw/shell';
 import type { ChannelPlugin, Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
 import { createGateway } from '@tinyclaw/gateway';
-import { createNudgeEngine, wireNudgeToIntercom, createNudgeTools } from '@tinyclaw/nudge';
+import { createNudgeEngine, wireNudgeToIntercom, createNudgeTools, createCompanionJobs, getCompanionTouchActivity } from '@tinyclaw/nudge';
 import { theme } from '../ui/theme.js';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 
@@ -1023,6 +1023,8 @@ export async function startCommand(): Promise<void> {
       logger.info('Owner claimed via web UI', { ownerId }, { emoji: '🔑' });
     },
     onMessage: async (message: string, userId: string) => {
+      // Update companion activity tracker on every user message
+      touchCompanionActivity?.();
       const { provider, classification, failedOver } =
         await orchestrator.routeWithHealth(message);
       logger.debug('Routed query', {
@@ -1044,6 +1046,8 @@ export async function startCommand(): Promise<void> {
       return db.getAllSubAgents(userId, true);
     },
     onMessageStream: async (message: string, userId: string, callback: StreamCallback) => {
+      // Update companion activity tracker on every user message
+      touchCompanionActivity?.();
       const { provider, classification, failedOver } =
         await orchestrator.routeWithHealth(message);
       logger.debug('Routed query (stream)', {
@@ -1074,7 +1078,7 @@ export async function startCommand(): Promise<void> {
     quietHoursStart: configManager.get<string>('nudge.quietHoursStart'),
     quietHoursEnd: configManager.get<string>('nudge.quietHoursEnd'),
     maxPerHour: configManager.get<number>('nudge.maxPerHour') ?? 5,
-    suppressedCategories: configManager.get<string[]>('nudge.suppressedCategories') ?? [],
+    suppressedCategories: (configManager.get<string[]>('nudge.suppressedCategories') ?? []) as import('@tinyclaw/types').NudgeCategory[],
   };
 
   const nudgeEngine = createNudgeEngine({ gateway, preferences: nudgePrefs });
@@ -1092,7 +1096,7 @@ export async function startCommand(): Promise<void> {
       quietHoursStart: configManager.get<string>('nudge.quietHoursStart'),
       quietHoursEnd: configManager.get<string>('nudge.quietHoursEnd'),
       maxPerHour: configManager.get<number>('nudge.maxPerHour') ?? 5,
-      suppressedCategories: configManager.get<string[]>('nudge.suppressedCategories') ?? [],
+      suppressedCategories: (configManager.get<string[]>('nudge.suppressedCategories') ?? []) as import('@tinyclaw/types').NudgeCategory[],
     });
   });
 
@@ -1104,6 +1108,26 @@ export async function startCommand(): Promise<void> {
       await nudgeEngine.flush();
     },
   });
+
+  // --- Companion Nudges (AI-generated, Heartware-aligned) ----------------
+
+  const companionJobs = createCompanionJobs({
+    nudgeEngine,
+    queue,
+    context,
+    configManager,
+    db,
+    agentLoop,
+  });
+
+  for (const job of companionJobs) {
+    pulse.register(job);
+  }
+
+  // Wire activity tracking so the companion knows when the owner is active
+  const touchCompanionActivity = getCompanionTouchActivity(companionJobs);
+
+  logger.info('Companion nudges registered', undefined, { emoji: '🐾' });
 
   // Register software update check nudge (every 6 hours)
   pulse.register({
