@@ -367,8 +367,8 @@ function fileResponse(filePath) {
   })
 }
 
-function resolveUiPaths() {
-  const webRoot = resolve(import.meta.dir, '..')
+function resolveUiPaths(overrideWebRoot?: string) {
+  const webRoot = overrideWebRoot || resolve(import.meta.dir, '..')
   return {
     webRoot,
     distDir: join(webRoot, 'dist'),
@@ -376,8 +376,8 @@ function resolveUiPaths() {
   }
 }
 
-function findStaticFile(pathname) {
-  const { distDir, publicDir } = resolveUiPaths()
+function findStaticFile(pathname, overrideWebRoot?: string) {
+  const { distDir, publicDir } = resolveUiPaths(overrideWebRoot)
 
   const candidates = [
     join(distDir, pathname),
@@ -442,6 +442,7 @@ export function createWebUI(config) {
     onOwnerClaimed,
     configDbPath,
     dataDir,
+    webRoot: configWebRoot,
   } = config
 
   const serverStartedAt = Date.now()
@@ -1358,7 +1359,7 @@ export function createWebUI(config) {
           }
 
           if (pathname === '/' || pathname === '/index.html') {
-            const { distDir } = resolveUiPaths()
+            const { distDir } = resolveUiPaths(configWebRoot)
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
@@ -1376,7 +1377,7 @@ export function createWebUI(config) {
 
           // Setup route — first-time onboarding flow
           if (pathname === '/setup') {
-            const { distDir } = resolveUiPaths()
+            const { distDir } = resolveUiPaths(configWebRoot)
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
@@ -1392,7 +1393,7 @@ export function createWebUI(config) {
               return Response.redirect(new URL('/setup', request.url).toString(), 302)
             }
 
-            const { distDir } = resolveUiPaths()
+            const { distDir } = resolveUiPaths(configWebRoot)
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
@@ -1414,7 +1415,7 @@ export function createWebUI(config) {
               return Response.redirect(new URL('/recovery', request.url).toString(), 302)
             }
 
-            const { distDir } = resolveUiPaths()
+            const { distDir } = resolveUiPaths(configWebRoot)
             const distIndex = join(distDir, 'index.html')
 
             if (existsSync(distIndex)) {
@@ -1425,13 +1426,13 @@ export function createWebUI(config) {
           }
 
           // Serve static files from dist/ or public/
-          const staticPath = findStaticFile(pathname.replace(/^\//, ''))
+          const staticPath = findStaticFile(pathname.replace(/^\//, ''), configWebRoot)
           if (staticPath) {
             return fileResponse(staticPath)
           }
 
           // SPA fallback: serve index.html for client-side routing
-          const { distDir } = resolveUiPaths()
+          const { distDir } = resolveUiPaths(configWebRoot)
           const distIndex = join(distDir, 'index.html')
           if (existsSync(distIndex)) {
             return fileResponse(distIndex)
