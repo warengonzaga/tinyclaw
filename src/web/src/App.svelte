@@ -224,6 +224,10 @@
       fetchAgentProfile()
     }
     const interval = setInterval(checkHealth, 12000)
+    // Re-check auth status periodically to detect session expiry or revocation.
+    // If the user is no longer recognized as owner, the view will reactively
+    // switch to 'landing', kicking them out of the dashboard.
+    const authInterval = setInterval(checkAuth, 30000)
     // Poll faster (3s) to keep sidebar responsive during background execution
     const bgInterval = setInterval(() => {
       if (view === 'owner') {
@@ -272,6 +276,7 @@
     return () => {
       clearInterval(interval)
       clearInterval(bgInterval)
+      clearInterval(authInterval)
       if (eventSource) eventSource.close()
       if (welcomeTimerId) clearTimeout(welcomeTimerId)
       if (restartTimerId) clearTimeout(restartTimerId)
@@ -989,6 +994,10 @@
   async function sendMessage() {
     const message = input.trim()
     if (!message || isStreaming) return
+
+    // Re-verify ownership before every message to prevent stale sessions
+    await checkAuth()
+    if (!isOwner) return
 
     streamError = ''
     input = ''
