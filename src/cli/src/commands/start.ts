@@ -41,6 +41,7 @@ import { createCompactor } from '@tinyclaw/compactor';
 import { createShellEngine, createShellTools } from '@tinyclaw/shell';
 import type { ChannelPlugin, Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
+import { createGateway } from '@tinyclaw/gateway';
 import { theme } from '../ui/theme.js';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 
@@ -1057,6 +1058,13 @@ export async function startCommand(): Promise<void> {
 
   await webUI.start();
 
+  // --- Outbound Gateway ---------------------------------------------------
+
+  const gateway = createGateway();
+
+  // Register web UI as a channel sender (SSE push)
+  gateway.register('web', webUI.getChannelSender());
+
   // --- Start channel plugins ---------------------------------------------
 
   const pluginRuntimeContext = {
@@ -1070,12 +1078,23 @@ export async function startCommand(): Promise<void> {
     agentContext: context,
     secrets: secretsManager,
     configManager,
+    gateway,
   };
 
   for (const channel of plugins.channels) {
     try {
       await channel.start(pluginRuntimeContext);
       logger.info(`Channel plugin started: ${channel.name}`, undefined, { emoji: '✅' });
+
+      // Register channel plugins that support outbound messaging
+      if (channel.sendToUser && channel.channelPrefix) {
+        gateway.register(channel.channelPrefix, {
+          name: channel.name,
+          async send(userId, message) {
+            await channel.sendToUser!(userId, message);
+          },
+        });
+      }
     } catch (err) {
       logger.error(`Failed to start channel plugin "${channel.name}":`, err);
     }

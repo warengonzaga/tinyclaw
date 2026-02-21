@@ -33,6 +33,7 @@
     "@tinyclaw/config": "workspace:*",
     "@tinyclaw/core": "workspace:*",
     "@tinyclaw/delegation": "workspace:*",
+    "@tinyclaw/gateway": "workspace:*",
     "@tinyclaw/heartware": "workspace:*",
     "@tinyclaw/intercom": "workspace:*",
     "@tinyclaw/learning": "workspace:*",

@@ -240,12 +240,29 @@ mock.module('@tinyclaw/types', () => ({}));
 const mockWebUIStart = mock(() => Promise.resolve());
 const mockWebUIStop = mock(() => Promise.resolve());
 
+// ── Mock @tinyclaw/gateway ────────────────────────────────────────────
+
+mock.module('@tinyclaw/gateway', () => ({
+  createGateway: mock(() => ({
+    register: mock(() => {}),
+    unregister: mock(() => {}),
+    send: mock(() => Promise.resolve({ success: true, channel: 'web', userId: 'web:owner' })),
+    broadcast: mock(() => Promise.resolve([])),
+    getRegisteredChannels: mock(() => []),
+  })),
+}));
+
 // ── Mock @tinyclaw/web ────────────────────────────────────────────────
 
 mock.module('@tinyclaw/web', () => ({
   createWebUI: mock(() => ({
     start: mockWebUIStart,
     stop: mockWebUIStop,
+    getChannelSender: mock(() => ({
+      name: 'Web UI (SSE)',
+      send: mock(() => Promise.resolve()),
+      broadcast: mock(() => Promise.resolve()),
+    })),
   })),
 }));
 

@@ -5,6 +5,7 @@ import { SecurityDatabase } from './security-db'
 import { DEFAULT_PROVIDER, DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core'
 import { generateSoulTraits } from '@tinyclaw/heartware'
 import { logger } from '@tinyclaw/logger'
+import type { ChannelSender, OutboundMessage } from '@tinyclaw/types'
 
 // Inline ANSI helpers for log highlighting (no external dep needed)
 const highlight = (text: string) => `\x1b[1m\x1b[36m${text}\x1b[39m\x1b[22m`
@@ -447,6 +448,27 @@ export function createWebUI(config) {
 
   const serverStartedAt = Date.now()
   let server = null
+
+  // ---------------------------------------------------------------------------
+  // SSE push — outbound gateway delivery channel for the web UI
+  // ---------------------------------------------------------------------------
+  type SSEClient = ReadableStreamDefaultController<Uint8Array>
+  const sseClients = new Set<SSEClient>()
+  const sseEncoder = new TextEncoder()
+
+  /** Push an SSE event to all connected web clients. */
+  function pushToAllClients(event: string, data: unknown): void {
+    const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+    const encoded = sseEncoder.encode(payload)
+    for (const client of sseClients) {
+      try {
+        client.enqueue(encoded)
+      } catch {
+        // Client disconnected — remove on next heartbeat sweep
+        sseClients.delete(client)
+      }
+    }
+  }
 
   // Initialize persistent security database when dataDir is available
   if (dataDir) {
@@ -1065,6 +1087,53 @@ export function createWebUI(config) {
             return jsonResponse({ name: agentName, emoji: agentEmoji })
           }
 
+          // =================================================================
+          // SSE push endpoint — outbound gateway delivery for web UI
+          // =================================================================
+
+          if (pathname === '/api/events' && request.method === 'GET') {
+            if (!await isOwnerRequest(request)) {
+              return jsonResponse({ error: 'Unauthorized' }, 401)
+            }
+
+            const stream = new ReadableStream<Uint8Array>({
+              start(controller) {
+                sseClients.add(controller)
+                logger.debug(`SSE: client connected (${sseClients.size} active)`, 'web')
+
+                // Send initial connection confirmation
+                const welcome = sseEncoder.encode(`event: connected\ndata: ${JSON.stringify({ ok: true, ts: Date.now() })}\n\n`)
+                controller.enqueue(welcome)
+
+                // Heartbeat to keep connection alive
+                const heartbeat = setInterval(() => {
+                  try {
+                    controller.enqueue(sseEncoder.encode(': heartbeat\n\n'))
+                  } catch {
+                    clearInterval(heartbeat)
+                    sseClients.delete(controller)
+                  }
+                }, 15_000)
+
+                // Cleanup on abort (client closes tab/connection)
+                request.signal.addEventListener('abort', () => {
+                  clearInterval(heartbeat)
+                  sseClients.delete(controller)
+                  logger.debug(`SSE: client disconnected (${sseClients.size} active)`, 'web')
+                  try { controller.close() } catch { /* already closed */ }
+                })
+              },
+            })
+
+            return new Response(stream, {
+              headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                Connection: 'keep-alive',
+              },
+            })
+          }
+
           if (pathname === '/api/background-tasks' && request.method === 'GET') {
             if (!await isOwnerRequest(request)) {
               return jsonResponse({ error: 'Unauthorized' }, 401)
@@ -1452,6 +1521,34 @@ export function createWebUI(config) {
 
     getPort() {
       return server?.port || port
-    }
+    },
+
+    /**
+     * Returns a ChannelSender for the web UI channel.
+     * Register this with the outbound gateway using prefix 'web'.
+     */
+    getChannelSender(): ChannelSender {
+      return {
+        name: 'Web UI (SSE)',
+        async send(_userId: string, message: OutboundMessage) {
+          pushToAllClients('message', {
+            content: message.content,
+            priority: message.priority,
+            source: message.source,
+            metadata: message.metadata,
+            ts: Date.now(),
+          })
+        },
+        async broadcast(message: OutboundMessage) {
+          pushToAllClients('broadcast', {
+            content: message.content,
+            priority: message.priority,
+            source: message.source,
+            metadata: message.metadata,
+            ts: Date.now(),
+          })
+        },
+      }
+    },
   }
 }

@@ -601,6 +601,18 @@ export interface ChannelPlugin extends PluginMeta {
     secrets: SecretsManagerInterface,
     configManager: ConfigManagerInterface,
   ): Tool[];
+  /**
+   * Send an outbound message to a user on this channel.
+   * Optional — channels that support proactive messaging implement this.
+   * The gateway calls this method to deliver nudges, task results, etc.
+   */
+  sendToUser?(userId: string, message: OutboundMessage): Promise<void>;
+  /**
+   * The userId prefix this channel owns (e.g. 'discord', 'friend', 'web').
+   * Used by the gateway to route outbound messages to the correct channel.
+   * If not provided, the gateway cannot route to this channel.
+   */
+  readonly channelPrefix?: string;
 }
 
 /** A provider plugin registers an additional LLM provider. */
@@ -638,6 +650,8 @@ export interface PluginRuntimeContext {
   secrets: SecretsManagerInterface;
   /** Config manager for reading/writing channel config. */
   configManager: ConfigManagerInterface;
+  /** Outbound gateway for sending proactive messages across channels. */
+  gateway?: OutboundGateway;
 }
 
 // ---------------------------------------------------------------------------
@@ -756,6 +770,108 @@ export interface ShieldEngine {
   isActive(): boolean;
   /** Get all loaded threat entries (for debugging/audit). */
   getThreats(): ThreatEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Outbound Gateway — Proactive Messaging
+// ---------------------------------------------------------------------------
+
+/** Priority levels for outbound messages. */
+export type OutboundPriority = 'urgent' | 'normal' | 'low';
+
+/** The source that triggered the outbound message. */
+export type OutboundSource =
+  | 'background_task'
+  | 'sub_agent'
+  | 'reminder'
+  | 'pulse'
+  | 'system'
+  | 'agent';
+
+/**
+ * An outbound message to be delivered to a user.
+ */
+export interface OutboundMessage {
+  /** The message content to deliver. */
+  content: string;
+  /** Priority determines delivery urgency. */
+  priority: OutboundPriority;
+  /** What triggered this message. */
+  source: OutboundSource;
+  /** Optional metadata for channel-specific rendering. */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Outbound Gateway — routes proactive messages to users across channels.
+ *
+ * The gateway maintains a registry of channel senders (keyed by userId prefix)
+ * and resolves the correct channel for each outbound message by inspecting the
+ * userId prefix (e.g. 'discord:123' → Discord channel, 'web:owner' → Web SSE).
+ */
+export interface OutboundGateway {
+  /**
+   * Register a channel sender for a given userId prefix.
+   * Called during boot after channel plugins are loaded.
+   */
+  register(
+    prefix: string,
+    sender: ChannelSender,
+  ): void;
+
+  /**
+   * Unregister a channel sender (e.g. during shutdown).
+   */
+  unregister(prefix: string): void;
+
+  /**
+   * Send a message to a specific user.
+   * Resolves the userId prefix → channel sender → delivers.
+   */
+  send(
+    userId: string,
+    message: OutboundMessage,
+  ): Promise<OutboundDeliveryResult>;
+
+  /**
+   * Broadcast a message to all registered channels.
+   * Each channel decides how to handle the broadcast (e.g. to all connected users).
+   */
+  broadcast(
+    message: OutboundMessage,
+  ): Promise<OutboundDeliveryResult[]>;
+
+  /**
+   * Get all registered channel prefixes.
+   */
+  getRegisteredChannels(): string[];
+}
+
+/**
+ * A channel sender — the outbound delivery contract that each channel implements.
+ * Registered with the gateway during boot.
+ */
+export interface ChannelSender {
+  /** The channel name (for logging/debugging). */
+  readonly name: string;
+  /** Send a message to a specific user on this channel. */
+  send(userId: string, message: OutboundMessage): Promise<void>;
+  /** Broadcast a message to all users on this channel. */
+  broadcast?(message: OutboundMessage): Promise<void>;
+}
+
+/**
+ * Result of an outbound delivery attempt.
+ */
+export interface OutboundDeliveryResult {
+  /** Whether delivery succeeded. */
+  success: boolean;
+  /** The channel prefix that handled delivery. */
+  channel: string;
+  /** The target userId. */
+  userId: string;
+  /** Error message if delivery failed. */
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------
