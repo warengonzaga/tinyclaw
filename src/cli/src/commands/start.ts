@@ -987,7 +987,7 @@ export async function startCommand(): Promise<void> {
   if (needsBuild) {
     logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
     try {
-      const buildResult = Bun.spawnSync(['bun', 'run', 'build'], {
+      const buildResult = Bun.spawnSync([process.execPath, 'run', 'build'], {
         cwd: webRoot,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
