@@ -18,6 +18,12 @@ import type { InviteStore, FriendUser } from './store.js';
 const COOKIE_NAME = 'tc_friend_session';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year in seconds
 
+/** Active SSE push connections keyed by username. */
+type PushClient = {
+  controller: ReadableStreamDefaultController<Uint8Array>;
+  encoder: TextEncoder;
+};
+
 interface FriendsServerConfig {
   port: number;
   host: string;
@@ -89,6 +95,7 @@ export function createFriendsServer(config: FriendsServerConfig) {
   const { port, host, store, chatHtml, onMessage, onMessageStream } = config;
   const secure = config.secure ?? (process.env.NODE_ENV === 'production');
   const textEncoder = new TextEncoder();
+  const pushClients = new Map<string, Set<PushClient>>();
 
   let server: ReturnType<typeof Bun.serve> | null = null;
 
@@ -205,6 +212,52 @@ export function createFriendsServer(config: FriendsServerConfig) {
 
             store.updateNickname(friend.username, newNickname);
             return jsonResponse({ ok: true, nickname: newNickname });
+          }
+
+          // ─── Push SSE stream (outbound notifications) ──────────
+          if (pathname === '/api/push' && request.method === 'GET') {
+            const friend = authenticateFriend(request, store);
+            if (!friend) {
+              return jsonResponse({ error: 'Unauthorized' }, 401);
+            }
+
+            const username = friend.username;
+            const stream = new ReadableStream<Uint8Array>({
+              start(controller) {
+                const pushClient: PushClient = { controller, encoder: textEncoder };
+                if (!pushClients.has(username)) {
+                  pushClients.set(username, new Set());
+                }
+                pushClients.get(username)!.add(pushClient);
+
+                // Heartbeat to keep connection alive
+                const heartbeat = setInterval(() => {
+                  try {
+                    controller.enqueue(textEncoder.encode(': heartbeat\n\n'));
+                  } catch {
+                    clearInterval(heartbeat);
+                    pushClients.get(username)?.delete(pushClient);
+                  }
+                }, 15_000);
+
+                // Clean up on abort
+                request.signal.addEventListener('abort', () => {
+                  clearInterval(heartbeat);
+                  pushClients.get(username)?.delete(pushClient);
+                  if (pushClients.get(username)?.size === 0) {
+                    pushClients.delete(username);
+                  }
+                });
+              },
+            });
+
+            return new Response(stream, {
+              headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                Connection: 'keep-alive',
+              },
+            });
           }
 
           // ─── Chat API (message) ─────────────────────────────────
@@ -329,8 +382,36 @@ export function createFriendsServer(config: FriendsServerConfig) {
       if (server) {
         server.stop();
         server = null;
+        // Clean up all push clients
+        pushClients.clear();
         logger.info('Friends chat server stopped');
       }
+    },
+
+    /**
+     * Push an outbound message to all connected SSE clients for a username.
+     * Returns true if at least one client received the message.
+     */
+    pushToUser(username: string, data: Record<string, unknown>): boolean {
+      const clients = pushClients.get(username);
+      if (!clients || clients.size === 0) return false;
+
+      const payload = `data: ${JSON.stringify(data)}\n\n`;
+      const dead: PushClient[] = [];
+
+      for (const pc of clients) {
+        try {
+          pc.controller.enqueue(pc.encoder.encode(payload));
+        } catch {
+          dead.push(pc);
+        }
+      }
+
+      for (const dc of dead) {
+        clients.delete(dc);
+      }
+
+      return clients.size > 0 || dead.length < (clients.size + dead.length);
     },
 
     getPort() {

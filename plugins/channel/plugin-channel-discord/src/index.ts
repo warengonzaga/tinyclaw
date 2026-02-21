@@ -29,6 +29,7 @@ import type {
   Tool,
   SecretsManagerInterface,
   ConfigManagerInterface,
+  OutboundMessage,
 } from '@tinyclaw/types';
 import {
   createDiscordPairingTools,
@@ -44,6 +45,7 @@ const discordPlugin: ChannelPlugin = {
   description: 'Connect Tiny Claw to a Discord bot',
   type: 'channel',
   version: '0.1.0',
+  channelPrefix: 'discord',
 
   getPairingTools(
     secrets: SecretsManagerInterface,
@@ -131,6 +133,37 @@ const discordPlugin: ChannelPlugin = {
 
     await client.login(token);
     logger.info('Discord bot connected');
+  },
+
+  async sendToUser(userId: string, message: OutboundMessage): Promise<void> {
+    if (!client) {
+      throw new Error('Discord client is not connected');
+    }
+
+    // Parse the Discord user ID from the prefixed format "discord:<id>"
+    const discordId = userId.replace(/^discord:/, '');
+    if (!discordId) {
+      throw new Error(`Invalid Discord userId: ${userId}`);
+    }
+
+    try {
+      const user = await client.users.fetch(discordId);
+      const text = message.content;
+
+      if (text.length <= 2000) {
+        await user.send(text);
+      } else {
+        const chunks = splitIntoChunks(text, 1900);
+        for (const chunk of chunks) {
+          await user.send(chunk);
+        }
+      }
+
+      logger.info(`Discord: sent outbound message to ${userId}`);
+    } catch (err) {
+      logger.error(`Discord: failed to send to ${userId}`, err);
+      throw err;
+    }
   },
 
   async stop(): Promise<void> {
