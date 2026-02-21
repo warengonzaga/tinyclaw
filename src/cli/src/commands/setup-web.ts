@@ -6,7 +6,8 @@
  * starts automatically via the supervisor restart mechanism.
  */
 
-import { join } from 'path';
+import { join, resolve } from 'path';
+import { existsSync, statSync, readdirSync } from 'fs';
 import { homedir } from 'os';
 import { logger, setLogMode } from '@tinyclaw/logger';
 import { SecretsManager } from '@tinyclaw/secrets';
@@ -57,6 +58,63 @@ export async function webSetupCommand(): Promise<void> {
   logger.info('─'.repeat(52), undefined, { emoji: '' });
   logger.info('Web setup mode enabled (--web)', undefined, { emoji: '⚠️' });
   logger.info('─'.repeat(52), undefined, { emoji: '' });
+
+  // --- Auto-build Web UI if needed --------------------------------------
+
+  let webRoot: string;
+  try {
+    const uiEntry = require.resolve('@tinyclaw/web');
+    webRoot = resolve(uiEntry, '..', '..');
+  } catch {
+    webRoot = resolve(import.meta.dir, '..', '..', '..', 'web');
+  }
+  const webDistIndex = join(webRoot, 'dist', 'index.html');
+
+  let needsBuild = !existsSync(webDistIndex);
+  if (!needsBuild) {
+    try {
+      const distMtime = statSync(webDistIndex).mtimeMs;
+      const srcDir = join(webRoot, 'src');
+      const checkDir = (dir: string): boolean => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const fullPath = join(dir, entry.name);
+          if (entry.isDirectory()) {
+            if (checkDir(fullPath)) return true;
+          } else if (statSync(fullPath).mtimeMs > distMtime) {
+            return true;
+          }
+        }
+        return false;
+      };
+      if (existsSync(srcDir)) {
+        needsBuild = checkDir(srcDir);
+      }
+    } catch {
+      // If stat check fails, skip stale detection
+    }
+  }
+
+  if (needsBuild) {
+    logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
+    try {
+      const buildResult = Bun.spawnSync(['bun', 'run', 'build'], {
+        cwd: webRoot,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      if (buildResult.exitCode === 0) {
+        logger.info('Web UI built successfully', undefined, { emoji: '✅' });
+      } else {
+        const stderr = buildResult.stderr?.toString().trim();
+        logger.warn('Web UI build failed — setup page may not display correctly', undefined, { emoji: '⚠️' });
+        if (stderr) logger.warn(stderr);
+      }
+    } catch (err) {
+      logger.warn('Could not build Web UI:', err, { emoji: '⚠️' });
+    }
+  }
+
+  // --- Launch setup-only web server -------------------------------------
 
   const setupWebUI = createWebUI({
     port,
