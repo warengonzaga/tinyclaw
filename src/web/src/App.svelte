@@ -232,6 +232,28 @@
       }
     }, 3000)
 
+    // SSE push channel — receive nudges & proactive messages from the server
+    let eventSource = null
+    if (isOwner) {
+      eventSource = new EventSource('/api/events')
+      eventSource.addEventListener('message', (e) => {
+        try {
+          const data = JSON.parse(e.data)
+          if (data.content && !isStreaming) {
+            const nudgeMsg = {
+              id: createId(),
+              role: 'assistant',
+              content: data.content,
+              streaming: false,
+              timestamp: getTimestamp(),
+            }
+            messages = [...messages, nudgeMsg]
+            tick().then(scrollToBottom)
+          }
+        } catch { /* ignore malformed events */ }
+      })
+    }
+
     // Sync view state on back/forward navigation
     const handlePopstate = () => {
       const p = window.location.pathname
@@ -250,6 +272,7 @@
     return () => {
       clearInterval(interval)
       clearInterval(bgInterval)
+      if (eventSource) eventSource.close()
       if (welcomeTimerId) clearTimeout(welcomeTimerId)
       if (restartTimerId) clearTimeout(restartTimerId)
       window.removeEventListener('popstate', handlePopstate)
