@@ -418,11 +418,11 @@ function buildDevNotice() {
       <div class="divider"></div>
       <div class="steps">
         <div class="step"><strong>Development:</strong></div>
-        <div class="step">1. Run <code>bun run --cwd apps/web dev</code></div>
+        <div class="step">1. Run <code>bun run --cwd src/web dev</code></div>
         <div class="step">2. Open <a href="http://localhost:5173">http://localhost:5173</a></div>
         <div class="divider"></div>
         <div class="step"><strong>Production:</strong></div>
-        <div class="step">Run <code>bun run --cwd apps/web build</code></div>
+        <div class="step">Run <code>bun run --cwd src/web build</code></div>
       </div>
     </div>
   </body>
