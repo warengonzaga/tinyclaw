@@ -956,8 +956,14 @@ export async function startCommand(): Promise<void> {
     const uiEntry = require.resolve('@tinyclaw/web');
     webRoot = resolve(uiEntry, '..', '..');
   } catch {
-    // Fallback: resolve relative to this file (src/cli/src/commands/ → src/web/)
-    webRoot = resolve(import.meta.dir, '..', '..', '..', 'web');
+    // Fallback 1: resolve relative to cwd (when running from the project root)
+    const cwdCandidate = resolve(process.cwd(), 'src', 'web');
+    if (existsSync(cwdCandidate)) {
+      webRoot = cwdCandidate;
+    } else {
+      // Fallback 2: resolve relative to this file (src/cli/src/commands/ → src/web/)
+      webRoot = resolve(import.meta.dir, '..', '..', '..', 'web');
+    }
   }
   const webDistIndex = join(webRoot, 'dist', 'index.html');
 
@@ -988,6 +994,9 @@ export async function startCommand(): Promise<void> {
   }
 
   if (needsBuild) {
+    if (!existsSync(webRoot)) {
+      logger.warn(`Web UI source not found at ${webRoot} — skipping build`, undefined, { emoji: '⚠️' });
+    } else {
     logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
     try {
       const buildResult = Bun.spawnSync([process.execPath, 'run', 'build'], {
@@ -1004,6 +1013,7 @@ export async function startCommand(): Promise<void> {
       }
     } catch (err) {
       logger.warn('Could not build Web UI:', err, { emoji: '⚠️' });
+    }
     }
   }
 
