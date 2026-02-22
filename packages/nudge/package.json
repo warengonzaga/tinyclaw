@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/nudge",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Proactive nudge engine for Tiny Claw — schedules, queues, and delivers notifications",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
@@ -20,7 +20,12 @@
   "bugs": {
     "url": "https://github.com/warengonzaga/tinyclaw/issues"
   },
-  "keywords": ["tinyclaw", "nudge", "proactive", "notifications"],
+  "keywords": [
+    "tinyclaw",
+    "nudge",
+    "proactive",
+    "notifications"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "bun test"

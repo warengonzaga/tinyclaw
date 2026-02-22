@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/logger",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Context-aware structured logging for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
@@ -20,7 +20,11 @@
   "bugs": {
     "url": "https://github.com/warengonzaga/tinyclaw/issues"
   },
-  "keywords": ["tinyclaw", "logging", "structured-logging"],
+  "keywords": [
+    "tinyclaw",
+    "logging",
+    "structured-logging"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },

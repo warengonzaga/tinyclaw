@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/compactor",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Layered conversation compaction and token optimization for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
@@ -19,7 +19,12 @@
   "bugs": {
     "url": "https://github.com/warengonzaga/tinyclaw/issues"
   },
-  "keywords": ["tinyclaw", "context", "compaction", "compression"],
+  "keywords": [
+    "tinyclaw",
+    "context",
+    "compaction",
+    "compression"
+  ],
   "engines": {
     "node": ">=18"
   },

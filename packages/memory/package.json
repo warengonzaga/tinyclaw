@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/memory",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "3-layer adaptive memory with temporal decay for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
@@ -20,7 +20,12 @@
   "bugs": {
     "url": "https://github.com/warengonzaga/tinyclaw/issues"
   },
-  "keywords": ["tinyclaw", "memory", "episodic", "temporal-decay"],
+  "keywords": [
+    "tinyclaw",
+    "memory",
+    "episodic",
+    "temporal-decay"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
