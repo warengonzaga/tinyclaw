@@ -40,6 +40,13 @@
     </div>
   </nav>
 
+  <!-- No Crypto Token Notice -->
+  <div class="bg-amber-900/70 border-b border-amber-700 text-amber-100 px-6 py-3 text-center text-sm mt-[65px]">
+    <span class="font-bold">🚫 No Crypto Token:</span> Tiny Claw has <strong>no</strong> official token, coin, or cryptocurrency and we have no plans to create one. The only way to support this project is through
+    <a href="https://github.com/sponsors/warengonzaga" target="_blank" rel="noopener noreferrer" class="underline font-semibold text-amber-200 hover:text-white">GitHub Sponsors</a> or
+    <a href="https://buymeacoffee.com/warengonzaga" target="_blank" rel="noopener noreferrer" class="underline font-semibold text-amber-200 hover:text-white">Buy Me a Coffee</a>.
+  </div>
+
   <main id="main" class="flex-1">
     <Hero />
     <Features />
