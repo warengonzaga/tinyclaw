@@ -24,3 +24,8 @@ jobs:
         with:
           github-token: ${{ secrets.GH_PAT }}
           monorepo: 'true'
+          monorepo-root-release: 'true'
+          unified-version: 'false'
+          change-detection: 'both'
+          per-package-changelog: 'true'
+          root-changelog: 'true'
