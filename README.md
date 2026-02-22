@@ -11,6 +11,9 @@
 > [!WARNING]
 > **🚧 Under Active Development** - This project is in heavy development and things will break. Running it now may spoil the experience we're building for you. Please wait for the first official release before trying it out. Follow [@TinyClawAI](https://x.com/TinyClawAI) and [@warengonzaga](https://x.com/warengonzaga) on X for launch updates.
 
+> [!CAUTION]
+> **🚫 No Crypto Token** — Tiny Claw has **NO** official token, coin, or cryptocurrency and we have no plans to create one. If you see any token using Tiny Claw's name, it is **not affiliated** with this project. The only way to support Tiny Claw is through [GitHub Sponsors](https://github.com/sponsors/warengonzaga) or [Buy Me a Coffee](https://buymeacoffee.com/warengonzaga). 🙏
+
 AI agents today are powerful but complex, expensive to run, and heavy to set up. Tiny Claw believes AI should be **simple, affordable, and truly personal**, like having your own Codsworth or AYLA as a helpful friend. It achieves this by being a **native framework built from scratch** with a tiny core, plugin architecture, self-improving memory, and smart routing that tiers queries to cut costs. The result is an **autonomous, self-improving, self-learning, and self-configuring personal AI companion** that grows with you over time.
 
 Think of the **personal computer revolution**. Computers were once reserved for governments, military, and large corporations. Having one meant building it yourself or spending serious money. Then Apple came along and made them personal and accessible to everyone. Tiny Claw does the same for AI agents.
