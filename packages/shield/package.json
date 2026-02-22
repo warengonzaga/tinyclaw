@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/shield",
   "private": true,
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Runtime SHIELD.md threat evaluation and enforcement for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",

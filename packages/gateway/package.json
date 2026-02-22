@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/gateway",
   "private": true,
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Outbound message gateway for proactive messaging across channels",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",

@@ -1,7 +1,7 @@
 {
   "name": "@tinyclaw/nudge",
   "private": true,
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Proactive nudge engine for Tiny Claw — schedules, queues, and delivers notifications",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
