@@ -1,6 +1,6 @@
 {
   "name": "@tinyclaw/plugin-channel-discord",
-  "version": "2.1.0",
+  "version": "2.0.0",
   "description": "Discord channel plugin for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",

@@ -1,6 +1,6 @@
 {
   "name": "@tinyclaw/plugin-channel-friends",
-  "version": "2.1.0",
+  "version": "2.0.0",
   "description": "Friends web chat channel plugin for Tiny Claw",
   "license": "GPL-3.0",
   "author": "Waren Gonzaga",
