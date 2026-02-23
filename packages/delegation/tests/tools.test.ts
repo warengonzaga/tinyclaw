@@ -5,19 +5,22 @@
 import { describe, expect, test } from 'bun:test';
 import { createDatabase } from '@tinyclaw/core';
 import { createSessionQueue } from '@tinyclaw/queue';
+import type { ProviderOrchestrator, ProviderRegistry } from '@tinyclaw/router';
+import type {
+  LearnedContext,
+  LearningEngine,
+  LLMResponse,
+  Message,
+  Provider,
+  Tool,
+} from '@tinyclaw/types';
 import { createDelegationTools } from '../src/index.js';
-import type { Provider, Tool, Message, LLMResponse, LearningEngine, LearnedContext } from '@tinyclaw/types';
-import type { ProviderOrchestrator } from '@tinyclaw/router';
-import type { ProviderRegistry } from '@tinyclaw/router';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
 // ---------------------------------------------------------------------------
 
-function createMockProvider(
-  responses: LLMResponse[],
-  id = 'mock-provider',
-): Provider {
+function createMockProvider(responses: LLMResponse[], id = 'mock-provider'): Provider {
   let callIndex = 0;
   return {
     id,
@@ -223,9 +226,7 @@ describe('delegate_task', () => {
   });
 
   test('auto-creates template on success', async () => {
-    const { result, db } = setup([
-      { type: 'text', content: 'Task done.' },
-    ]);
+    const { result, db } = setup([{ type: 'text', content: 'Task done.' }]);
 
     const tool = findTool(result.tools, 'delegate_task');
 
@@ -292,9 +293,7 @@ describe('delegate_tasks', () => {
   });
 
   test('skips entries with missing task or role', async () => {
-    const { result, db } = setup([
-      { type: 'text', content: 'Done.' },
-    ]);
+    const { result, db } = setup([{ type: 'text', content: 'Done.' }]);
 
     const tool = findTool(result.tools, 'delegate_tasks');
     const output = await tool.execute({
@@ -390,8 +389,16 @@ describe('list_sub_agents', () => {
 
     const delegateTool = findTool(result.tools, 'delegate_task');
     // Use very distinct roles so they won't be reused
-    await delegateTool.execute({ task: 'Research quantum physics', role: 'Quantum Physics Researcher', user_id: 'u1' });
-    await delegateTool.execute({ task: 'Write poetry about nature', role: 'Creative Poetry Writer', user_id: 'u1' });
+    await delegateTool.execute({
+      task: 'Research quantum physics',
+      role: 'Quantum Physics Researcher',
+      user_id: 'u1',
+    });
+    await delegateTool.execute({
+      task: 'Write poetry about nature',
+      role: 'Creative Poetry Writer',
+      user_id: 'u1',
+    });
 
     const listTool = findTool(result.tools, 'list_sub_agents');
     const output = await listTool.execute({ user_id: 'u1', include_deleted: true });
@@ -417,9 +424,7 @@ describe('list_sub_agents', () => {
 
 describe('manage_sub_agent', () => {
   test('dismiss and revive cycle', async () => {
-    const { result, db } = setup([
-      { type: 'text', content: 'Done.' },
-    ]);
+    const { result, db } = setup([{ type: 'text', content: 'Done.' }]);
 
     // Create an agent
     const delegateTool = findTool(result.tools, 'delegate_task');
@@ -444,9 +449,7 @@ describe('manage_sub_agent', () => {
   });
 
   test('kill permanently removes agent', async () => {
-    const { result, db } = setup([
-      { type: 'text', content: 'Done.' },
-    ]);
+    const { result, db } = setup([{ type: 'text', content: 'Done.' }]);
 
     const delegateTool = findTool(result.tools, 'delegate_task');
     await delegateTool.execute({ task: 'Task', role: 'Doomed', user_id: 'u1' });
@@ -476,9 +479,7 @@ describe('manage_sub_agent', () => {
 
 describe('manage_template', () => {
   test('list returns all templates', async () => {
-    const { result, db } = setup([
-      { type: 'text', content: 'Done.' },
-    ]);
+    const { result, db } = setup([{ type: 'text', content: 'Done.' }]);
 
     // Create a template via delegation (auto-create on background success)
     const delegateTool = findTool(result.tools, 'delegate_task');
@@ -496,9 +497,7 @@ describe('manage_template', () => {
   });
 
   test('delete removes template', async () => {
-    const { result, db } = setup([
-      { type: 'text', content: 'Done.' },
-    ]);
+    const { result, db } = setup([{ type: 'text', content: 'Done.' }]);
 
     const delegateTool = findTool(result.tools, 'delegate_task');
     await delegateTool.execute({ task: 'Research AI', role: 'Researcher', user_id: 'u1' });

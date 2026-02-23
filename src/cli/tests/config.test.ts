@@ -5,10 +5,10 @@
  * and validates stdout / exit codes.
  */
 
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { resolve, join } from 'path';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join, resolve } from 'path';
 
 const CLI_ENTRY = resolve(__dirname, '../src/index.ts');
 
@@ -16,12 +16,19 @@ const CLI_ENTRY = resolve(__dirname, '../src/index.ts');
 let tempDataDir: string;
 
 beforeEach(() => {
-  tempDataDir = join(tmpdir(), `tinyclaw-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  tempDataDir = join(
+    tmpdir(),
+    `tinyclaw-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
   mkdirSync(tempDataDir, { recursive: true });
 });
 
 afterEach(() => {
-  try { rmSync(tempDataDir, { recursive: true, force: true }); } catch { /* best effort */ }
+  try {
+    rmSync(tempDataDir, { recursive: true, force: true });
+  } catch {
+    /* best effort */
+  }
 });
 
 /**
@@ -53,11 +60,7 @@ async function runCLI(
   );
 
   const [stdout, stderr, exitCode] = await Promise.race([
-    Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]),
+    Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]),
     timeoutPromise,
   ]);
 

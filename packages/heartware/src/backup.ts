@@ -8,8 +8,16 @@
  * - Content hashing for integrity verification
  */
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync } from 'fs';
-import { join, basename } from 'path';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+} from 'fs';
+import { basename, join } from 'path';
 import { computeContentHash } from './audit.js';
 import type { BackupMetadata } from './types.js';
 
@@ -73,7 +81,7 @@ export class BackupManager {
         backupPath,
         timestamp,
         contentHash,
-        size: stats.size
+        size: stats.size,
       };
     } catch (err) {
       // Log error but don't block the operation
@@ -89,7 +97,7 @@ export class BackupManager {
     try {
       const files = readdirSync(this.backupDir);
       return files
-        .filter(f => f.startsWith(`${filename}.`) && f.endsWith('.bak'))
+        .filter((f) => f.startsWith(`${filename}.`) && f.endsWith('.bak'))
         .sort()
         .reverse(); // Most recent first
     } catch (err) {
@@ -120,7 +128,7 @@ export class BackupManager {
         backupPath,
         timestamp,
         contentHash: computeContentHash(content),
-        size: stats.size
+        size: stats.size,
       };
     } catch (err) {
       console.error(`[BACKUP ERROR] Failed to get metadata for ${backupFilename}:`, err);

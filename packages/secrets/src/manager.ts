@@ -8,10 +8,10 @@
  * Provider API keys follow the naming convention: provider.<name>.apiKey
  */
 
-import { SecretsEngine } from '@wgtechlabs/secrets-engine';
 import { logger } from '@tinyclaw/logger';
-import { buildProviderKeyName } from '@tinyclaw/types';
 import type { SecretsConfig, SecretsManagerInterface } from '@tinyclaw/types';
+import { buildProviderKeyName } from '@tinyclaw/types';
+import { SecretsEngine } from '@wgtechlabs/secrets-engine';
 
 export class SecretsManager implements SecretsManagerInterface {
   private engine: SecretsEngine;

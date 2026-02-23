@@ -25,11 +25,7 @@ export class HeartwareSecurityError extends Error {
    */
   public readonly details?: Record<string, unknown>;
 
-  constructor(
-    code: SecurityErrorCode,
-    message: string,
-    details?: Record<string, unknown>
-  ) {
+  constructor(code: SecurityErrorCode, message: string, details?: Record<string, unknown>) {
     super(message);
     this.name = 'HeartwareSecurityError';
     this.code = code;
@@ -50,16 +46,14 @@ export class HeartwareSecurityError extends Error {
       code: this.code,
       message: this.message,
       // Only include non-sensitive details
-      details: this.sanitizeDetails(this.details)
+      details: this.sanitizeDetails(this.details),
     };
   }
 
   /**
    * Sanitize details to prevent leaking absolute paths or sensitive info
    */
-  private sanitizeDetails(
-    details?: Record<string, unknown>
-  ): Record<string, unknown> | undefined {
+  private sanitizeDetails(details?: Record<string, unknown>): Record<string, unknown> | undefined {
     if (!details) return undefined;
 
     const sanitized: Record<string, unknown> = {};
@@ -79,18 +73,13 @@ export class HeartwareSecurityError extends Error {
 /**
  * Check if an error is a HeartwareSecurityError
  */
-export function isHeartwareSecurityError(
-  error: unknown
-): error is HeartwareSecurityError {
+export function isHeartwareSecurityError(error: unknown): error is HeartwareSecurityError {
   return error instanceof HeartwareSecurityError;
 }
 
 /**
  * Check if an error is a specific security error code
  */
-export function isSecurityErrorCode(
-  error: unknown,
-  code: SecurityErrorCode
-): boolean {
+export function isSecurityErrorCode(error: unknown, code: SecurityErrorCode): boolean {
   return isHeartwareSecurityError(error) && error.code === code;
 }

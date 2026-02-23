@@ -24,15 +24,12 @@
 
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { ConfigEngine } from '@wgtechlabs/config-engine';
-import type { Unsubscribe, ChangeCallback, AnyChangeCallback } from '@wgtechlabs/config-engine';
 import { logger } from '@tinyclaw/logger';
 import type { ConfigManagerConfig, ConfigManagerInterface } from '@tinyclaw/types';
-import {
-  TinyClawConfigSchema,
-  CONFIG_DEFAULTS,
-} from './types.js';
+import type { AnyChangeCallback, ChangeCallback, Unsubscribe } from '@wgtechlabs/config-engine';
+import { ConfigEngine } from '@wgtechlabs/config-engine';
 import type { TinyClawConfigData } from './types.js';
+import { CONFIG_DEFAULTS, TinyClawConfigSchema } from './types.js';
 
 export class ConfigManager implements ConfigManagerInterface {
   private engine: ConfigEngine<TinyClawConfigData>;

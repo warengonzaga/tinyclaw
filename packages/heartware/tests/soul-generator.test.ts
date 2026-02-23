@@ -1,17 +1,17 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { HeartwareSecurityError } from '../src/errors.js';
+import { validatePath } from '../src/sandbox.js';
 import {
+  generateRandomSeed,
   generateSoul,
   generateSoulTraits,
-  renderSoulMarkdown,
-  generateRandomSeed,
   parseSeed,
+  renderSoulMarkdown,
 } from '../src/soul-generator.js';
-import { validatePath } from '../src/sandbox.js';
-import { HeartwareSecurityError } from '../src/errors.js';
 import type { SoulTraits } from '../src/types.js';
-import { mkdtempSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -51,7 +51,7 @@ describe('Soul Generator — Determinism', () => {
 
   it('different seeds produce different personalities', () => {
     const seeds = [0, 1, 42, 8675309, 999999, 2147483647];
-    const contents = seeds.map(s => generateSoul(s).content);
+    const contents = seeds.map((s) => generateSoul(s).content);
 
     // All should be unique
     const unique = new Set(contents);
@@ -399,7 +399,7 @@ describe('Soul Generator — Diversity', () => {
       allColors.add(traits.preferences.favoriteColor);
       allHumors.add(traits.humor);
       allCreatures.add(traits.character.creatureType);
-      traits.values.forEach(v => allValues.add(v));
+      traits.values.forEach((v) => allValues.add(v));
     }
 
     // Should hit most of the pools
@@ -451,10 +451,10 @@ describe('Soul Generator — Origin Story', () => {
   });
 
   it('different seeds produce different origin stories', () => {
-    const origins = [0, 1, 42, 100, 999].map(s => generateSoulTraits(s).origin);
+    const origins = [0, 1, 42, 100, 999].map((s) => generateSoulTraits(s).origin);
     // At least some should differ (very unlikely all 5 match)
-    const places = new Set(origins.map(o => o.originPlace));
-    const events = new Set(origins.map(o => o.awakeningEvent));
+    const places = new Set(origins.map((o) => o.originPlace));
+    const events = new Set(origins.map((o) => o.awakeningEvent));
     expect(places.size + events.size).toBeGreaterThan(2);
   });
 

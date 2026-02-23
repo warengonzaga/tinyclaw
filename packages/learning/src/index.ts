@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import type { Pattern, LearnedContext, Message, Signal } from '@tinyclaw/types';
+import type { LearnedContext, Message, Pattern, Signal } from '@tinyclaw/types';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
 import { detectSignals } from './detector.js';
 
 export interface LearningEngineConfig {
@@ -38,11 +38,11 @@ export function createLearningEngine(config: LearningEngineConfig) {
     if (signal.confidence < minConfidence) return;
 
     const category = `${signal.type}_general`;
-    const existing = patterns.find(p => p.category === category);
+    const existing = patterns.find((p) => p.category === category);
 
     if (existing) {
       // Update confidence (weighted average)
-      existing.confidence = (existing.confidence * 0.7) + (signal.confidence * 0.3);
+      existing.confidence = existing.confidence * 0.7 + signal.confidence * 0.3;
       existing.examples.push(signal.context);
       existing.lastUpdated = Date.now();
 
@@ -73,22 +73,22 @@ export function createLearningEngine(config: LearningEngineConfig) {
     },
 
     getContext(): LearnedContext {
-      const highConfidence = patterns.filter(p => p.confidence >= minConfidence);
+      const highConfidence = patterns.filter((p) => p.confidence >= minConfidence);
 
       const preferences = highConfidence
-        .filter(p => p.category.includes('preference') || p.category.includes('correction'))
-        .map(p => `- ${p.preference}`)
+        .filter((p) => p.category.includes('preference') || p.category.includes('correction'))
+        .map((p) => `- ${p.preference}`)
         .join('\n');
 
       const patternsText = highConfidence
-        .filter(p => p.category.includes('positive'))
-        .map(p => `- Works well: ${p.preference}`)
+        .filter((p) => p.category.includes('positive'))
+        .map((p) => `- Works well: ${p.preference}`)
         .join('\n');
 
       const recentCorrections = patterns
-        .filter(p => p.category.includes('correction'))
+        .filter((p) => p.category.includes('correction'))
         .slice(-5)
-        .map(p => `- ${p.preference}`)
+        .map((p) => `- ${p.preference}`)
         .join('\n');
 
       return { preferences, patterns: patternsText, recentCorrections };
@@ -119,9 +119,9 @@ export function createLearningEngine(config: LearningEngineConfig) {
     getStats() {
       return {
         totalPatterns: patterns.length,
-        highConfidencePatterns: patterns.filter(p => p.confidence >= minConfidence).length,
+        highConfidencePatterns: patterns.filter((p) => p.confidence >= minConfidence).length,
       };
-    }
+    },
   };
 }
 

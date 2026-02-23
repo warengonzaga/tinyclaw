@@ -7,8 +7,8 @@
  * through the session queue to prevent conflicts.
  */
 
-import type { PulseJob } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
+import type { PulseJob } from '@tinyclaw/types';
 
 export interface PulseScheduler {
   register(job: PulseJob): void;
@@ -21,9 +21,7 @@ export interface PulseScheduler {
 function parseInterval(schedule: string): number {
   const match = schedule.match(/^(\d+)(s|m|h)$/);
   if (!match) {
-    throw new Error(
-      `Invalid schedule "${schedule}". Use format like "30m", "1h", or "24h".`,
-    );
+    throw new Error(`Invalid schedule "${schedule}". Use format like "30m", "1h", or "24h".`);
   }
 
   const value = parseInt(match[1], 10);

@@ -73,14 +73,26 @@ describe('sub_agents table', () => {
     };
 
     db.saveSubAgent({ ...base, id: 'sa-1', userId: 'user-1', role: 'Agent A', status: 'active' });
-    db.saveSubAgent({ ...base, id: 'sa-2', userId: 'user-1', role: 'Agent B', status: 'soft_deleted' });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-2',
+      userId: 'user-1',
+      role: 'Agent B',
+      status: 'soft_deleted',
+    });
     db.saveSubAgent({ ...base, id: 'sa-3', userId: 'user-2', role: 'Agent C', status: 'active' });
-    db.saveSubAgent({ ...base, id: 'sa-4', userId: 'user-1', role: 'Agent D', status: 'suspended' });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-4',
+      userId: 'user-1',
+      role: 'Agent D',
+      status: 'suspended',
+    });
 
     const active = db.getActiveSubAgents('user-1');
     expect(active.length).toBe(2); // active + suspended (not soft_deleted)
-    expect(active.some(a => a.id === 'sa-1')).toBe(true);
-    expect(active.some(a => a.id === 'sa-4')).toBe(true);
+    expect(active.some((a) => a.id === 'sa-1')).toBe(true);
+    expect(active.some((a) => a.id === 'sa-4')).toBe(true);
 
     db.close();
   });
@@ -103,7 +115,14 @@ describe('sub_agents table', () => {
     };
 
     db.saveSubAgent({ ...base, id: 'sa-1', userId: 'user-1', role: 'A', status: 'active' });
-    db.saveSubAgent({ ...base, id: 'sa-2', userId: 'user-1', role: 'B', status: 'soft_deleted', deletedAt: now });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-2',
+      userId: 'user-1',
+      role: 'B',
+      status: 'soft_deleted',
+      deletedAt: now,
+    });
 
     const withoutDeleted = db.getAllSubAgents('user-1', false);
     expect(withoutDeleted.length).toBe(1);
@@ -168,9 +187,30 @@ describe('sub_agents table', () => {
       lastActiveAt: now,
     };
 
-    db.saveSubAgent({ ...base, id: 'sa-old', userId: 'u1', role: 'Old', status: 'soft_deleted', deletedAt: now - 100_000 });
-    db.saveSubAgent({ ...base, id: 'sa-new', userId: 'u1', role: 'New', status: 'soft_deleted', deletedAt: now });
-    db.saveSubAgent({ ...base, id: 'sa-active', userId: 'u1', role: 'Active', status: 'active', deletedAt: null });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-old',
+      userId: 'u1',
+      role: 'Old',
+      status: 'soft_deleted',
+      deletedAt: now - 100_000,
+    });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-new',
+      userId: 'u1',
+      role: 'New',
+      status: 'soft_deleted',
+      deletedAt: now,
+    });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-active',
+      userId: 'u1',
+      role: 'Active',
+      status: 'active',
+      deletedAt: null,
+    });
 
     const deleted = db.deleteExpiredSubAgents(now - 50_000);
     expect(deleted).toBe(1);
@@ -368,10 +408,39 @@ describe('background_tasks table', () => {
       deliveredAt: null,
     };
 
-    db.saveBackgroundTask({ ...base, id: 'bt-1', taskDescription: 'Running', status: 'running', result: null, completedAt: null });
-    db.saveBackgroundTask({ ...base, id: 'bt-2', taskDescription: 'Completed', status: 'completed', result: 'Done!', completedAt: now + 1000 });
-    db.saveBackgroundTask({ ...base, id: 'bt-3', taskDescription: 'Failed', status: 'failed', result: 'Error', completedAt: now + 2000 });
-    db.saveBackgroundTask({ ...base, id: 'bt-4', taskDescription: 'Delivered', status: 'delivered', result: 'Old', completedAt: now, deliveredAt: now + 3000 });
+    db.saveBackgroundTask({
+      ...base,
+      id: 'bt-1',
+      taskDescription: 'Running',
+      status: 'running',
+      result: null,
+      completedAt: null,
+    });
+    db.saveBackgroundTask({
+      ...base,
+      id: 'bt-2',
+      taskDescription: 'Completed',
+      status: 'completed',
+      result: 'Done!',
+      completedAt: now + 1000,
+    });
+    db.saveBackgroundTask({
+      ...base,
+      id: 'bt-3',
+      taskDescription: 'Failed',
+      status: 'failed',
+      result: 'Error',
+      completedAt: now + 2000,
+    });
+    db.saveBackgroundTask({
+      ...base,
+      id: 'bt-4',
+      taskDescription: 'Delivered',
+      status: 'delivered',
+      result: 'Old',
+      completedAt: now,
+      deliveredAt: now + 3000,
+    });
 
     const undelivered = db.getUndeliveredTasks('user-1');
     expect(undelivered.length).toBe(2);

@@ -195,7 +195,7 @@ function compressUltra(text: string): string {
   result = replaceWord(result, 'for', '4');
 
   // Clean up spacing
-  result = result.replace(/  +/g, ' ');
+  result = result.replace(/ {2,}/g, ' ');
   result = result.replace(/\n{3,}/g, '\n\n');
   result = result.replace(/^\s+/gm, '');
 
@@ -217,7 +217,7 @@ function compressMedium(text: string): string {
   }
 
   // Clean up
-  result = result.replace(/  +/g, ' ');
+  result = result.replace(/ {2,}/g, ' ');
   result = result.replace(/\n{3,}/g, '\n\n');
 
   return result.trim();
@@ -226,7 +226,7 @@ function compressMedium(text: string): string {
 function compressLight(text: string): string {
   if (!text) return '';
   let result = text;
-  result = result.replace(/  +/g, ' ');
+  result = result.replace(/ {2,}/g, ' ');
   result = result.replace(/\n{3,}/g, '\n\n');
   return result.trim();
 }

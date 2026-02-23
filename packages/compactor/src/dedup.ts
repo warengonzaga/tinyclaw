@@ -111,9 +111,7 @@ export function deduplicateMessages(
     }
   }
 
-  const result = shingled
-    .filter((s) => !dropped.has(s.index))
-    .map((s) => s.message);
+  const result = shingled.filter((s) => !dropped.has(s.index)).map((s) => s.message);
 
   return { messages: result, groupsRemoved };
 }

@@ -127,7 +127,8 @@ describe('parseTar', () => {
     const hardlinkHeader = makeTarHeader('hard', '1', 0, 'file.txt');
 
     const tar = Buffer.concat([
-      fileHeader, fileData,
+      fileHeader,
+      fileData,
       dirHeader,
       symlinkHeader,
       hardlinkHeader,

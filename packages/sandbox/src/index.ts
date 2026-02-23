@@ -21,7 +21,7 @@
  *   - Each execution runs in a fresh worker (no state leakage)
  */
 
-import { join, dirname } from 'path';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ export interface Sandbox {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_TIMEOUT_MS = 10_000; // 10 seconds
-const MAX_TIMEOUT_MS = 30_000;     // 30 seconds
+const MAX_TIMEOUT_MS = 30_000; // 30 seconds
 
 // ---------------------------------------------------------------------------
 // Factory
@@ -140,7 +140,11 @@ export function createSandbox(): Sandbox {
       return runInWorker(code, undefined, config);
     },
 
-    async executeWithInput(code: string, input: unknown, config?: SandboxConfig): Promise<SandboxResult> {
+    async executeWithInput(
+      code: string,
+      input: unknown,
+      config?: SandboxConfig,
+    ): Promise<SandboxResult> {
       return runInWorker(code, input, config);
     },
 

@@ -5,10 +5,9 @@
  * sub-agent records, role templates, background tasks, and orientation.
  */
 
-import type { QueryTier } from '@tinyclaw/router';
-import type { Provider, Tool, Message, LearningEngine } from '@tinyclaw/types';
-import type { ProviderOrchestrator } from '@tinyclaw/router';
-import type { DelegationStore, DelegationQueue } from './store.js';
+import type { ProviderOrchestrator, QueryTier } from '@tinyclaw/router';
+import type { LearningEngine, Message, Provider, Tool } from '@tinyclaw/types';
+import type { DelegationQueue, DelegationStore } from './store.js';
 import type { TimeoutEstimator } from './timeout-estimator.js';
 
 // ---------------------------------------------------------------------------

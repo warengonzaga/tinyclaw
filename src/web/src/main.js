@@ -1,24 +1,24 @@
-import './app.css'
-import { mount } from 'svelte'
-import App from './App.svelte'
+import './app.css';
+import { mount } from 'svelte';
+import App from './App.svelte';
 
-const target = document.getElementById('app')
+const target = document.getElementById('app');
 
 if (!target) {
-  throw new Error('Tiny Claw UI failed to find #app root element.')
+  throw new Error('Tiny Claw UI failed to find #app root element.');
 }
 
-target.textContent = 'Booting Tiny Claw UI...'
+target.textContent = 'Booting Tiny Claw UI...';
 
-let app
+let app;
 
 try {
-  target.textContent = ''
-  app = mount(App, { target })
+  target.textContent = '';
+  app = mount(App, { target });
 } catch (error) {
-  const message = error instanceof Error ? error.message : 'Unknown error.'
-  target.textContent = `Tiny Claw UI failed to start: ${message}`
-  console.error(error)
+  const message = error instanceof Error ? error.message : 'Unknown error.';
+  target.textContent = `Tiny Claw UI failed to start: ${message}`;
+  console.error(error);
 }
 
-export default app
+export default app;

@@ -5,7 +5,7 @@
  * and the start/stop lifecycle guards.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import discordPlugin, { splitIntoChunks } from '../src/index.js';
 
 // ---------------------------------------------------------------------------

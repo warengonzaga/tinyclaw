@@ -13,13 +13,13 @@
  */
 
 import type {
+  ConfigManagerInterface,
   ProviderPlugin,
   SecretsManagerInterface,
-  ConfigManagerInterface,
   Tool,
 } from '@tinyclaw/types';
-import { createOpenAIProvider } from './provider.js';
 import { createOpenAIPairingTools } from './pairing.js';
+import { createOpenAIProvider } from './provider.js';
 
 const openaiPlugin: ProviderPlugin = {
   id: '@tinyclaw/plugin-provider-openai',
@@ -32,10 +32,7 @@ const openaiPlugin: ProviderPlugin = {
     return createOpenAIProvider({ secrets });
   },
 
-  getPairingTools(
-    secrets: SecretsManagerInterface,
-    configManager: ConfigManagerInterface,
-  ): Tool[] {
+  getPairingTools(secrets: SecretsManagerInterface, configManager: ConfigManagerInterface): Tool[] {
     return createOpenAIPairingTools(secrets, configManager);
   },
 };

@@ -8,11 +8,11 @@
  *   tinyclaw seed          Show key soul traits
  */
 
-import { join } from 'path';
-import { readFile } from 'fs/promises';
-import { existsSync } from 'fs';
-import { homedir } from 'os';
 import { generateSoul, parseSeed } from '@tinyclaw/heartware';
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { homedir } from 'os';
+import { join } from 'path';
 import { theme } from '../ui/theme.js';
 
 /**
@@ -46,16 +46,32 @@ export async function seedCommand(): Promise<void> {
     console.log(`    Catchphrase: "${t.character.catchphrase}"`);
     console.log();
     console.log(`  ${theme.label('Personality (Big Five)')}`);
-    console.log(`    Openness          : ${bar(t.personality.openness)} ${(t.personality.openness * 100).toFixed(0)}%`);
-    console.log(`    Conscientiousness : ${bar(t.personality.conscientiousness)} ${(t.personality.conscientiousness * 100).toFixed(0)}%`);
-    console.log(`    Extraversion      : ${bar(t.personality.extraversion)} ${(t.personality.extraversion * 100).toFixed(0)}%`);
-    console.log(`    Agreeableness     : ${bar(t.personality.agreeableness)} ${(t.personality.agreeableness * 100).toFixed(0)}%`);
-    console.log(`    Emot. Sensitivity : ${bar(t.personality.emotionalSensitivity)} ${(t.personality.emotionalSensitivity * 100).toFixed(0)}%`);
+    console.log(
+      `    Openness          : ${bar(t.personality.openness)} ${(t.personality.openness * 100).toFixed(0)}%`,
+    );
+    console.log(
+      `    Conscientiousness : ${bar(t.personality.conscientiousness)} ${(t.personality.conscientiousness * 100).toFixed(0)}%`,
+    );
+    console.log(
+      `    Extraversion      : ${bar(t.personality.extraversion)} ${(t.personality.extraversion * 100).toFixed(0)}%`,
+    );
+    console.log(
+      `    Agreeableness     : ${bar(t.personality.agreeableness)} ${(t.personality.agreeableness * 100).toFixed(0)}%`,
+    );
+    console.log(
+      `    Emot. Sensitivity : ${bar(t.personality.emotionalSensitivity)} ${(t.personality.emotionalSensitivity * 100).toFixed(0)}%`,
+    );
     console.log();
     console.log(`  ${theme.label('Communication')}`);
-    console.log(`    Verbosity  : ${bar(t.communication.verbosity)} ${(t.communication.verbosity * 100).toFixed(0)}%`);
-    console.log(`    Formality  : ${bar(t.communication.formality)} ${(t.communication.formality * 100).toFixed(0)}%`);
-    console.log(`    Emoji      : ${bar(t.communication.emojiFrequency)} ${(t.communication.emojiFrequency * 100).toFixed(0)}%`);
+    console.log(
+      `    Verbosity  : ${bar(t.communication.verbosity)} ${(t.communication.verbosity * 100).toFixed(0)}%`,
+    );
+    console.log(
+      `    Formality  : ${bar(t.communication.formality)} ${(t.communication.formality * 100).toFixed(0)}%`,
+    );
+    console.log(
+      `    Emoji      : ${bar(t.communication.emojiFrequency)} ${(t.communication.emojiFrequency * 100).toFixed(0)}%`,
+    );
     console.log(`    Humor      : ${t.humor}`);
     console.log();
     console.log(`  ${theme.label('Favorites')}`);
@@ -68,8 +84,12 @@ export async function seedCommand(): Promise<void> {
     console.log(`  ${theme.label('Values')}: ${t.values.join(', ')}`);
     console.log(`  ${theme.label('Quirks')}: ${t.quirks.length} behavioral patterns`);
     console.log();
-    console.log(theme.dim('  This soul is immutable — the same seed always produces the same personality.'));
-    console.log(theme.dim('  Share your seed with others so they can create a companion just like yours!'));
+    console.log(
+      theme.dim('  This soul is immutable — the same seed always produces the same personality.'),
+    );
+    console.log(
+      theme.dim('  Share your seed with others so they can create a companion just like yours!'),
+    );
     console.log();
   } catch (err) {
     console.log();

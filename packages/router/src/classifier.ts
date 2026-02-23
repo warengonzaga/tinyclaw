@@ -33,9 +33,9 @@ export interface ClassificationResult {
 // ---------------------------------------------------------------------------
 
 const TIER_BOUNDARIES = {
-  simple: -0.05,   // score < -0.05
-  moderate: 0.15,  // score -0.05 to 0.15
-  complex: 0.35,   // score 0.15 to 0.35
+  simple: -0.05, // score < -0.05
+  moderate: 0.15, // score -0.05 to 0.15
+  complex: 0.35, // score 0.15 to 0.35
   // reasoning: score >= 0.35
 } as const;
 
@@ -44,46 +44,137 @@ const TIER_BOUNDARIES = {
 // ---------------------------------------------------------------------------
 
 const REASONING_KEYWORDS = [
-  'prove', 'theorem', 'derive', 'step by step', 'chain of thought',
-  'analyze', 'compare and contrast', 'evaluate', 'critique', 'why does',
-  'explain why', 'what causes', 'reasoning', 'logic', 'deduce',
+  'prove',
+  'theorem',
+  'derive',
+  'step by step',
+  'chain of thought',
+  'analyze',
+  'compare and contrast',
+  'evaluate',
+  'critique',
+  'why does',
+  'explain why',
+  'what causes',
+  'reasoning',
+  'logic',
+  'deduce',
 ];
 
 const CODE_KEYWORDS = [
-  'function', 'class', 'import', 'export', 'async', 'await',
-  'const ', 'let ', 'var ', '```', 'debug', 'refactor',
-  'compile', 'runtime', 'typescript', 'javascript', 'python',
-  'implement', 'bug', 'error', 'stack trace', 'exception',
+  'function',
+  'class',
+  'import',
+  'export',
+  'async',
+  'await',
+  'const ',
+  'let ',
+  'var ',
+  '```',
+  'debug',
+  'refactor',
+  'compile',
+  'runtime',
+  'typescript',
+  'javascript',
+  'python',
+  'implement',
+  'bug',
+  'error',
+  'stack trace',
+  'exception',
 ];
 
 const MULTI_STEP_KEYWORDS = [
-  'first', 'then', 'next', 'finally', 'step 1', 'step 2',
-  'and then', 'after that', 'followed by', 'in order to',
-  '1.', '2.', '3.',
+  'first',
+  'then',
+  'next',
+  'finally',
+  'step 1',
+  'step 2',
+  'and then',
+  'after that',
+  'followed by',
+  'in order to',
+  '1.',
+  '2.',
+  '3.',
 ];
 
 const TECHNICAL_KEYWORDS = [
-  'algorithm', 'architecture', 'database', 'api', 'deploy',
-  'kubernetes', 'docker', 'distributed', 'microservice', 'scalab',
-  'infrastructure', 'pipeline', 'protocol', 'encryption', 'oauth',
-  'websocket', 'middleware', 'schema', 'migration', 'optimization',
+  'algorithm',
+  'architecture',
+  'database',
+  'api',
+  'deploy',
+  'kubernetes',
+  'docker',
+  'distributed',
+  'microservice',
+  'scalab',
+  'infrastructure',
+  'pipeline',
+  'protocol',
+  'encryption',
+  'oauth',
+  'websocket',
+  'middleware',
+  'schema',
+  'migration',
+  'optimization',
 ];
 
 const SIMPLE_KEYWORDS = [
-  'hello', 'hi', 'hey', 'thanks', 'thank you', 'bye', 'goodbye',
-  'what is', 'define', 'translate', 'who is', 'when was',
-  'how are you', 'good morning', 'good night', 'yes', 'no', 'ok',
+  'hello',
+  'hi',
+  'hey',
+  'thanks',
+  'thank you',
+  'bye',
+  'goodbye',
+  'what is',
+  'define',
+  'translate',
+  'who is',
+  'when was',
+  'how are you',
+  'good morning',
+  'good night',
+  'yes',
+  'no',
+  'ok',
 ];
 
 const CONSTRAINT_KEYWORDS = [
-  'must', 'at most', 'at least', 'exactly', 'within', 'budget',
-  'constraint', 'requirement', 'maximum', 'minimum', 'limit',
-  'no more than', 'o(n)', 'time complexity', 'space complexity',
+  'must',
+  'at most',
+  'at least',
+  'exactly',
+  'within',
+  'budget',
+  'constraint',
+  'requirement',
+  'maximum',
+  'minimum',
+  'limit',
+  'no more than',
+  'o(n)',
+  'time complexity',
+  'space complexity',
 ];
 
 const CREATIVE_KEYWORDS = [
-  'story', 'poem', 'brainstorm', 'imagine', 'creative',
-  'fiction', 'narrative', 'write a', 'compose', 'invent',
+  'story',
+  'poem',
+  'brainstorm',
+  'imagine',
+  'creative',
+  'fiction',
+  'narrative',
+  'write a',
+  'compose',
+  'invent',
 ];
 
 // ---------------------------------------------------------------------------
@@ -153,7 +244,7 @@ const DIMENSIONS: Array<{
 }> = [
   {
     name: 'reasoning',
-    weight: 0.20,
+    weight: 0.2,
     score: (text) => {
       const count = countMatches(text, REASONING_KEYWORDS);
       const matched = REASONING_KEYWORDS.filter((k) => text.includes(k));
@@ -200,7 +291,7 @@ const DIMENSIONS: Array<{
   },
   {
     name: 'promptLength',
-    weight: 0.10,
+    weight: 0.1,
     score: (_text, tokens) => {
       if (tokens < 30) return { score: -0.5, signal: 'short prompt' };
       if (tokens > 200) return { score: 0.8, signal: 'long prompt' };
@@ -210,7 +301,7 @@ const DIMENSIONS: Array<{
   },
   {
     name: 'simple',
-    weight: 0.10,
+    weight: 0.1,
     score: (text) => {
       const count = countMatches(text, SIMPLE_KEYWORDS);
       // Negative score — pulls toward simple tier

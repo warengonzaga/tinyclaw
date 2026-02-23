@@ -6,16 +6,16 @@
  * starts automatically via the supervisor restart mechanism.
  */
 
-import { join, resolve } from 'path';
-import { existsSync, statSync, readdirSync } from 'fs';
-import { homedir } from 'os';
+import { ConfigManager } from '@tinyclaw/config';
 import { logger, setLogMode } from '@tinyclaw/logger';
 import { SecretsManager } from '@tinyclaw/secrets';
-import { ConfigManager } from '@tinyclaw/config';
-import { createWebUI } from '@tinyclaw/web';
 import type { StreamCallback } from '@tinyclaw/types';
-import { theme } from '../ui/theme.js';
+import { createWebUI } from '@tinyclaw/web';
+import { existsSync, readdirSync, statSync } from 'fs';
+import { homedir } from 'os';
+import { join, resolve } from 'path';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Run the web-based setup flow.
@@ -36,9 +36,13 @@ export async function webSetupCommand(): Promise<void> {
   // --- Initialize engines -----------------------------------------------
 
   const secretsManager = await SecretsManager.create();
-  logger.info('Secrets engine initialized', {
-    storagePath: secretsManager.storagePath,
-  }, { emoji: '✅' });
+  logger.info(
+    'Secrets engine initialized',
+    {
+      storagePath: secretsManager.storagePath,
+    },
+    { emoji: '✅' },
+  );
 
   const configManager = await ConfigManager.create();
   logger.info('Config engine initialized', { configPath: configManager.path }, { emoji: '✅' });
@@ -46,11 +50,12 @@ export async function webSetupCommand(): Promise<void> {
   // --- Launch setup-only web server -------------------------------------
 
   const parsedPort = parseInt(process.env.PORT || '3000', 10);
-  const port = Number.isInteger(parsedPort) && parsedPort >= 1 && parsedPort <= 65535
-    ? parsedPort
-    : 3000;
+  const port =
+    Number.isInteger(parsedPort) && parsedPort >= 1 && parsedPort <= 65535 ? parsedPort : 3000;
   if (process.env.PORT && port !== parsedPort) {
-    logger.warn(`Invalid PORT "${process.env.PORT}" — falling back to ${port}`, undefined, { emoji: '⚠️' });
+    logger.warn(`Invalid PORT "${process.env.PORT}" — falling back to ${port}`, undefined, {
+      emoji: '⚠️',
+    });
   }
   const setupOnlyMessage =
     'Tiny Claw setup is not complete yet. Open /setup to finish onboarding, or run tinyclaw setup in the CLI.';
@@ -103,25 +108,29 @@ export async function webSetupCommand(): Promise<void> {
 
   if (needsBuild) {
     if (!existsSync(webRoot)) {
-      logger.warn(`Web UI source not found at ${webRoot} — skipping build`, undefined, { emoji: '⚠️' });
-    } else {
-    logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
-    try {
-      const buildResult = Bun.spawnSync([process.execPath, 'run', 'build'], {
-        cwd: webRoot,
-        stdio: ['ignore', 'pipe', 'pipe'],
+      logger.warn(`Web UI source not found at ${webRoot} — skipping build`, undefined, {
+        emoji: '⚠️',
       });
+    } else {
+      logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
+      try {
+        const buildResult = Bun.spawnSync([process.execPath, 'run', 'build'], {
+          cwd: webRoot,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
 
-      if (buildResult.exitCode === 0) {
-        logger.info('Web UI built successfully', undefined, { emoji: '✅' });
-      } else {
-        const stderr = buildResult.stderr?.toString().trim();
-        logger.warn('Web UI build failed — setup page may not display correctly', undefined, { emoji: '⚠️' });
-        if (stderr) logger.warn(stderr);
+        if (buildResult.exitCode === 0) {
+          logger.info('Web UI built successfully', undefined, { emoji: '✅' });
+        } else {
+          const stderr = buildResult.stderr?.toString().trim();
+          logger.warn('Web UI build failed — setup page may not display correctly', undefined, {
+            emoji: '⚠️',
+          });
+          if (stderr) logger.warn(stderr);
+        }
+      } catch (err) {
+        logger.warn('Could not build Web UI:', err, { emoji: '⚠️' });
       }
-    } catch (err) {
-      logger.warn('Could not build Web UI:', err, { emoji: '⚠️' });
-    }
     }
   }
 
@@ -139,9 +148,21 @@ export async function webSetupCommand(): Promise<void> {
       logger.info('Setup complete — starting Tiny Claw agent...', undefined, { emoji: '🚀' });
 
       // Graceful shutdown: stop web server, then close managers before restart
-      try { await setupWebUI.stop(); } catch (err) { logger.warn('Error stopping web server during shutdown', { err }, { emoji: '⚠️' }); }
-      try { configManager.close(); } catch (err) { logger.warn('Error closing config manager during shutdown', { err }, { emoji: '⚠️' }); } // sync — ConfigManager.close() returns void
-      try { await secretsManager.close(); } catch (err) { logger.warn('Error closing secrets manager during shutdown', { err }, { emoji: '⚠️' }); }
+      try {
+        await setupWebUI.stop();
+      } catch (err) {
+        logger.warn('Error stopping web server during shutdown', { err }, { emoji: '⚠️' });
+      }
+      try {
+        configManager.close();
+      } catch (err) {
+        logger.warn('Error closing config manager during shutdown', { err }, { emoji: '⚠️' });
+      } // sync — ConfigManager.close() returns void
+      try {
+        await secretsManager.close();
+      } catch (err) {
+        logger.warn('Error closing secrets manager during shutdown', { err }, { emoji: '⚠️' });
+      }
 
       // Exit with restart code so the supervisor respawns as a normal start
       process.exit(RESTART_EXIT_CODE);

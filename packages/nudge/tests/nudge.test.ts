@@ -1,6 +1,12 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import type {
+  ChannelSender,
+  NudgeEngine,
+  OutboundDeliveryResult,
+  OutboundGateway,
+  OutboundMessage,
+} from '@tinyclaw/types';
 import { createNudgeEngine, wireNudgeToIntercom } from '../src/index';
-import type { OutboundGateway, OutboundMessage, OutboundDeliveryResult, ChannelSender, NudgeEngine } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
 // Mock Gateway
@@ -15,8 +21,12 @@ function createMockGateway() {
       sends.push({ userId, message });
       return { success: true, channel: 'web', userId };
     },
-    async broadcast(_message: OutboundMessage) { return []; },
-    getRegisteredChannels() { return ['web']; },
+    async broadcast(_message: OutboundMessage) {
+      return [];
+    },
+    getRegisteredChannels() {
+      return ['web'];
+    },
   };
   return { gateway, sends };
 }
@@ -48,7 +58,7 @@ describe('NudgeEngine', () => {
       const id2 = engine.schedule({
         userId: 'web:owner',
         category: 'reminder',
-        content: 'Don\'t forget!',
+        content: "Don't forget!",
         priority: 'normal',
         deliverAfter: 0,
       });
@@ -230,8 +240,12 @@ describe('NudgeEngine', () => {
         async send(userId): Promise<OutboundDeliveryResult> {
           return { success: false, channel: 'web', userId, error: 'offline' };
         },
-        async broadcast() { return []; },
-        getRegisteredChannels() { return []; },
+        async broadcast() {
+          return [];
+        },
+        getRegisteredChannels() {
+          return [];
+        },
       };
       const failEngine = createNudgeEngine({ gateway: failGw });
 
@@ -424,7 +438,9 @@ describe('wireNudgeToIntercom', () => {
     const intercom = {
       on(_topic: string, _handler: any) {
         subCount++;
-        return () => { subCount--; };
+        return () => {
+          subCount--;
+        };
       },
     };
 

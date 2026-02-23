@@ -20,26 +20,26 @@
  * userId format: "friend:<username>"
  */
 
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { logger } from '@tinyclaw/logger';
 import type {
   ChannelPlugin,
-  PluginRuntimeContext,
-  Tool,
-  SecretsManagerInterface,
   ConfigManagerInterface,
   OutboundMessage,
+  PluginRuntimeContext,
+  SecretsManagerInterface,
+  Tool,
 } from '@tinyclaw/types';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+import { createFriendsServer } from './server.js';
 import { InviteStore } from './store.js';
 import {
   createFriendsTools,
   FRIENDS_ENABLED_CONFIG_KEY,
-  FRIENDS_PORT_CONFIG_KEY,
   FRIENDS_PLUGIN_ID,
+  FRIENDS_PORT_CONFIG_KEY,
 } from './tools.js';
-import { createFriendsServer } from './server.js';
 
 // Resolve the directory of this source file for static asset paths
 const __filename = fileURLToPath(import.meta.url);
@@ -91,7 +91,8 @@ const friendsPlugin: ChannelPlugin = {
     }
 
     const port = context.configManager.get<number>(FRIENDS_PORT_CONFIG_KEY) || 3001;
-    const host = process.env.HOST || context.configManager.get<string>('friends.host') || '127.0.0.1';
+    const host =
+      process.env.HOST || context.configManager.get<string>('friends.host') || '127.0.0.1';
     const chatHtml = loadChatHtml();
 
     friendsServer = createFriendsServer({

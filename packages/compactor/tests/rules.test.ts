@@ -1,15 +1,15 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import {
-  stripEmoji,
-  deduplicateLines,
   collapseWhitespace,
-  removeDecorativeLines,
-  normalizeCjkPunctuation,
-  removeEmptySections,
   compressMarkdownTable,
-  mergeSimilarBullets,
+  deduplicateLines,
   mergeShortBullets,
+  mergeSimilarBullets,
+  normalizeCjkPunctuation,
   preCompress,
+  removeDecorativeLines,
+  removeEmptySections,
+  stripEmoji,
 } from '../src/rules.js';
 
 describe('stripEmoji', () => {
@@ -203,7 +203,8 @@ describe('compressMarkdownTable', () => {
 
 describe('mergeSimilarBullets', () => {
   it('merges bullets with high similarity', () => {
-    const input = '- The quick brown fox jumps over the lazy dog\n- The quick brown fox jumps over the lazy cat';
+    const input =
+      '- The quick brown fox jumps over the lazy dog\n- The quick brown fox jumps over the lazy cat';
     const result = mergeSimilarBullets(input, 0.7);
     const lines = result.split('\n').filter((l) => l.trim());
     expect(lines.length).toBe(1); // One was merged

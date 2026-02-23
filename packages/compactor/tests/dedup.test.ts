@@ -1,10 +1,6 @@
-import { describe, it, expect } from 'bun:test';
-import {
-  computeShingles,
-  jaccardSimilarity,
-  deduplicateMessages,
-} from '../src/dedup.js';
+import { describe, expect, it } from 'bun:test';
 import type { Message } from '@tinyclaw/types';
+import { computeShingles, deduplicateMessages, jaccardSimilarity } from '../src/dedup.js';
 
 describe('computeShingles', () => {
   it('returns empty set for empty text', () => {

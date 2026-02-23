@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { generateTiers } from '../src/tiers.js';
 import { estimateTokens } from '../src/tokens.js';
 
@@ -66,7 +66,8 @@ describe('generateTiers', () => {
 
     // L0 should be non-empty and contain high-priority lines
     expect(tiers.l0.length).toBeGreaterThan(0);
-    const hasIdentity = tiers.l0.includes('name') || tiers.l0.includes('decision') || tiers.l0.includes('Decision');
+    const hasIdentity =
+      tiers.l0.includes('name') || tiers.l0.includes('decision') || tiers.l0.includes('Decision');
     expect(hasIdentity).toBe(true);
   });
 

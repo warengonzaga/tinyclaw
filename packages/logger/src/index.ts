@@ -1,4 +1,11 @@
-import { LogEngine, LogMode, EmojiSelector, EMOJI_MAPPINGS, FALLBACK_EMOJI, type LogCallOptions } from '@wgtechlabs/log-engine';
+import {
+  EMOJI_MAPPINGS,
+  EmojiSelector,
+  FALLBACK_EMOJI,
+  type LogCallOptions,
+  LogEngine,
+  LogMode,
+} from '@wgtechlabs/log-engine';
 
 // Only local time with context-aware emoji
 LogEngine.configure({
@@ -13,29 +20,29 @@ LogEngine.configure({
           emoji: '🤖',
           code: ':robot:',
           description: 'Agent operations',
-          keywords: ['agent', 'heartware', 'plugin', 'orchestrator']
+          keywords: ['agent', 'heartware', 'plugin', 'orchestrator'],
         },
         {
           emoji: '🔑',
           code: ':key:',
           description: 'Secrets operations',
-          keywords: ['secret', 'vault', 'encrypt', 'decrypt', 'credential']
+          keywords: ['secret', 'vault', 'encrypt', 'decrypt', 'credential'],
         },
         {
           emoji: '🧠',
           code: ':brain:',
           description: 'Learning operations',
-          keywords: ['learn', 'pattern', 'detect', 'adapt', 'training']
+          keywords: ['learn', 'pattern', 'detect', 'adapt', 'training'],
         },
         {
           emoji: '🔀',
           code: ':twisted_rightwards_arrows:',
           description: 'Router operations',
-          keywords: ['route', 'router', 'dispatch', 'forward', 'command']
-        }
-      ]
-    }
-  }
+          keywords: ['route', 'router', 'dispatch', 'forward', 'command'],
+        },
+      ],
+    },
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -61,10 +68,7 @@ export type LogModeName = keyof typeof LOG_MODES;
  * numeric `LogMode` value.  Invalid input is silently ignored.
  */
 export function setLogMode(level: LogModeName | LogMode): void {
-  const mode =
-    typeof level === 'string'
-      ? LOG_MODES[level as LogModeName]
-      : level;
+  const mode = typeof level === 'string' ? LOG_MODES[level as LogModeName] : level;
 
   if (mode === undefined) return;
   LogEngine.configure({ mode });

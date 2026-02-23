@@ -503,8 +503,7 @@ export function createNudgeTools(nudgeEngine: NudgeEngine): Tool[] {
         : 'normal';
 
       const delayMinutes = Number(args.delayMinutes) || 0;
-      const deliverAfter =
-        delayMinutes > 0 ? Date.now() + delayMinutes * 60_000 : 0;
+      const deliverAfter = delayMinutes > 0 ? Date.now() + delayMinutes * 60_000 : 0;
 
       const id = nudgeEngine.schedule({
         userId,
@@ -537,9 +536,10 @@ export function createNudgeTools(nudgeEngine: NudgeEngine): Tool[] {
       }
 
       const summary = pending.map((n) => {
-        const delay = n.deliverAfter > Date.now()
-          ? ` (delayed until ${new Date(n.deliverAfter).toISOString()})`
-          : '';
+        const delay =
+          n.deliverAfter > Date.now()
+            ? ` (delayed until ${new Date(n.deliverAfter).toISOString()})`
+            : '';
         return `- [${n.priority}] ${n.category} → ${n.userId}: "${n.content.slice(0, 60)}"${delay}`;
       });
 
@@ -579,8 +579,8 @@ export function createNudgeTools(nudgeEngine: NudgeEngine): Tool[] {
 // Companion Nudge System (re-exports)
 // ---------------------------------------------------------------------------
 
+export type { CompanionMood, CompanionNudgeOptions } from './companion.js';
 export {
   createCompanionJobs,
   getCompanionTouchActivity,
 } from './companion.js';
-export type { CompanionMood, CompanionNudgeOptions } from './companion.js';

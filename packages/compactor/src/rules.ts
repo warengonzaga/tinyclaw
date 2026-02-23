@@ -29,20 +29,35 @@ const EMOJI_REGEX =
 const HEADER_RE = /^(#{1,6})\s+(.*)/;
 
 // Table separator line
-const TABLE_SEP_RE = /^[\s|:\-]+$/;
+const TABLE_SEP_RE = /^[\s|:-]+$/;
 
 // Bullet line
 const BULLET_RE = /^(\s*[-*+]\s+)(.*)/;
 
 // Chinese fullwidth punctuation -> ASCII equivalents (each saves ~1 token)
 const ZH_PUNCT_MAP: Record<string, string> = {
-  '\uFF0C': ',', '\u3002': '.', '\uFF1B': ';', '\uFF1A': ':', '\uFF01': '!', '\uFF1F': '?',
-  '\u201C': '"', '\u201D': '"', '\u2018': "'", '\u2019': "'",
-  '\uFF08': '(', '\uFF09': ')', '\u3010': '[', '\u3011': ']',
-  '\u3001': ',', '\u2026': '...', '\uFF5E': '~',
+  '\uFF0C': ',',
+  '\u3002': '.',
+  '\uFF1B': ';',
+  '\uFF1A': ':',
+  '\uFF01': '!',
+  '\uFF1F': '?',
+  '\u201C': '"',
+  '\u201D': '"',
+  '\u2018': "'",
+  '\u2019': "'",
+  '\uFF08': '(',
+  '\uFF09': ')',
+  '\u3010': '[',
+  '\u3011': ']',
+  '\u3001': ',',
+  '\u2026': '...',
+  '\uFF5E': '~',
 };
 const ZH_PUNCT_RE = new RegExp(
-  Object.keys(ZH_PUNCT_MAP).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+  Object.keys(ZH_PUNCT_MAP)
+    .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|'),
   'g',
 );
 
@@ -65,7 +80,10 @@ export function normalizeCjkPunctuation(text: string): string {
  * Remove emoji characters from text.
  */
 export function stripEmoji(text: string): string {
-  return text.replace(EMOJI_REGEX, '').replace(/\s{2,}/g, ' ').trim();
+  return text
+    .replace(EMOJI_REGEX, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 /**
@@ -182,16 +200,20 @@ export function compressMarkdownTable(text: string): string {
 
   while (i < lines.length) {
     const line = lines[i];
-    if (
-      line.includes('|') &&
-      i + 1 < lines.length &&
-      TABLE_SEP_RE.test(lines[i + 1].trim())
-    ) {
-      const headers = line.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+    if (line.includes('|') && i + 1 < lines.length && TABLE_SEP_RE.test(lines[i + 1].trim())) {
+      const headers = line
+        .trim()
+        .replace(/^\||\|$/g, '')
+        .split('|')
+        .map((c) => c.trim());
       i += 2; // skip header + separator
       const rows: string[][] = [];
       while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
-        const cells = lines[i].trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+        const cells = lines[i]
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .split('|')
+          .map((c) => c.trim());
         rows.push(cells);
         i++;
       }
@@ -258,7 +280,7 @@ function similarityRatio(a: string, b: string): number {
     intersection += Math.min(countA, bigramsB.get(bg) ?? 0);
   }
 
-  const total = (a.length - 1) + (b.length - 1);
+  const total = a.length - 1 + (b.length - 1);
   return total === 0 ? 0 : (2 * intersection) / total;
 }
 

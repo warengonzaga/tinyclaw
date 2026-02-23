@@ -1,24 +1,35 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createDatabase } from '@tinyclaw/core';
-import { createCompactor } from '../src/compactor.js';
 import type { Database } from '@tinyclaw/types';
-import { unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import { createCompactor } from '../src/compactor.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function createTestDb(): { db: Database; path: string } {
-  const path = join(tmpdir(), `tinyclaw-test-compactor-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  const path = join(
+    tmpdir(),
+    `tinyclaw-test-compactor-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
+  );
   const db = createDatabase(path);
   return { db, path };
 }
 
 function cleanupDb(db: Database, path: string): void {
-  try { db.close(); } catch { /* ignore */ }
-  try { if (existsSync(path)) unlinkSync(path); } catch { /* ignore */ }
+  try {
+    db.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (existsSync(path)) unlinkSync(path);
+  } catch {
+    /* ignore */
+  }
 }
 
 function createMockProvider(summaryResponse: string = 'Summary of conversation.') {
@@ -28,8 +39,12 @@ function createMockProvider(summaryResponse: string = 'Summary of conversation.'
     async chat() {
       return { content: summaryResponse, role: 'assistant' as const };
     },
-    async isAvailable() { return true; },
-    async chatStream() { return { content: summaryResponse, role: 'assistant' as const }; },
+    async isAvailable() {
+      return true;
+    },
+    async chatStream() {
+      return { content: summaryResponse, role: 'assistant' as const };
+    },
   };
 }
 
@@ -149,9 +164,15 @@ describe('createCompactor', () => {
     const failingProvider = {
       id: 'fail',
       name: 'Failing Provider',
-      async chat() { throw new Error('LLM unavailable'); },
-      async isAvailable() { return false; },
-      async chatStream() { throw new Error('LLM unavailable'); },
+      async chat() {
+        throw new Error('LLM unavailable');
+      },
+      async isAvailable() {
+        return false;
+      },
+      async chatStream() {
+        throw new Error('LLM unavailable');
+      },
     };
 
     for (let i = 0; i < 5; i++) {

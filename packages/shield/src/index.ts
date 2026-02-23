@@ -25,10 +25,9 @@
 
 // Engine
 export { createShieldEngine } from './engine.js';
-
-// Parser
-export { parseShieldContent, parseThreatBlock, parseAllThreats } from './parser.js';
+export type { Directive, MatchResult } from './matcher.js';
 
 // Matcher
 export { matchEvent, parseDirectives } from './matcher.js';
-export type { Directive, MatchResult } from './matcher.js';
+// Parser
+export { parseAllThreats, parseShieldContent, parseThreatBlock } from './parser.js';

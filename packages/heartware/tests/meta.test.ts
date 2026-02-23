@@ -1,8 +1,13 @@
-import { describe, it, expect, afterEach } from 'bun:test';
-import { fetchCreatorMeta, loadCachedCreatorMeta, DEFAULT_META_URL, META_CACHE_FILE } from '../src/meta.js';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs';
-import { join } from 'path';
+import { afterEach, describe, expect, it } from 'bun:test';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import {
+  DEFAULT_META_URL,
+  fetchCreatorMeta,
+  loadCachedCreatorMeta,
+  META_CACHE_FILE,
+} from '../src/meta.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

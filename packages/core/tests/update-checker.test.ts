@@ -5,15 +5,15 @@
  * building, cache I/O, and the main checkForUpdate flow.
  */
 
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
+import { join } from 'path';
 import {
-  isNewerVersion,
-  detectRuntime,
   buildUpdateContext,
   checkForUpdate,
+  detectRuntime,
+  isNewerVersion,
   sanitizeForPrompt,
   type UpdateInfo,
 } from '../src/update-checker.js';
@@ -193,10 +193,7 @@ describe('checkForUpdate', () => {
 
   test('returns cached result if cache is fresh', async () => {
     const cached = makeMockInfo({ checkedAt: Date.now() });
-    writeFileSync(
-      join(tempDir, 'data', 'update-check.json'),
-      JSON.stringify(cached),
-    );
+    writeFileSync(join(tempDir, 'data', 'update-check.json'), JSON.stringify(cached));
 
     const result = await checkForUpdate('1.0.0', tempDir);
     expect(result).not.toBeNull();
@@ -207,10 +204,7 @@ describe('checkForUpdate', () => {
   test('re-evaluates updateAvailable against current version', async () => {
     // Cache says latest=1.1.0, but we're now running 1.1.0
     const cached = makeMockInfo({ checkedAt: Date.now(), latest: '1.1.0' });
-    writeFileSync(
-      join(tempDir, 'data', 'update-check.json'),
-      JSON.stringify(cached),
-    );
+    writeFileSync(join(tempDir, 'data', 'update-check.json'), JSON.stringify(cached));
 
     const result = await checkForUpdate('1.1.0', tempDir);
     expect(result).not.toBeNull();

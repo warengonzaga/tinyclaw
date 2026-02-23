@@ -12,11 +12,11 @@
 
 import { logger } from '@tinyclaw/logger';
 import type {
-  TinyClawPlugin,
   ChannelPlugin,
-  ProviderPlugin,
-  ToolsPlugin,
   ConfigManagerInterface,
+  ProviderPlugin,
+  TinyClawPlugin,
+  ToolsPlugin,
 } from '@tinyclaw/types';
 
 export interface LoadedPlugins {
@@ -31,9 +31,7 @@ export interface LoadedPlugins {
  * @param configManager - Used to read the `plugins.enabled` list
  * @returns Grouped loaded plugin instances
  */
-export async function loadPlugins(
-  configManager: ConfigManagerInterface,
-): Promise<LoadedPlugins> {
+export async function loadPlugins(configManager: ConfigManagerInterface): Promise<LoadedPlugins> {
   const result: LoadedPlugins = { channels: [], providers: [], tools: [] };
 
   const enabledIds = configManager.get<string[]>('plugins.enabled') ?? [];
@@ -77,9 +75,7 @@ export async function loadPlugins(
           logger.warn(`Plugin "${id}" has unknown type — skipping`);
       }
     } catch (err) {
-      logger.warn(
-        `Failed to load plugin "${id}": ${(err as Error).message}`,
-      );
+      logger.warn(`Failed to load plugin "${id}": ${(err as Error).message}`);
     }
   }
 

@@ -13,12 +13,12 @@
 
 import { logger } from '@tinyclaw/logger';
 import type {
-  Provider,
-  Message,
   LLMResponse,
+  Message,
+  Provider,
+  SecretsManagerInterface,
   Tool,
   ToolCall,
-  SecretsManagerInterface,
 } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
@@ -76,9 +76,10 @@ function toOpenAIMessages(messages: Message[]): OpenAIMessage[] {
   });
 }
 
-function toOpenAITools(
-  tools: Tool[],
-): { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } }[] {
+function toOpenAITools(tools: Tool[]): {
+  type: 'function';
+  function: { name: string; description: string; parameters: Record<string, unknown> };
+}[] {
   return tools.map((t) => ({
     type: 'function' as const,
     function: {
@@ -117,7 +118,7 @@ export function createOpenAIProvider(config: OpenAIProviderConfig): Provider {
         if (!apiKey) {
           throw new Error(
             'No API key available for OpenAI. ' +
-            'Store one with: store_secret key="provider.openai.apiKey" value="sk-..."',
+              'Store one with: store_secret key="provider.openai.apiKey" value="sk-..."',
           );
         }
 
@@ -133,7 +134,7 @@ export function createOpenAIProvider(config: OpenAIProviderConfig): Provider {
         const response = await fetch(`${baseUrl}/v1/chat/completions`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(body),
@@ -182,7 +183,7 @@ export function createOpenAIProvider(config: OpenAIProviderConfig): Provider {
 
         const response = await fetch(`${baseUrl}/v1/models`, {
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
           },
         });
         return response.ok;

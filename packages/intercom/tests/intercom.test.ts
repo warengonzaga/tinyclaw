@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { createIntercom, type IntercomMessage, type IntercomTopic } from '../src/index.js';
 
 describe('Intercom', () => {
@@ -205,7 +205,9 @@ describe('Intercom', () => {
     const intercom = createIntercom();
     let received: IntercomMessage | null = null;
 
-    intercom.on('task:completed', (event) => { received = event; });
+    intercom.on('task:completed', (event) => {
+      received = event;
+    });
 
     const before = Date.now();
     intercom.emit('task:completed', 'user1');
@@ -220,7 +222,9 @@ describe('Intercom', () => {
     const intercom = createIntercom();
     let received: IntercomMessage | null = null;
 
-    intercom.on('task:completed', (event) => { received = event; });
+    intercom.on('task:completed', (event) => {
+      received = event;
+    });
     intercom.emit('task:completed', 'user1');
 
     expect(received!.data).toEqual({});
@@ -234,7 +238,9 @@ describe('Intercom', () => {
     const intercom = createIntercom();
     let count = 0;
 
-    intercom.on('task:completed', () => { throw new Error('boom'); });
+    intercom.on('task:completed', () => {
+      throw new Error('boom');
+    });
     intercom.on('task:completed', () => count++);
 
     // Should not throw
@@ -246,7 +252,9 @@ describe('Intercom', () => {
     const intercom = createIntercom();
     let count = 0;
 
-    intercom.onAny(() => { throw new Error('boom'); });
+    intercom.onAny(() => {
+      throw new Error('boom');
+    });
     intercom.on('task:completed', () => count++);
 
     intercom.emit('task:completed', 'user1');

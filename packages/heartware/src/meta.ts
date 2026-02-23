@@ -11,10 +11,10 @@
  * Default URL: https://markdown.new/github.com/warengonzaga
  */
 
-import { readFile, writeFile, stat } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
 import { logger } from '@tinyclaw/logger';
+import { existsSync } from 'fs';
+import { readFile, stat, writeFile } from 'fs/promises';
+import { join } from 'path';
 
 /** Default remote URL for creator metadata */
 export const DEFAULT_META_URL = 'https://markdown.new/github.com/warengonzaga';
@@ -67,7 +67,7 @@ async function fetchRemoteContent(url: string, timeout: number): Promise<string>
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'Accept': 'text/markdown, text/plain, */*',
+        Accept: 'text/markdown, text/plain, */*',
         'User-Agent': 'Tiny Claw/1.0 (heartware-meta-fetcher)',
       },
     });

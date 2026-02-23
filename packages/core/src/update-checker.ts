@@ -12,8 +12,8 @@
  * tool) from Docker containers (manual pull required).
  */
 
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { logger } from '@tinyclaw/logger';
 
 // ---------------------------------------------------------------------------
@@ -97,10 +97,7 @@ const SAFE_URL_RE = /^https?:\/\/[^\s]+$/;
  * Validates against an expected pattern and strips characters that could
  * be used for prompt injection (newlines, backticks, markdown markers).
  */
-export function sanitizeForPrompt(
-  value: string,
-  kind: 'version' | 'url',
-): string {
+export function sanitizeForPrompt(value: string, kind: 'version' | 'url'): string {
   const trimmed = value.trim();
   if (kind === 'version') {
     if (!SEMVER_RE.test(trimmed)) return 'unknown';
@@ -110,7 +107,7 @@ export function sanitizeForPrompt(
   // kind === 'url'
   if (!SAFE_URL_RE.test(trimmed)) return '(unavailable)';
   // Remove characters that could break prompt formatting
-  return trimmed.replace(/[`\n\r\[\](){}#*_~>|]/g, '');
+  return trimmed.replace(/[`\n\r[\](){}#*_~>|]/g, '');
 }
 
 /**
@@ -124,7 +121,10 @@ export function isNewerVersion(current: string, latest: string): boolean {
       .replace(/^v/, '')
       .replace(/[-+].*$/, '')
       .split('.')
-      .map((s) => { const n = Number(s); return isNaN(n) ? 0 : n; })
+      .map((s) => {
+        const n = Number(s);
+        return isNaN(n) ? 0 : n;
+      })
       .slice(0, 3);
   const [cMaj = 0, cMin = 0, cPat = 0] = parse(current);
   const [lMaj = 0, lMin = 0, lPat = 0] = parse(latest);
@@ -146,7 +146,13 @@ function readCache(dataDir: string): UpdateInfo | null {
     const raw = readFileSync(getCachePath(dataDir), 'utf-8');
     const cached = JSON.parse(raw) as UpdateInfo;
     const validRuntimes: UpdateRuntime[] = ['npm', 'docker', 'source'];
-    if (cached && typeof cached.checkedAt === 'number' && typeof cached.latest === 'string' && validRuntimes.includes(cached.runtime as UpdateRuntime)) return cached;
+    if (
+      cached &&
+      typeof cached.checkedAt === 'number' &&
+      typeof cached.latest === 'string' &&
+      validRuntimes.includes(cached.runtime as UpdateRuntime)
+    )
+      return cached;
   } catch {
     // Missing or corrupt — will re-check
   }
@@ -246,7 +252,11 @@ export async function checkForUpdate(
     writeCache(dataDir, info);
 
     if (info.updateAvailable) {
-      logger.info('Update available', { current: currentVersion, latest, runtime }, { emoji: '🆕' });
+      logger.info(
+        'Update available',
+        { current: currentVersion, latest, runtime },
+        { emoji: '🆕' },
+      );
     }
 
     return info;

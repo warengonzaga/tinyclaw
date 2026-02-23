@@ -21,10 +21,10 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
           key: {
             type: 'string',
             description:
-              'Dot-notation key to retrieve (e.g., "agent.name", "learning.minConfidence")'
-          }
+              'Dot-notation key to retrieve (e.g., "agent.name", "learning.minConfidence")',
+          },
         },
-        required: ['key']
+        required: ['key'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         if (typeof args.key !== 'string' || args.key.trim() === '') {
@@ -43,7 +43,7 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
         } catch (err) {
           return `Error getting config "${key}": ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -58,17 +58,16 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
         properties: {
           key: {
             type: 'string',
-            description:
-              'Dot-notation key to set (e.g., "agent.name", "learning.minConfidence")'
+            description: 'Dot-notation key to set (e.g., "agent.name", "learning.minConfidence")',
           },
           value: {
             type: 'string',
             description:
               'The value to set. For objects, pass a JSON string (e.g. \'{"key": "val"}\').' +
-              ' Booleans and numbers will be auto-detected from the string.'
-          }
+              ' Booleans and numbers will be auto-detected from the string.',
+          },
         },
-        required: ['key', 'value']
+        required: ['key', 'value'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         if (typeof args.key !== 'string' || args.key.trim() === '') {
@@ -90,7 +89,11 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
           else if (trimmed === 'false') value = false;
           else if (trimmed !== '' && !isNaN(Number(trimmed))) value = Number(trimmed);
           else {
-            try { value = JSON.parse(trimmed); } catch { value = raw; }
+            try {
+              value = JSON.parse(trimmed);
+            } catch {
+              value = raw;
+            }
           }
         }
 
@@ -103,7 +106,7 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
         } catch (err) {
           return `Error setting config "${key}": ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -116,11 +119,10 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
         properties: {
           key: {
             type: 'string',
-            description:
-              'Dot-notation key to delete (e.g., "channels.telegram")'
-          }
+            description: 'Dot-notation key to delete (e.g., "channels.telegram")',
+          },
         },
-        required: ['key']
+        required: ['key'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         if (typeof args.key !== 'string' || args.key.trim() === '') {
@@ -139,7 +141,7 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
         } catch (err) {
           return `Error deleting config "${key}": ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -151,7 +153,7 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
       parameters: {
         type: 'object',
         properties: {},
-        required: []
+        required: [],
       },
       async execute(): Promise<string> {
         try {
@@ -166,7 +168,7 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
         } catch (err) {
           return `Error listing config: ${(err as Error).message}`;
         }
-      }
-    }
+      },
+    },
   ];
 }

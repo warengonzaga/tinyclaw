@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import {
+  compactBullets,
+  compressTableToKv,
+  minimizeWhitespace,
   optimizeTokens,
   stripBoldItalic,
   stripTrivialBackticks,
-  minimizeWhitespace,
-  compactBullets,
-  compressTableToKv,
 } from '../src/optimizer.js';
 
 describe('stripBoldItalic', () => {

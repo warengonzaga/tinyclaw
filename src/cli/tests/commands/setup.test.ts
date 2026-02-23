@@ -7,7 +7,7 @@
  * filesystem side-effects.
  */
 
-import { afterEach, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, mock, test } from 'bun:test';
 
 // ── Mock @clack/prompts ──────────────────────────────────────────────
 
@@ -91,7 +91,9 @@ const mockIsAvailable = mock(() => Promise.resolve(true));
 const mockGenerateTotpSecret = mock(() => 'JBSWY3DPEHPK3PXP');
 const mockCreateTotpUri = mock(() => 'otpauth://totp/TinyClaw?secret=JBSWY3DPEHPK3PXP');
 const mockVerifyTotpCode = mock(() => Promise.resolve(true));
-const mockGenerateBackupCodes = mock(() => Array.from({ length: 10 }, (_, i) => `BACKUP${String(i).padStart(2, '0')}`));
+const mockGenerateBackupCodes = mock(() =>
+  Array.from({ length: 10 }, (_, i) => `BACKUP${String(i).padStart(2, '0')}`),
+);
 const mockGenerateRecoveryToken = mock(() => 'RECOVERYTOKEN'.repeat(5));
 const mockSha256 = mock(() => Promise.resolve('abc123'));
 
@@ -241,7 +243,9 @@ beforeEach(() => {
   mockGenerateTotpSecret.mockImplementation(() => 'JBSWY3DPEHPK3PXP');
   mockCreateTotpUri.mockImplementation(() => 'otpauth://totp/TinyClaw?secret=JBSWY3DPEHPK3PXP');
   mockVerifyTotpCode.mockImplementation(() => Promise.resolve(true));
-  mockGenerateBackupCodes.mockImplementation(() => Array.from({ length: 10 }, (_, i) => `BACKUP${String(i).padStart(2, '0')}`));
+  mockGenerateBackupCodes.mockImplementation(() =>
+    Array.from({ length: 10 }, (_, i) => `BACKUP${String(i).padStart(2, '0')}`),
+  );
   mockGenerateRecoveryToken.mockImplementation(() => 'RECOVERYTOKEN'.repeat(5));
   mockSha256.mockImplementation(() => Promise.resolve('abc123'));
   mockParseSeed.mockImplementation((input: unknown) => {
@@ -281,10 +285,7 @@ describe('setupCommand', () => {
 
   test('stores the API key in secrets manager', async () => {
     await setupCommand();
-    expect(mockSecretsStore).toHaveBeenCalledWith(
-      'provider.ollama.apiKey',
-      'test-api-key',
-    );
+    expect(mockSecretsStore).toHaveBeenCalledWith('provider.ollama.apiKey', 'test-api-key');
   });
 
   test('persists provider config with default model', async () => {
@@ -325,9 +326,7 @@ describe('setupCommand — existing configuration', () => {
   test('prompts to reconfigure when already configured', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
     // Return a saved seed so the setup detects "fully configured"
-    mockConfigGet.mockImplementation((key: string) =>
-      key === 'heartware.seed' ? 42 : undefined,
-    );
+    mockConfigGet.mockImplementation((key: string) => (key === 'heartware.seed' ? 42 : undefined));
     // confirm calls: risk acceptance → true, reconfigure → false (decline)
     let callCount = 0;
     mockConfirm.mockImplementation(() => {
@@ -341,9 +340,7 @@ describe('setupCommand — existing configuration', () => {
 
   test('skips setup when user declines reconfiguration', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
-    mockConfigGet.mockImplementation((key: string) =>
-      key === 'heartware.seed' ? 42 : undefined,
-    );
+    mockConfigGet.mockImplementation((key: string) => (key === 'heartware.seed' ? 42 : undefined));
     let callCount = 0;
     mockConfirm.mockImplementation(() => {
       callCount++;
@@ -357,9 +354,7 @@ describe('setupCommand — existing configuration', () => {
 
   test('proceeds with setup when user confirms reconfiguration', async () => {
     mockSecretsCheck.mockImplementation(() => Promise.resolve(true));
-    mockConfigGet.mockImplementation((key: string) =>
-      key === 'heartware.seed' ? 42 : undefined,
-    );
+    mockConfigGet.mockImplementation((key: string) => (key === 'heartware.seed' ? 42 : undefined));
     mockConfirm.mockImplementation(() => true);
 
     await setupCommand();
@@ -376,9 +371,7 @@ describe('setupCommand — provider verification', () => {
   });
 
   test('handles verification error gracefully', async () => {
-    mockIsAvailable.mockImplementation(() =>
-      Promise.reject(new Error('connection refused')),
-    );
+    mockIsAvailable.mockImplementation(() => Promise.reject(new Error('connection refused')));
 
     await expect(setupCommand()).resolves.toBeUndefined();
     expect(mockSpinnerStop).toHaveBeenCalled();

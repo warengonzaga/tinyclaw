@@ -517,7 +517,7 @@ Once we're done, I'll delete this file and we'll never need it again.
 
 > **Note:** SOUL.md is generated from my soul seed and cannot be changed.
 > My personality is permanent, like a real soul.
-`
+`,
 };
 
 /**

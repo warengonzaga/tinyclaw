@@ -6,14 +6,11 @@
  * and message persistence.
  */
 
-import type { Message, SubAgentRecord } from '@tinyclaw/types';
 import type { QueryTier } from '@tinyclaw/router';
-import type { DelegationStore } from './store.js';
-import type {
-  LifecycleManager,
-  OrientationContext,
-} from './types.js';
+import type { Message, SubAgentRecord } from '@tinyclaw/types';
 import { formatOrientation } from './orientation.js';
+import type { DelegationStore } from './store.js';
+import type { LifecycleManager, OrientationContext } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -39,13 +36,70 @@ const REUSE_THRESHOLD = 0.6;
 // ---------------------------------------------------------------------------
 
 const STOP_WORDS = new Set([
-  'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'shall', 'can', 'to', 'of', 'in', 'for',
-  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'about', 'like',
-  'through', 'after', 'over', 'between', 'out', 'up', 'that', 'this',
-  'it', 'and', 'or', 'but', 'not', 'no', 'so', 'if', 'then', 'than',
-  'too', 'very', 'just', 'also', 'more', 'some', 'any', 'each', 'all',
+  'a',
+  'an',
+  'the',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'shall',
+  'can',
+  'to',
+  'of',
+  'in',
+  'for',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'into',
+  'about',
+  'like',
+  'through',
+  'after',
+  'over',
+  'between',
+  'out',
+  'up',
+  'that',
+  'this',
+  'it',
+  'and',
+  'or',
+  'but',
+  'not',
+  'no',
+  'so',
+  'if',
+  'then',
+  'than',
+  'too',
+  'very',
+  'just',
+  'also',
+  'more',
+  'some',
+  'any',
+  'each',
+  'all',
 ]);
 
 function tokenize(text: string): Set<string> {
@@ -74,14 +128,7 @@ function keywordOverlap(a: Set<string>, b: Set<string>): number {
 export function createLifecycleManager(db: DelegationStore): LifecycleManager {
   return {
     create(config) {
-      const {
-        userId,
-        role,
-        toolsGranted,
-        tierPreference,
-        templateId,
-        orientation,
-      } = config;
+      const { userId, role, toolsGranted, tierPreference, templateId, orientation } = config;
 
       // Enforce max active limit
       const active = db.getActiveSubAgents(userId);
@@ -130,7 +177,9 @@ export function createLifecycleManager(db: DelegationStore): LifecycleManager {
     findReusable(userId, role) {
       // Check active, suspended, and soft_deleted agents for reuse
       const all = db.getAllSubAgents(userId, true);
-      const candidates = all.filter(a => a.status === 'active' || a.status === 'suspended' || a.status === 'soft_deleted');
+      const candidates = all.filter(
+        (a) => a.status === 'active' || a.status === 'suspended' || a.status === 'soft_deleted',
+      );
       if (candidates.length === 0) return null;
 
       const requestTokens = tokenize(role);

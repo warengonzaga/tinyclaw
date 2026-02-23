@@ -36,11 +36,7 @@ async function runCLI(
   );
 
   const [stdout, stderr, exitCode] = await Promise.race([
-    Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]),
+    Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]),
     timeoutPromise,
   ]);
 

@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { TinyClawConfigSchema, CONFIG_DEFAULTS } from '../src/types.js';
-import { DEFAULT_MODEL, DEFAULT_BASE_URL } from '@tinyclaw/core';
+import { DEFAULT_BASE_URL, DEFAULT_MODEL } from '@tinyclaw/core';
+import { CONFIG_DEFAULTS, TinyClawConfigSchema } from '../src/types.js';
 
 // -----------------------------------------------------------------------
 // Defaults validation

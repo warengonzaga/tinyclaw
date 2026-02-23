@@ -1,24 +1,35 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createDatabase } from '@tinyclaw/core';
-import { createMemoryEngine } from '../src/index.js';
 import type { Database, MemoryEngine } from '@tinyclaw/types';
-import { unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync, unlinkSync } from 'fs';
 import { tmpdir } from 'os';
+import { join } from 'path';
+import { createMemoryEngine } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function createTestDb(): { db: Database; path: string } {
-  const path = join(tmpdir(), `tinyclaw-test-memory-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  const path = join(
+    tmpdir(),
+    `tinyclaw-test-memory-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
+  );
   const db = createDatabase(path);
   return { db, path };
 }
 
 function cleanupDb(db: Database, path: string): void {
-  try { db.close(); } catch { /* ignore */ }
-  try { if (existsSync(path)) unlinkSync(path); } catch { /* ignore */ }
+  try {
+    db.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (existsSync(path)) unlinkSync(path);
+  } catch {
+    /* ignore */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -79,7 +90,10 @@ describe('MemoryEngine', () => {
     });
 
     it('uses correct default importance per event type', () => {
-      const types: Array<{ type: Parameters<typeof engine.recordEvent>[1]['type']; expected: number }> = [
+      const types: Array<{
+        type: Parameters<typeof engine.recordEvent>[1]['type'];
+        expected: number;
+      }> = [
         { type: 'correction', expected: 0.9 },
         { type: 'preference_learned', expected: 0.8 },
         { type: 'fact_stored', expected: 0.6 },
@@ -610,10 +624,12 @@ describe('MemoryEngine', () => {
       // Rapid-fire event recording
       const ids: string[] = [];
       for (let i = 0; i < 50; i++) {
-        ids.push(engine.recordEvent('user1', {
-          type: 'fact_stored',
-          content: `Concurrent event ${i}`,
-        }));
+        ids.push(
+          engine.recordEvent('user1', {
+            type: 'fact_stored',
+            content: `Concurrent event ${i}`,
+          }),
+        );
       }
 
       expect(ids.length).toBe(50);

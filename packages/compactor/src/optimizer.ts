@@ -20,8 +20,8 @@ import { normalizeCjkPunctuation } from './rules.js';
 const BOLD_RE = /\*\*(.+?)\*\*/g;
 const ITALIC_RE = /(?<!\*)\*([^*]+?)\*(?!\*)/g;
 const TRIVIAL_CODE_RE = /`([a-zA-Z0-9_.-]+)`/g;
-const TABLE_SEP_RE = /^[\s|:\-]+$/;
-const MULTI_SPACE_RE = /  +/g;
+const TABLE_SEP_RE = /^[\s|:-]+$/;
+const MULTI_SPACE_RE = / {2,}/g;
 const LEADING_SPACES_RE = /^( {4,})/gm;
 const BULLET_RE = /^(\s*[-*+])\s+(.*)/;
 
@@ -130,16 +130,20 @@ export function compressTableToKv(text: string): string {
 
   while (i < lines.length) {
     const line = lines[i];
-    if (
-      line.includes('|') &&
-      i + 1 < lines.length &&
-      TABLE_SEP_RE.test(lines[i + 1].trim())
-    ) {
-      const headers = line.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+    if (line.includes('|') && i + 1 < lines.length && TABLE_SEP_RE.test(lines[i + 1].trim())) {
+      const headers = line
+        .trim()
+        .replace(/^\||\|$/g, '')
+        .split('|')
+        .map((c) => c.trim());
       i += 2;
       const rows: string[][] = [];
       while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
-        const cells = lines[i].trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+        const cells = lines[i]
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .split('|')
+          .map((c) => c.trim());
         rows.push(cells);
         i++;
       }

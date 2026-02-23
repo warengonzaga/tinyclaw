@@ -15,8 +15,8 @@
  */
 
 import type { HeartwareManager } from './manager.js';
-import { generateSoul } from './soul-generator.js';
 import { loadCachedCreatorMeta } from './meta.js';
+import { generateSoul } from './soul-generator.js';
 
 /** Label used for creator meta in heartware context */
 const META_CACHE_LABEL = 'CREATOR.md — About My Creator';
@@ -27,17 +27,15 @@ const META_CACHE_LABEL = 'CREATOR.md — About My Creator';
  * @param manager - Initialized HeartwareManager instance
  * @returns Formatted context string for system prompt
  */
-export async function loadHeartwareContext(
-  manager: HeartwareManager
-): Promise<string> {
+export async function loadHeartwareContext(manager: HeartwareManager): Promise<string> {
   const loadOrder = [
-    'SOUL.md',      // Load first - defines personality
-    'IDENTITY.md',  // Who the agent is
-    'FRIEND.md',    // Who the owner is
-    'FRIENDS.md',   // People I've met (non-owner friends)
-    'AGENTS.md',    // Operating instructions
-    'TOOLS.md',     // Tool usage notes
-    'SHIELD.md'     // Runtime security policy
+    'SOUL.md', // Load first - defines personality
+    'IDENTITY.md', // Who the agent is
+    'FRIEND.md', // Who the owner is
+    'FRIENDS.md', // People I've met (non-owner friends)
+    'AGENTS.md', // Operating instructions
+    'TOOLS.md', // Tool usage notes
+    'SHIELD.md', // Runtime security policy
   ];
 
   let context = '\n\n=== HEARTWARE CONFIGURATION ===\n';
@@ -47,7 +45,8 @@ export async function loadHeartwareContext(
     const seed = await manager.getSeed();
     if (seed !== undefined) {
       context += `\n> SOUL.md is immutable — permanently generated from soul seed \`${seed}\`.`;
-      context += '\n> Your personality traits, preferences, and quirks are permanent. Embrace them.\n';
+      context +=
+        '\n> Your personality traits, preferences, and quirks are permanent. Embrace them.\n';
     }
   } catch {
     // Seed might not exist yet
@@ -99,9 +98,7 @@ export async function loadHeartwareContext(
  * @param manager - Initialized HeartwareManager instance
  * @returns Raw SHIELD.md content string, or empty string if not found
  */
-export async function loadShieldContent(
-  manager: HeartwareManager
-): Promise<string> {
+export async function loadShieldContent(manager: HeartwareManager): Promise<string> {
   try {
     return await manager.read('SHIELD.md');
   } catch {
@@ -117,10 +114,7 @@ export async function loadShieldContent(
  * @param daysBack - Number of days to look back (0 = today only)
  * @returns Combined memory content or empty string
  */
-async function loadRecentMemories(
-  manager: HeartwareManager,
-  daysBack: number
-): Promise<string> {
+async function loadRecentMemories(manager: HeartwareManager, daysBack: number): Promise<string> {
   let output = '';
   const now = new Date();
 
@@ -133,10 +127,7 @@ async function loadRecentMemories(
     try {
       const content = await manager.read(filename);
       output += `\n${content}\n`;
-    } catch (err) {
-      // File doesn't exist - skip
-      continue;
-    }
+    } catch (err) {}
   }
 
   return output;
@@ -151,7 +142,7 @@ async function loadRecentMemories(
  */
 export async function loadMemoryByDate(
   manager: HeartwareManager,
-  date: string
+  date: string,
 ): Promise<string | null> {
   try {
     const content = await manager.read(`memory/${date}.md`);
@@ -172,13 +163,13 @@ export async function loadMemoryByDate(
 export async function loadMemoryRange(
   manager: HeartwareManager,
   startDate: string,
-  endDate: string
+  endDate: string,
 ): Promise<Array<{ date: string; content: string }>> {
   const memories: Array<{ date: string; content: string }> = [];
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  let current = new Date(start);
+  const current = new Date(start);
   while (current <= end) {
     const dateStr = current.toISOString().split('T')[0];
     const content = await loadMemoryByDate(manager, dateStr);

@@ -10,17 +10,17 @@
  * All operations go through these layers in the correct order
  */
 
-import { readFile, writeFile, readdir, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
-import { validatePath, validateContent, validateFileSize } from './sandbox.js';
-import { AuditLogger, computeContentHash } from './audit.js';
-import { RateLimiter } from './rate-limiter.js';
-import { BackupManager } from './backup.js';
-import { getTemplate } from './templates.js';
-import { generateSoul, generateRandomSeed, parseSeed } from './soul-generator.js';
-import { fetchCreatorMeta } from './meta.js';
 import { logger } from '@tinyclaw/logger';
+import { existsSync } from 'fs';
+import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
+import { join } from 'path';
+import { AuditLogger, computeContentHash } from './audit.js';
+import { BackupManager } from './backup.js';
+import { fetchCreatorMeta } from './meta.js';
+import { RateLimiter } from './rate-limiter.js';
+import { validateContent, validateFileSize, validatePath } from './sandbox.js';
+import { generateRandomSeed, generateSoul, parseSeed } from './soul-generator.js';
+import { getTemplate } from './templates.js';
 import type { HeartwareConfig, SearchResult } from './types.js';
 
 /**
@@ -75,7 +75,9 @@ export class HeartwareManager {
         // Generate soul from seed
         await this.generateSoulFromSeed();
 
-        logger.info('First run detected - created template files and generated soul', undefined, { emoji: '📝' });
+        logger.info('First run detected - created template files and generated soul', undefined, {
+          emoji: '📝',
+        });
       }
 
       // Fetch/refresh creator metadata (non-blocking — uses cache when offline)
@@ -111,21 +113,12 @@ export class HeartwareManager {
       validateFileSize(content.length, this.config.maxFileSize);
 
       // Layer 3: Audit logging (success)
-      this.auditLogger.logSuccess(
-        this.config.userId,
-        'read',
-        validation.relativePath
-      );
+      this.auditLogger.logSuccess(this.config.userId, 'read', validation.relativePath);
 
       return content;
     } catch (err) {
       // Layer 3: Audit logging (failure)
-      this.auditLogger.logFailure(
-        this.config.userId,
-        'read',
-        filename,
-        err as Error
-      );
+      this.auditLogger.logFailure(this.config.userId, 'read', filename, err as Error);
       throw err;
     }
   }
@@ -175,22 +168,21 @@ export class HeartwareManager {
         'write',
         validation.relativePath,
         contentHash,
-        previousHash
+        previousHash,
       );
 
-      logger.info('Heartware file written', {
-        file: validation.relativePath,
-        size: content.length,
-        backup: backup ? 'created' : 'none'
-      }, { emoji: '✅' });
+      logger.info(
+        'Heartware file written',
+        {
+          file: validation.relativePath,
+          size: content.length,
+          backup: backup ? 'created' : 'none',
+        },
+        { emoji: '✅' },
+      );
     } catch (err) {
       // Layer 3: Audit logging (failure)
-      this.auditLogger.logFailure(
-        this.config.userId,
-        'write',
-        filename,
-        err as Error
-      );
+      this.auditLogger.logFailure(this.config.userId, 'write', filename, err as Error);
       throw err;
     }
   }
@@ -210,13 +202,13 @@ export class HeartwareManager {
 
       // List root files (only .md files, skip hidden files)
       const rootFiles = await readdir(this.config.baseDir);
-      files.push(...rootFiles.filter(f => f.endsWith('.md') && !f.startsWith('.')));
+      files.push(...rootFiles.filter((f) => f.endsWith('.md') && !f.startsWith('.')));
 
       // List memory directory
       const memoryDir = join(this.config.baseDir, 'memory');
       if (existsSync(memoryDir)) {
         const memoryFiles = await readdir(memoryDir);
-        files.push(...memoryFiles.map(f => `memory/${f}`));
+        files.push(...memoryFiles.map((f) => `memory/${f}`));
       }
 
       this.auditLogger.logSuccess(this.config.userId, 'list', 'heartware/');
@@ -246,26 +238,15 @@ export class HeartwareManager {
         try {
           const content = await this.read(file);
           const lines = content.split('\n');
-          const matches = lines.filter(line =>
-            line.toLowerCase().includes(queryLower)
-          );
+          const matches = lines.filter((line) => line.toLowerCase().includes(queryLower));
 
           if (matches.length > 0) {
             results.push({ file, matches });
           }
-        } catch (err) {
-          // Skip files that can't be read
-          continue;
-        }
+        } catch (err) {}
       }
 
-      this.auditLogger.logSuccess(
-        this.config.userId,
-        'search',
-        'heartware/',
-        undefined,
-        undefined
-      );
+      this.auditLogger.logSuccess(this.config.userId, 'search', 'heartware/', undefined, undefined);
 
       return results;
     } catch (err) {
@@ -310,24 +291,28 @@ export class HeartwareManager {
       let identity = await readFile(identityPath, 'utf-8');
       identity = identity.replace(
         /\*\*Name:\*\*.*/,
-        `**Name:** ${result.traits.character.suggestedName}`
+        `**Name:** ${result.traits.character.suggestedName}`,
       );
       identity = identity.replace(
         /\*\*Emoji:\*\*.*/,
-        `**Emoji:** ${result.traits.character.signatureEmoji}`
+        `**Emoji:** ${result.traits.character.signatureEmoji}`,
       );
       identity = identity.replace(
         /\*\*Creature:\*\*.*/,
-        `**Creature:** ${result.traits.character.creatureType}`
+        `**Creature:** ${result.traits.character.creatureType}`,
       );
       await writeFile(identityPath, identity, 'utf-8');
     }
 
-    logger.info('Soul generated from seed', {
-      seed: result.seed,
-      name: result.traits.character.suggestedName,
-      emoji: result.traits.character.signatureEmoji,
-    }, { emoji: '🧬' });
+    logger.info(
+      'Soul generated from seed',
+      {
+        seed: result.seed,
+        name: result.traits.character.suggestedName,
+        emoji: result.traits.character.signatureEmoji,
+      },
+      { emoji: '🧬' },
+    );
   }
 
   /**
@@ -362,7 +347,11 @@ export class HeartwareManager {
       url: this.config.metaUrl,
       baseDir: this.config.baseDir,
     }).catch((err) => {
-      logger.warn('Creator meta fetch failed (non-critical)', { error: String(err) }, { emoji: '⚠️' });
+      logger.warn(
+        'Creator meta fetch failed (non-critical)',
+        { error: String(err) },
+        { emoji: '⚠️' },
+      );
     });
   }
 
@@ -390,7 +379,7 @@ export class HeartwareManager {
       'TOOLS.md',
       'SHIELD.md',
       'MEMORY.md',
-      'BOOTSTRAP.md'
+      'BOOTSTRAP.md',
     ];
 
     for (const file of templateFiles) {

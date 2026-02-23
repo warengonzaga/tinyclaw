@@ -23,10 +23,10 @@
 
 import { logger } from '@tinyclaw/logger';
 import type {
+  ChannelSender,
+  OutboundDeliveryResult,
   OutboundGateway,
   OutboundMessage,
-  OutboundDeliveryResult,
-  ChannelSender,
 } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
@@ -88,10 +88,7 @@ export function createGateway(): OutboundGateway {
       }
     },
 
-    async send(
-      userId: string,
-      message: OutboundMessage,
-    ): Promise<OutboundDeliveryResult> {
+    async send(userId: string, message: OutboundMessage): Promise<OutboundDeliveryResult> {
       const prefix = resolvePrefix(userId);
 
       if (!prefix) {
@@ -143,9 +140,7 @@ export function createGateway(): OutboundGateway {
       }
     },
 
-    async broadcast(
-      message: OutboundMessage,
-    ): Promise<OutboundDeliveryResult[]> {
+    async broadcast(message: OutboundMessage): Promise<OutboundDeliveryResult[]> {
       const results: OutboundDeliveryResult[] = [];
 
       for (const [prefix, sender] of senders) {

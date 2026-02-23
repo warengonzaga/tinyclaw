@@ -1,8 +1,8 @@
 /**
  * Shield Parser Tests
  */
-import { describe, it, expect } from 'bun:test';
-import { parseShieldContent, parseThreatBlock, parseAllThreats } from '../src/parser.js';
+import { describe, expect, it } from 'bun:test';
+import { parseAllThreats, parseShieldContent, parseThreatBlock } from '../src/parser.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -96,7 +96,7 @@ describe('parseThreatBlock', () => {
     expect(result!.fingerprint).toBe('abc123');
     expect(result!.category).toBe('tool');
     expect(result!.severity).toBe('high');
-    expect(result!.confidence).toBe(0.90);
+    expect(result!.confidence).toBe(0.9);
     expect(result!.action).toBe('block');
     expect(result!.title).toBe('SQL Injection via Tool');
   });
@@ -226,7 +226,7 @@ describe('parseShieldContent', () => {
 
   it('should filter out revoked threats', () => {
     const threats = parseShieldContent(FULL_SHIELD_MD);
-    const ids = threats.map(t => t.id);
+    const ids = threats.map((t) => t.id);
     expect(ids).not.toContain('THREAT-003');
   });
 
@@ -252,7 +252,7 @@ describe('parseAllThreats', () => {
   it('should include revoked threats', () => {
     const all = parseAllThreats(FULL_SHIELD_MD);
     expect(all.length).toBe(3);
-    const revoked = all.find(t => t.id === 'THREAT-003');
+    const revoked = all.find((t) => t.id === 'THREAT-003');
     expect(revoked).toBeDefined();
     expect(revoked!.revoked).toBe(true);
   });

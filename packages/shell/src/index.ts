@@ -26,19 +26,18 @@
 // ---------------------------------------------------------------------------
 
 export {
-  createPermissionEngine,
-  type ShellPermissionEngine,
-  type ShellPermissionResult,
-  type ShellDecision,
-  type ShellApproval,
-} from './permissions.js';
-
-export {
   createShellExecutor,
   type ShellExecutor,
   type ShellExecutorConfig,
   type ShellResult,
 } from './executor.js';
+export {
+  createPermissionEngine,
+  type ShellApproval,
+  type ShellDecision,
+  type ShellPermissionEngine,
+  type ShellPermissionResult,
+} from './permissions.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -51,10 +50,14 @@ export const SHELL_TOOL_NAMES = ['run_shell', 'shell_approve', 'shell_allow'] as
 // Types
 // ---------------------------------------------------------------------------
 
-import type { Tool } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
-import { createPermissionEngine, type ShellPermissionEngine, type ShellApproval } from './permissions.js';
+import type { Tool } from '@tinyclaw/types';
 import { createShellExecutor, type ShellExecutor, type ShellExecutorConfig } from './executor.js';
+import {
+  createPermissionEngine,
+  type ShellApproval,
+  type ShellPermissionEngine,
+} from './permissions.js';
 
 export interface ShellEngineConfig extends ShellExecutorConfig {
   /** Additional allow patterns from user config. */
@@ -129,7 +132,9 @@ export function createShellEngine(config: ShellEngineConfig = {}): ShellEngine {
     }
 
     if (!result.stdout && !result.stderr) {
-      parts.push(result.success ? '(command completed with no output)' : '(command failed with no output)');
+      parts.push(
+        result.success ? '(command completed with no output)' : '(command failed with no output)',
+      );
     }
 
     if (!result.success && !result.timedOut) {

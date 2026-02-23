@@ -1,60 +1,55 @@
 // Database
 export { createDatabase } from './database.js';
-
-// Agent loop
-export { agentLoop } from './loop.js';
-
 // Built-in Ollama provider (default LLM)
 export { createOllamaProvider } from './llm.js';
-
-// Model constants — single source of truth
-export {
-  DEFAULT_MODEL,
-  DEFAULT_BASE_URL,
-  DEFAULT_PROVIDER,
-  BUILTIN_MODELS,
-  BUILTIN_MODEL_TAGS,
-} from './models.js';
-export type { BuiltinModelTag } from './models.js';
-
+// Agent loop
+export { agentLoop } from './loop.js';
 // Shared onboarding messages — single source of truth
 export {
-  SECURITY_WARNING_TITLE,
-  SECURITY_WARNING_BODY,
-  SECURITY_LICENSE,
-  SECURITY_WARRANTY,
-  SECURITY_SAFETY_TITLE,
-  SECURITY_SAFETY_PRACTICES,
-  SECURITY_CONFIRM,
-  defaultModelNote,
-  TOTP_SETUP_TITLE,
-  TOTP_SETUP_BODY,
-  BACKUP_CODES_INTRO,
   BACKUP_CODES_HINT,
+  BACKUP_CODES_INTRO,
+  defaultModelNote,
   RECOVERY_TOKEN_HINT,
+  SECURITY_CONFIRM,
+  SECURITY_LICENSE,
+  SECURITY_SAFETY_PRACTICES,
+  SECURITY_SAFETY_TITLE,
+  SECURITY_WARNING_BODY,
+  SECURITY_WARNING_TITLE,
+  SECURITY_WARRANTY,
+  TOTP_SETUP_BODY,
+  TOTP_SETUP_TITLE,
 } from './messages.js';
+export type { BuiltinModelTag } from './models.js';
+// Model constants — single source of truth
+export {
+  BUILTIN_MODEL_TAGS,
+  BUILTIN_MODELS,
+  DEFAULT_BASE_URL,
+  DEFAULT_MODEL,
+  DEFAULT_PROVIDER,
+} from './models.js';
 
 // Owner authority — shared crypto utilities
 export {
-  generateRecoveryToken,
+  BACKUP_CODE_LENGTH,
+  BACKUP_CODES_COUNT,
+  createTotpUri,
   generateBackupCode,
   generateBackupCodes,
-  generateTotpSecret,
-  createTotpUri,
-  generateTotpCode,
-  verifyTotpCode,
-  sha256,
+  generateRecoveryToken,
   generateSessionToken,
-  BACKUP_CODES_COUNT,
-  BACKUP_CODE_LENGTH,
+  generateTotpCode,
+  generateTotpSecret,
   RECOVERY_TOKEN_LENGTH,
+  sha256,
+  verifyTotpCode,
 } from './owner-auth.js';
-
+export type { UpdateInfo, UpdateRuntime } from './update-checker.js';
 // Update checker — npm registry polling + system prompt context
 export {
-  checkForUpdate,
   buildUpdateContext,
+  checkForUpdate,
   detectRuntime,
   isNewerVersion,
 } from './update-checker.js';
-export type { UpdateInfo, UpdateRuntime } from './update-checker.js';

@@ -11,29 +11,29 @@
  * - recommendation_agent multi-line strings
  */
 
-import type {
-  ThreatEntry,
-  ThreatCategory,
-  ThreatSeverity,
-  ShieldAction,
-} from '@tinyclaw/types';
+import type { ShieldAction, ThreatCategory, ThreatEntry, ThreatSeverity } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const VALID_CATEGORIES: ReadonlySet<string> = new Set([
-  'prompt', 'tool', 'mcp', 'memory', 'supply_chain',
-  'vulnerability', 'fraud', 'policy_bypass', 'anomaly', 'skill', 'other',
+  'prompt',
+  'tool',
+  'mcp',
+  'memory',
+  'supply_chain',
+  'vulnerability',
+  'fraud',
+  'policy_bypass',
+  'anomaly',
+  'skill',
+  'other',
 ]);
 
-const VALID_SEVERITIES: ReadonlySet<string> = new Set([
-  'critical', 'high', 'medium', 'low',
-]);
+const VALID_SEVERITIES: ReadonlySet<string> = new Set(['critical', 'high', 'medium', 'low']);
 
-const VALID_ACTIONS: ReadonlySet<string> = new Set([
-  'block', 'require_approval', 'log',
-]);
+const VALID_ACTIONS: ReadonlySet<string> = new Set(['block', 'require_approval', 'log']);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -52,8 +52,10 @@ function extractField(block: string, field: string): string | null {
   let value = match[1].trim();
 
   // Strip surrounding quotes
-  if ((value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
     value = value.slice(1, -1);
   }
 
@@ -177,7 +179,9 @@ export function parseThreatBlock(block: string): ThreatEntry | null {
 
   // Filter out expired threats (enforce ISO 8601 format)
   if (expiresAt && expiresAt !== 'null') {
-    if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(expiresAt)) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(expiresAt)
+    ) {
       return null; // Reject non-ISO date strings
     }
     const expiryDate = new Date(expiresAt);
@@ -196,9 +200,9 @@ export function parseThreatBlock(block: string): ThreatEntry | null {
     title,
     description,
     recommendationAgent,
-    expiresAt: (expiresAt === 'null' || !expiresAt) ? null : expiresAt,
+    expiresAt: expiresAt === 'null' || !expiresAt ? null : expiresAt,
     revoked: false,
-    revokedAt: (revokedAt === 'null' || !revokedAt) ? null : revokedAt,
+    revokedAt: revokedAt === 'null' || !revokedAt ? null : revokedAt,
   };
 }
 
@@ -267,8 +271,8 @@ function parseThreatBlockRaw(block: string): ThreatEntry | null {
     title,
     description,
     recommendationAgent,
-    expiresAt: (expiresAt === 'null' || !expiresAt) ? null : expiresAt,
+    expiresAt: expiresAt === 'null' || !expiresAt ? null : expiresAt,
     revoked: revoked === 'true',
-    revokedAt: (revokedAt === 'null' || !revokedAt) ? null : revokedAt,
+    revokedAt: revokedAt === 'null' || !revokedAt ? null : revokedAt,
   };
 }

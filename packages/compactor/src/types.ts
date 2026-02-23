@@ -5,7 +5,7 @@
  * Core's Database satisfies CompactorStore without changes.
  */
 
-import type { Message, CompactionRecord, Provider } from '@tinyclaw/types';
+import type { CompactionRecord, Message, Provider } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
 // CompactorStore — subset of Database used by compaction

@@ -5,13 +5,13 @@
  * error handling, and the unpair cleanup flow.
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test';
-import type { Tool, SecretsManagerInterface, ConfigManagerInterface } from '@tinyclaw/types';
+import { beforeEach, describe, expect, test } from 'bun:test';
+import type { ConfigManagerInterface, SecretsManagerInterface, Tool } from '@tinyclaw/types';
 import {
   createDiscordPairingTools,
-  DISCORD_TOKEN_SECRET_KEY,
   DISCORD_ENABLED_CONFIG_KEY,
   DISCORD_PLUGIN_ID,
+  DISCORD_TOKEN_SECRET_KEY,
 } from '../src/pairing.js';
 
 // ---------------------------------------------------------------------------

@@ -12,23 +12,23 @@
  *   8. confirm_task         — Acknowledge a completed background task
  */
 
-import type { Tool, Provider, QueryTier } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
-import type { DelegationStore, DelegationQueue, DelegationIntercom } from './store.js';
-import type {
-  DelegationV2Config,
-  LifecycleManager,
-  TemplateManager,
-  BackgroundRunner,
-  OrientationContext,
-} from './types.js';
-import type { TimeoutEstimator } from './timeout-estimator.js';
-import { buildOrientationContext } from './orientation.js';
-import { runSubAgentV2 } from './runner.js';
-import { createLifecycleManager } from './lifecycle.js';
-import { createTemplateManager } from './templates.js';
+import type { Provider, QueryTier, Tool } from '@tinyclaw/types';
 import { createBackgroundRunner } from './background.js';
 import { DELEGATION_TOOL_NAMES } from './handbook.js';
+import { createLifecycleManager } from './lifecycle.js';
+import { buildOrientationContext } from './orientation.js';
+import { runSubAgentV2 } from './runner.js';
+import type { DelegationIntercom, DelegationQueue, DelegationStore } from './store.js';
+import { createTemplateManager } from './templates.js';
+import type { TimeoutEstimator } from './timeout-estimator.js';
+import type {
+  BackgroundRunner,
+  DelegationV2Config,
+  LifecycleManager,
+  OrientationContext,
+  TemplateManager,
+} from './types.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -95,13 +95,18 @@ export function createDelegationTools(config: DelegationToolsConfig): {
     timeoutEstimator,
   } = config;
 
-  const safeToolSet = defaultSubAgentTools
-    ? new Set(defaultSubAgentTools)
-    : DEFAULT_SAFE_TOOLS;
+  const safeToolSet = defaultSubAgentTools ? new Set(defaultSubAgentTools) : DEFAULT_SAFE_TOOLS;
 
   const lifecycle = createLifecycleManager(db);
   const templates = createTemplateManager(db);
-  const background = createBackgroundRunner(db, lifecycle, queue, timeoutEstimator, templates, config.intercom);
+  const background = createBackgroundRunner(
+    db,
+    lifecycle,
+    queue,
+    timeoutEstimator,
+    templates,
+    config.intercom,
+  );
 
   // Helper: build orientation for the current user
   function getOrientation(userId: string): OrientationContext {
@@ -137,8 +142,14 @@ export function createDelegationTools(config: DelegationToolsConfig): {
       type: 'object',
       properties: {
         task: { type: 'string', description: 'The task to delegate' },
-        role: { type: 'string', description: 'Role description (e.g. "Technical Research Analyst")' },
-        tier: { type: 'string', description: 'Provider tier: simple, moderate, complex, reasoning, or auto' },
+        role: {
+          type: 'string',
+          description: 'Role description (e.g. "Technical Research Analyst")',
+        },
+        tier: {
+          type: 'string',
+          description: 'Provider tier: simple, moderate, complex, reasoning, or auto',
+        },
         tools: {
           type: 'array',
           items: { type: 'string' },
@@ -249,14 +260,23 @@ export function createDelegationTools(config: DelegationToolsConfig): {
             type: 'object',
             properties: {
               task: { type: 'string', description: 'The task to delegate' },
-              role: { type: 'string', description: 'Role description (e.g. "Technical Research Analyst")' },
-              tier: { type: 'string', description: 'Provider tier: simple, moderate, complex, reasoning, or auto' },
+              role: {
+                type: 'string',
+                description: 'Role description (e.g. "Technical Research Analyst")',
+              },
+              tier: {
+                type: 'string',
+                description: 'Provider tier: simple, moderate, complex, reasoning, or auto',
+              },
               tools: {
                 type: 'array',
                 items: { type: 'string' },
                 description: 'Additional tool names to grant beyond the default safe set',
               },
-              template_id: { type: 'string', description: 'Optional: use a specific role template' },
+              template_id: {
+                type: 'string',
+                description: 'Optional: use a specific role template',
+              },
             },
             required: ['task', 'role'],
           },
@@ -391,7 +411,10 @@ export function createDelegationTools(config: DelegationToolsConfig): {
       properties: {
         task: { type: 'string', description: 'The task to delegate' },
         role: { type: 'string', description: 'Role description' },
-        tier: { type: 'string', description: 'Provider tier: simple, moderate, complex, reasoning, or auto' },
+        tier: {
+          type: 'string',
+          description: 'Provider tier: simple, moderate, complex, reasoning, or auto',
+        },
         tools: {
           type: 'array',
           items: { type: 'string' },
@@ -491,7 +514,8 @@ export function createDelegationTools(config: DelegationToolsConfig): {
         agent = lifecycle.revive(agentId) ?? agent;
       }
 
-      if (agent.status !== 'active') return `Error: Sub-agent ${agentId} is ${agent.status}. Revive it first.`;
+      if (agent.status !== 'active')
+        return `Error: Sub-agent ${agentId} is ${agent.status}. Revive it first.`;
 
       try {
         const orientation = getOrientation(userId);
@@ -529,7 +553,10 @@ export function createDelegationTools(config: DelegationToolsConfig): {
     parameters: {
       type: 'object',
       properties: {
-        include_deleted: { type: 'boolean', description: 'Include dismissed agents (default: false)' },
+        include_deleted: {
+          type: 'boolean',
+          description: 'Include dismissed agents (default: false)',
+        },
         user_id: { type: 'string', description: 'User ID (injected by system)' },
       },
     },
@@ -549,9 +576,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
         const lastActive = new Date(a.lastActiveAt).toISOString().slice(0, 16);
         // Map internal status to user-friendly labels
         const statusLabel =
-          a.status === 'suspended' ? 'idle'
-          : a.status === 'soft_deleted' ? 'archived'
-          : a.status; // 'active' stays as-is
+          a.status === 'suspended' ? 'idle' : a.status === 'soft_deleted' ? 'archived' : a.status; // 'active' stays as-is
         return `- [${statusLabel}] ${a.role} (${a.id})\n  Performance: ${perf} | ${tasks} | Last active: ${lastActive}`;
       });
 
@@ -572,7 +597,8 @@ export function createDelegationTools(config: DelegationToolsConfig): {
         agent_id: { type: 'string', description: 'The sub-agent ID' },
         action: {
           type: 'string',
-          description: 'Action: dismiss (soft-delete, 14-day retention), revive, or kill (permanent)',
+          description:
+            'Action: dismiss (soft-delete, 14-day retention), revive, or kill (permanent)',
         },
       },
       required: ['agent_id', 'action'],
@@ -596,7 +622,8 @@ export function createDelegationTools(config: DelegationToolsConfig): {
         }
         case 'revive': {
           const revived = lifecycle.revive(agentId);
-          if (!revived) return `Error: Cannot revive ${agentId}. It may not be dismissed or has expired.`;
+          if (!revived)
+            return `Error: Cannot revive ${agentId}. It may not be dismissed or has expired.`;
           return `Sub-agent "${revived.role}" (${agentId}) revived and active again.`;
         }
         case 'kill': {

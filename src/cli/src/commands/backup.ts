@@ -22,16 +22,16 @@
  *   audit/                 — audit logs
  */
 
-import { join, resolve, basename, sep } from 'path';
-import { homedir } from 'os';
-import { existsSync, createReadStream, createWriteStream } from 'fs';
-import { readdir, stat, readFile, mkdir } from 'fs/promises';
-import { createGzip, createGunzip } from 'zlib';
-import { pipeline } from 'stream/promises';
 import * as p from '@clack/prompts';
-import { SecretsManager } from '@tinyclaw/secrets';
-import { parseSeed, generateSoul } from '@tinyclaw/heartware';
+import { generateSoul, parseSeed } from '@tinyclaw/heartware';
 import { setLogMode } from '@tinyclaw/logger';
+import { SecretsManager } from '@tinyclaw/secrets';
+import { createReadStream, createWriteStream, existsSync } from 'fs';
+import { mkdir, readdir, readFile, stat } from 'fs/promises';
+import { homedir } from 'os';
+import { basename, join, resolve, sep } from 'path';
+import { pipeline } from 'stream/promises';
+import { createGunzip, createGzip } from 'zlib';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
 
@@ -222,7 +222,7 @@ async function exportBackup(args: string[]): Promise<void> {
   const dataDir = resolveDataDir();
 
   if (!(await dirExists(dataDir))) {
-    p.log.error('Nothing to export — Tiny Claw hasn\'t been set up yet.');
+    p.log.error("Nothing to export — Tiny Claw hasn't been set up yet.");
     p.outro('Run ' + theme.cmd('tinyclaw setup') + ' to get started.');
     return;
   }
@@ -257,7 +257,8 @@ async function exportBackup(args: string[]): Promise<void> {
   const exportSpinner = p.spinner();
   exportSpinner.start('Collecting Tiny Claw data');
 
-  const allFiles: { relativePath: string; absolutePath: string; size: number; mtime: number }[] = [];
+  const allFiles: { relativePath: string; absolutePath: string; size: number; mtime: number }[] =
+    [];
 
   for (const dir of EXPORTABLE_DIRS) {
     const dirPath = join(dataDir, dir);
@@ -361,12 +362,14 @@ async function exportBackup(args: string[]): Promise<void> {
 
   if (secretKeys.length > 0) {
     summary.push('');
-    summary.push(`  ${theme.label('Secret keys')} ${theme.dim('(names only — values are NOT exported)')}`);
+    summary.push(
+      `  ${theme.label('Secret keys')} ${theme.dim('(names only — values are NOT exported)')}`,
+    );
     for (const key of secretKeys) {
       summary.push(`    ${theme.dim('•')} ${key}`);
     }
     summary.push('');
-    summary.push(theme.warn('  ⚠ You\'ll need to re-enter these secret values when importing'));
+    summary.push(theme.warn("  ⚠ You'll need to re-enter these secret values when importing"));
     summary.push(theme.dim('    on another machine. Secrets are machine-bound and cannot be'));
     summary.push(theme.dim('    transferred.'));
   } else {
@@ -385,8 +388,18 @@ async function exportBackup(args: string[]): Promise<void> {
  * Parse a tar buffer and extract entries.
  * @internal Exported for testing only.
  */
-export function parseTar(buffer: Buffer): { name: string; type: 'file' | 'directory' | 'symlink' | 'hardlink'; data: Buffer; linkname?: string }[] {
-  const entries: { name: string; type: 'file' | 'directory' | 'symlink' | 'hardlink'; data: Buffer; linkname?: string }[] = [];
+export function parseTar(buffer: Buffer): {
+  name: string;
+  type: 'file' | 'directory' | 'symlink' | 'hardlink';
+  data: Buffer;
+  linkname?: string;
+}[] {
+  const entries: {
+    name: string;
+    type: 'file' | 'directory' | 'symlink' | 'hardlink';
+    data: Buffer;
+    linkname?: string;
+  }[] = [];
   let offset = 0;
 
   while (offset + TAR_BLOCK <= buffer.length) {
@@ -395,7 +408,10 @@ export function parseTar(buffer: Buffer): { name: string; type: 'file' | 'direct
     // Check for end-of-archive (all zeros)
     let allZero = true;
     for (let i = 0; i < TAR_BLOCK; i++) {
-      if (header[i] !== 0) { allZero = false; break; }
+      if (header[i] !== 0) {
+        allZero = false;
+        break;
+      }
     }
     if (allZero) break;
 
@@ -467,7 +483,9 @@ async function importBackup(args: string[]): Promise<void> {
   const manifestEntry = entries.find((e) => e.name === 'manifest.json');
   if (!manifestEntry || manifestEntry.type !== 'file') {
     importSpinner.stop(theme.error('Failed'));
-    p.log.error('Invalid archive — missing manifest.json. This doesn\'t appear to be a Tiny Claw backup.');
+    p.log.error(
+      "Invalid archive — missing manifest.json. This doesn't appear to be a Tiny Claw backup.",
+    );
     return;
   }
 
@@ -498,12 +516,16 @@ async function importBackup(args: string[]): Promise<void> {
   if (manifest.soulName) {
     info.push(`  ${theme.label('Soul')}       ${manifest.soulName}`);
   }
-  info.push(`  ${theme.label('From')}       ${manifest.machine.hostname} (${manifest.machine.platform})`);
+  info.push(
+    `  ${theme.label('From')}       ${manifest.machine.hostname} (${manifest.machine.platform})`,
+  );
   info.push(`  ${theme.label('Files')}      ${manifest.files.length}`);
 
   if (manifest.secretKeys.length > 0) {
     info.push('');
-    info.push(`  ${theme.label('Secrets to re-enter')} ${theme.dim(`(${manifest.secretKeys.length} keys)`)}`);
+    info.push(
+      `  ${theme.label('Secrets to re-enter')} ${theme.dim(`(${manifest.secretKeys.length} keys)`)}`,
+    );
     for (const key of manifest.secretKeys) {
       info.push(`    ${theme.dim('•')} ${key}`);
     }
@@ -514,8 +536,10 @@ async function importBackup(args: string[]): Promise<void> {
   // Warn if existing data will be overwritten
   if (dataExists) {
     p.log.warn(
-      theme.warn('⚠ Existing Tiny Claw data found at ') + theme.dim(dataDir) + '\n' +
-      theme.warn('  Importing will overwrite your current data.')
+      theme.warn('⚠ Existing Tiny Claw data found at ') +
+        theme.dim(dataDir) +
+        '\n' +
+        theme.warn('  Importing will overwrite your current data.'),
     );
   }
 
@@ -583,10 +607,11 @@ async function importBackup(args: string[]): Promise<void> {
   if (manifest.secretKeys.length > 0) {
     p.log.step('');
     p.log.info(
-      theme.label('Secret Re-entry') + '\n\n' +
-      '  Your previous install had secrets that need to be re-entered.\n' +
-      '  Secrets are machine-bound and cannot be transferred between machines.\n' +
-      '  Each value will be encrypted with this machine\'s identity.\n'
+      theme.label('Secret Re-entry') +
+        '\n\n' +
+        '  Your previous install had secrets that need to be re-entered.\n' +
+        '  Secrets are machine-bound and cannot be transferred between machines.\n' +
+        "  Each value will be encrypted with this machine's identity.\n",
     );
 
     let secrets: SecretsManager | null = null;
@@ -595,8 +620,7 @@ async function importBackup(args: string[]): Promise<void> {
     } catch (err) {
       p.log.error(`Failed to initialize secrets engine: ${String(err)}`);
       p.log.info(
-        'You can manually re-enter secrets later via ' +
-        theme.cmd('tinyclaw setup') + '.'
+        'You can manually re-enter secrets later via ' + theme.cmd('tinyclaw setup') + '.',
       );
     }
 
@@ -647,15 +671,18 @@ async function importBackup(args: string[]): Promise<void> {
       if (skipped > 0) {
         p.log.info(
           theme.dim('  Skipped secrets can be added later via ') +
-          theme.cmd('tinyclaw setup') +
-          theme.dim('.')
+            theme.cmd('tinyclaw setup') +
+            theme.dim('.'),
         );
       }
     }
   }
 
   p.outro(
-    theme.success('Import complete!') + ' Run ' + theme.cmd('tinyclaw start') + ' to boot your Tiny Claw.'
+    theme.success('Import complete!') +
+      ' Run ' +
+      theme.cmd('tinyclaw start') +
+      ' to boot your Tiny Claw.',
   );
 }
 
@@ -666,14 +693,20 @@ async function importBackup(args: string[]): Promise<void> {
 function printHelp(): void {
   console.log();
   console.log('  ' + theme.label('Usage'));
-  console.log(`    ${theme.cmd('tinyclaw backup export')} ${theme.dim('[path]')}     Export a .tinyclaw backup archive`);
-  console.log(`    ${theme.cmd('tinyclaw backup import')} ${theme.dim('<file>')}     Import a .tinyclaw backup archive`);
+  console.log(
+    `    ${theme.cmd('tinyclaw backup export')} ${theme.dim('[path]')}     Export a .tinyclaw backup archive`,
+  );
+  console.log(
+    `    ${theme.cmd('tinyclaw backup import')} ${theme.dim('<file>')}     Import a .tinyclaw backup archive`,
+  );
   console.log();
   console.log('  ' + theme.label('Export'));
   console.log(`    Bundles all portable data (heartware, config, memory, learning)`);
   console.log(`    into a single .tinyclaw file. Secrets are ${theme.warn('NOT')} included — only`);
   console.log(`    their key names are saved so you know what to re-enter on import.`);
-  console.log(`    Saved to ~/.tinyclaw/backups/ by default. Use ${theme.dim('.')} for current directory.`);
+  console.log(
+    `    Saved to ~/.tinyclaw/backups/ by default. Use ${theme.dim('.')} for current directory.`,
+  );
   console.log();
   console.log('  ' + theme.label('Import'));
   console.log(`    Extracts the archive into ~/.tinyclaw/ and prompts you to`);
