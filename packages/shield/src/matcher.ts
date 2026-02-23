@@ -229,7 +229,12 @@ function evaluateCondition(
       const expected = pathMatch[1].trim();
       // Support wildcard: provider.*.apiKey
       if (expected.includes('*')) {
-        const regex = new RegExp(`^${expected.replace(/\./g, '\\.').replace(/\*/g, '[^.]+')}$`);
+        // Escape all regex metacharacters except . and *, then apply wildcard pattern
+        const pattern = expected
+          .split('*')
+          .map((part) => part.replace(/[\\^$+?()[\]{}|]/g, '\\$&').replace(/\./g, '\\.'))
+          .join('[^.]+');
+        const regex = new RegExp(`^${pattern}$`);
         if (regex.test(event.secretPath)) {
           return { matchedOn: 'secrets.path', matchValue: event.secretPath };
         }
