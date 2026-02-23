@@ -8,7 +8,8 @@ updates:
       day: "monday"
     open-pull-requests-limit: 10
     labels:
-      - "dependencies"
+      - "security"
+      - "infra"
     groups:
       # Group minor/patch updates together to reduce PR noise
       minor-and-patch:
@@ -24,8 +25,8 @@ updates:
       day: "monday"
     open-pull-requests-limit: 5
     labels:
-      - "dependencies"
-      - "ci"
+      - "security"
+      - "infra"
 
   # Docker base image
   - package-ecosystem: "docker"
@@ -35,5 +36,5 @@ updates:
       day: "monday"
     open-pull-requests-limit: 3
     labels:
-      - "dependencies"
-      - "docker"
+      - "security"
+      - "infra"
