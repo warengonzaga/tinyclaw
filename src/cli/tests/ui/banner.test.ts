@@ -4,7 +4,7 @@
  * Validates getVersion() and showBanner() output.
  */
 
-import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { getVersion, showBanner } from '../../src/ui/banner.js';
 
 describe('getVersion', () => {

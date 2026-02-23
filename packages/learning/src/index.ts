@@ -1,6 +1,6 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { LearnedContext, Message, Pattern, Signal } from '@tinyclaw/types';
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { dirname, join } from 'path';
 import { detectSignals } from './detector.js';
 
 export interface LearningEngineConfig {
@@ -29,7 +29,7 @@ export function createLearningEngine(config: LearningEngineConfig) {
   function savePatterns(): void {
     try {
       writeFileSync(patternsPath, JSON.stringify(patterns, null, 2));
-    } catch (err) {
+    } catch (_err) {
       // Silent fail - could be logged if logger is available
     }
   }
@@ -65,7 +65,7 @@ export function createLearningEngine(config: LearningEngineConfig) {
   }
 
   return {
-    analyze(userMessage: string, assistantMessage: string, history: Message[]): void {
+    analyze(userMessage: string, assistantMessage: string, _history: Message[]): void {
       const signals = detectSignals(userMessage, assistantMessage);
       for (const signal of signals) {
         storeSignal(signal);

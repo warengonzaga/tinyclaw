@@ -6,9 +6,6 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { createWebUI } from '../src/server.ts';
 
 // ---------------------------------------------------------------------------
@@ -75,7 +72,8 @@ async function generateTotp(secret: string): Promise<string> {
 }
 
 function extractBootstrapSecret(logs: string[]): string {
-  const full = logs.join('\n').replace(/\x1b\[[0-9;]*m/g, '');
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape code for terminal color stripping
+  const full = logs.join('\n').replace(/\u001b\[[0-9;]*m/g, '');
   const match = full.match(/secret:\s+([A-Z2-9]{30})/i);
   if (!match) throw new Error('bootstrap secret not found in logs');
   return match[1];
@@ -434,7 +432,7 @@ describe('setup and MFA flow', () => {
     const setCookie = recoverRes.headers.get('set-cookie') || '';
     const cookieMatch = setCookie.match(/tinyclaw_session=([^;]+)/);
     expect(cookieMatch).not.toBeNull();
-    const sessionCookie = `tinyclaw_session=${cookieMatch![1]}`;
+    const sessionCookie = `tinyclaw_session=${cookieMatch?.[1]}`;
 
     const recoverBody = await recoverRes.json();
     expect(recoverBody.ok).toBe(true);
@@ -470,7 +468,7 @@ describe('setup and MFA flow', () => {
 
     // Old TOTP should no longer work for login
     const oldTotpCode2 = await generateTotp(bootstrap.body.totpSecret);
-    const oldLogin = await fetchJSON(port, '/api/auth/login', {
+    const _oldLogin = await fetchJSON(port, '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ totpCode: oldTotpCode2 }),

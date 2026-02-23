@@ -7,17 +7,10 @@
  */
 
 import { logger } from '@tinyclaw/logger';
-import type { Message, Provider, Tool } from '@tinyclaw/types';
 import { runSubAgentV2 } from './runner.js';
 import type { DelegationIntercom, DelegationQueue, DelegationStore } from './store.js';
 import type { TimeoutEstimator } from './timeout-estimator.js';
-import type {
-  BackgroundRunner,
-  BackgroundTaskRecord,
-  LifecycleManager,
-  OrientationContext,
-  TemplateManager,
-} from './types.js';
+import type { BackgroundRunner, LifecycleManager, TemplateManager } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Constants

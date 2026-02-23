@@ -16,7 +16,6 @@
 
 import type { HeartwareManager } from './manager.js';
 import { loadCachedCreatorMeta } from './meta.js';
-import { generateSoul } from './soul-generator.js';
 
 /** Label used for creator meta in heartware context */
 const META_CACHE_LABEL = 'CREATOR.md — About My Creator';
@@ -57,7 +56,7 @@ export async function loadHeartwareContext(manager: HeartwareManager): Promise<s
     try {
       const content = await manager.read(file);
       context += `\n\n--- ${file} ---\n${content}`;
-    } catch (err) {
+    } catch (_err) {
       // File might not exist yet (first run)
       context += `\n\n--- ${file} ---\n[Not configured yet]`;
     }
@@ -69,7 +68,7 @@ export async function loadHeartwareContext(manager: HeartwareManager): Promise<s
     if (recentMemories) {
       context += `\n\n--- Recent Memory ---\n${recentMemories}`;
     }
-  } catch (err) {
+  } catch (_err) {
     // No recent memories - this is fine
   }
 
@@ -127,7 +126,7 @@ async function loadRecentMemories(manager: HeartwareManager, daysBack: number): 
     try {
       const content = await manager.read(filename);
       output += `\n${content}\n`;
-    } catch (err) {}
+    } catch (_err) {}
   }
 
   return output;
@@ -147,7 +146,7 @@ export async function loadMemoryByDate(
   try {
     const content = await manager.read(`memory/${date}.md`);
     return content;
-  } catch (err) {
+  } catch (_err) {
     return null;
   }
 }

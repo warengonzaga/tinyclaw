@@ -207,14 +207,14 @@ function evaluateCondition(
         const alternatives = expected.split(/\s+or\s+/i);
         for (const alt of alternatives) {
           const trimmed = alt.trim();
-          if (eventDomain === trimmed || eventDomain.endsWith('.' + trimmed)) {
+          if (eventDomain === trimmed || eventDomain.endsWith(`.${trimmed}`)) {
             return { matchedOn: 'domain', matchValue: event.domain };
           }
         }
         return null;
       }
 
-      if (eventDomain === expected || eventDomain.endsWith('.' + expected)) {
+      if (eventDomain === expected || eventDomain.endsWith(`.${expected}`)) {
         return { matchedOn: 'domain', matchValue: event.domain };
       }
     }
@@ -229,9 +229,8 @@ function evaluateCondition(
       const expected = pathMatch[1].trim();
       // Support wildcard: provider.*.apiKey
       if (expected.includes('*')) {
-        const regex = new RegExp(
-          '^' + expected.replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$',
-        );
+        const escaped = expected.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&').replace(/\\\*/g, '[^.]+');
+        const regex = new RegExp(`^${escaped}$`);
         if (regex.test(event.secretPath)) {
           return { matchedOn: 'secrets.path', matchValue: event.secretPath };
         }

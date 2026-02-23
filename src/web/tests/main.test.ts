@@ -5,7 +5,7 @@
  * and handles missing root elements or mount errors.
  */
 
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 
 // ---------------------------------------------------------------------------
 // DOM-less unit tests for the bootstrap logic

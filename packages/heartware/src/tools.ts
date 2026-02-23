@@ -178,7 +178,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
           let memory = '';
           try {
             memory = await manager.read('MEMORY.md');
-          } catch (err) {
+          } catch (_err) {
             // File might not exist yet
           }
 
@@ -233,7 +233,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
           let log = '';
           try {
             log = await manager.read(filename);
-          } catch (err) {
+          } catch (_err) {
             // File doesn't exist, create header
             log = `# Daily Memory Log - ${today}\n\n`;
           }
@@ -281,7 +281,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
             try {
               const content = await manager.read(filename);
               output += `\n=== ${dateStr} ===\n${content}\n`;
-            } catch (err) {}
+            } catch (_err) {}
           }
 
           if (!output) {

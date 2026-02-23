@@ -7,7 +7,7 @@
 
 import type { ProviderOrchestrator, QueryTier } from '@tinyclaw/router';
 import type { LearningEngine, Message, Provider, Tool } from '@tinyclaw/types';
-import type { DelegationQueue, DelegationStore } from './store.js';
+import type { DelegationStore } from './store.js';
 import type { TimeoutEstimator } from './timeout-estimator.js';
 
 // ---------------------------------------------------------------------------

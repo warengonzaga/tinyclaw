@@ -87,7 +87,7 @@ export function createConfigTools(manager: ConfigManager): Tool[] {
           const trimmed = raw.trim();
           if (trimmed === 'true') value = true;
           else if (trimmed === 'false') value = false;
-          else if (trimmed !== '' && !isNaN(Number(trimmed))) value = Number(trimmed);
+          else if (trimmed !== '' && !Number.isNaN(Number(trimmed))) value = Number(trimmed);
           else {
             try {
               value = JSON.parse(trimmed);

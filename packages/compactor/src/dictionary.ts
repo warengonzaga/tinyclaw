@@ -38,7 +38,7 @@ function generateCodes(n: number): string[] {
   // 2-letter codes: $AA .. $ZZ (676)
   for (let i = 0; i < 26 && codes.length < n; i++) {
     for (let j = 0; j < 26 && codes.length < n; j++) {
-      codes.push('$' + String.fromCharCode(A + i) + String.fromCharCode(A + j));
+      codes.push(`$${String.fromCharCode(A + i)}${String.fromCharCode(A + j)}`);
     }
   }
 

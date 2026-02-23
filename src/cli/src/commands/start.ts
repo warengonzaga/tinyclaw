@@ -9,6 +9,9 @@
  * `tinyclaw setup`.
  */
 
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { createCompactor } from '@tinyclaw/compactor';
 import { ConfigManager, createConfigTools } from '@tinyclaw/config';
 import {
@@ -55,11 +58,8 @@ import { createSandbox } from '@tinyclaw/sandbox';
 import { buildProviderKeyName, createSecretsTools, SecretsManager } from '@tinyclaw/secrets';
 import { createShellEngine, createShellTools } from '@tinyclaw/shell';
 import { createShieldEngine } from '@tinyclaw/shield';
-import type { ChannelPlugin, Provider, StreamCallback, Tool } from '@tinyclaw/types';
+import type { Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
-import { existsSync, readdirSync, statSync } from 'fs';
-import { homedir } from 'os';
-import { join, resolve } from 'path';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 import { theme } from '../ui/theme.js';
 
@@ -345,8 +345,8 @@ export async function startCommand(): Promise<void> {
   if (primaryModel) {
     // Find a plugin provider whose id matches the primary config.
     // Convention: the provider ID from the plugin is used to look up matching.
-    const primaryBaseUrl = configManager.get<string>('providers.primary.baseUrl');
-    const primaryApiKeyRef = configManager.get<string>('providers.primary.apiKeyRef');
+    const _primaryBaseUrl = configManager.get<string>('providers.primary.baseUrl');
+    const _primaryApiKeyRef = configManager.get<string>('providers.primary.apiKeyRef');
 
     // Try to find a matching plugin provider by checking if any plugin
     // provider's id is referenced in the tier mapping or matches a known pattern.
@@ -486,7 +486,7 @@ export async function startCommand(): Promise<void> {
   });
 
   // Hybrid semantic matcher (standalone, no deps)
-  const matcher = createHybridMatcher();
+  const _matcher = createHybridMatcher();
   logger.info('Hybrid matcher initialized', undefined, { emoji: '✅' });
 
   // Timeout estimator (after db — uses task_metrics table)
@@ -1252,7 +1252,7 @@ export async function startCommand(): Promise<void> {
         gateway.register(channel.channelPrefix, {
           name: channel.name,
           async send(userId, message) {
-            await channel.sendToUser!(userId, message);
+            await channel.sendToUser?.(userId, message);
           },
         });
       }

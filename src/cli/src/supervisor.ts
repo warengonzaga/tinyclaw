@@ -16,8 +16,8 @@
  *       child exits N   → supervisor exits N (error passthrough)
  */
 
+import { spawn } from 'node:child_process';
 import { logger } from '@tinyclaw/logger';
-import { spawn } from 'child_process';
 
 /**
  * Exit code that signals the supervisor to restart the agent.

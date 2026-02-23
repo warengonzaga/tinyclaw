@@ -118,7 +118,7 @@ export function createIntercom(historyLimit = DEFAULT_HISTORY_LIMIT): Intercom {
         userId,
         data,
       };
-      const seq = sequence++;
+      const _seq = sequence++;
 
       // Store in per-topic history (ring buffer — drop oldest if over limit)
       const list = getOrCreateHistory(topic);

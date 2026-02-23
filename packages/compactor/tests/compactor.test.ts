@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { existsSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createDatabase } from '@tinyclaw/core';
 import type { Database } from '@tinyclaw/types';
-import { existsSync, unlinkSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
 import { createCompactor } from '../src/compactor.js';
 
 // ---------------------------------------------------------------------------
@@ -98,9 +98,9 @@ describe('createCompactor', () => {
 
     const result = await compactor.compactIfNeeded('user1', provider);
     expect(result).not.toBeNull();
-    expect(result!.summary.l2).toContain('TypeScript');
-    expect(result!.metrics.messagesBefore).toBe(10);
-    expect(result!.metrics.messagesKept).toBe(3);
+    expect(result?.summary.l2).toContain('TypeScript');
+    expect(result?.metrics.messagesBefore).toBe(10);
+    expect(result?.metrics.messagesKept).toBe(3);
   });
 
   it('saves compaction and allows retrieval', async () => {
@@ -141,7 +141,7 @@ describe('createCompactor', () => {
 
     const result = await compactor.compactIfNeeded('user1', provider);
     expect(result).not.toBeNull();
-    expect(result!.metrics.messagesKept).toBe(1);
+    expect(result?.metrics.messagesKept).toBe(1);
   });
 
   it('returns metrics with compression ratio', async () => {
@@ -154,9 +154,9 @@ describe('createCompactor', () => {
 
     const result = await compactor.compactIfNeeded('user1', provider);
     expect(result).not.toBeNull();
-    expect(result!.metrics.compressionRatio).toBeGreaterThan(0);
-    expect(result!.metrics.compressionRatio).toBeLessThanOrEqual(1);
-    expect(result!.metrics.durationMs).toBeGreaterThanOrEqual(0);
+    expect(result?.metrics.compressionRatio).toBeGreaterThan(0);
+    expect(result?.metrics.compressionRatio).toBeLessThanOrEqual(1);
+    expect(result?.metrics.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   it('handles provider failure gracefully', async () => {

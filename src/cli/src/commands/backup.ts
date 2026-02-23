@@ -22,16 +22,13 @@
  *   audit/                 — audit logs
  */
 
+import { mkdir, readdir, readFile, stat } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { basename, join, resolve, sep } from 'node:path';
 import * as p from '@clack/prompts';
 import { generateSoul, parseSeed } from '@tinyclaw/heartware';
 import { setLogMode } from '@tinyclaw/logger';
 import { SecretsManager } from '@tinyclaw/secrets';
-import { createReadStream, createWriteStream, existsSync } from 'fs';
-import { mkdir, readdir, readFile, stat } from 'fs/promises';
-import { homedir } from 'os';
-import { basename, join, resolve, sep } from 'path';
-import { pipeline } from 'stream/promises';
-import { createGunzip, createGzip } from 'zlib';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
 
@@ -100,7 +97,7 @@ async function getSoulName(dataDir: string): Promise<string | null> {
 const TAR_BLOCK = 512;
 
 function encodeOctal(value: number, length: number): string {
-  return value.toString(8).padStart(length - 1, '0') + '\0';
+  return `${value.toString(8).padStart(length - 1, '0')}\0`;
 }
 
 function createTarHeader(name: string, size: number, mtime: number): Buffer {
@@ -132,13 +129,13 @@ function createTarHeader(name: string, size: number, mtime: number): Buffer {
   for (let i = 0; i < TAR_BLOCK; i++) {
     checksum += header[i];
   }
-  header.write(encodeOctal(checksum, 7) + ' ', 148, 8, 'utf-8');
+  header.write(`${encodeOctal(checksum, 7)} `, 148, 8, 'utf-8');
 
   return header;
 }
 
 function createTarDirHeader(name: string, mtime: number): Buffer {
-  const dirName = name.endsWith('/') ? name : name + '/';
+  const dirName = name.endsWith('/') ? name : `${name}/`;
   const header = Buffer.alloc(TAR_BLOCK);
 
   header.write(dirName, 0, Math.min(dirName.length, 100), 'utf-8');
@@ -157,7 +154,7 @@ function createTarDirHeader(name: string, mtime: number): Buffer {
   for (let i = 0; i < TAR_BLOCK; i++) {
     checksum += header[i];
   }
-  header.write(encodeOctal(checksum, 7) + ' ', 148, 8, 'utf-8');
+  header.write(`${encodeOctal(checksum, 7)} `, 148, 8, 'utf-8');
 
   return header;
 }
@@ -223,7 +220,7 @@ async function exportBackup(args: string[]): Promise<void> {
 
   if (!(await dirExists(dataDir))) {
     p.log.error("Nothing to export — Tiny Claw hasn't been set up yet.");
-    p.outro('Run ' + theme.cmd('tinyclaw setup') + ' to get started.');
+    p.outro(`Run ${theme.cmd('tinyclaw setup')} to get started.`);
     return;
   }
 
@@ -283,7 +280,7 @@ async function exportBackup(args: string[]): Promise<void> {
   }
 
   // Build manifest
-  const { hostname } = await import('os');
+  const { hostname } = await import('node:os');
   const manifest: BackupManifest = {
     version: MANIFEST_VERSION,
     createdAt: new Date().toISOString(),
@@ -344,9 +341,9 @@ async function exportBackup(args: string[]): Promise<void> {
   // Gzip and write
   exportSpinner.message('Compressing archive');
 
-  const { gzipSync } = await import('zlib');
+  const { gzipSync } = await import('node:zlib');
   const compressed = gzipSync(tarBuffer, { level: 9 });
-  const { writeFile } = await import('fs/promises');
+  const { writeFile } = await import('node:fs/promises');
   await writeFile(outputPath, compressed);
 
   const sizeMB = (compressed.length / (1024 * 1024)).toFixed(2);
@@ -464,7 +461,7 @@ async function importBackup(args: string[]): Promise<void> {
   const importSpinner = p.spinner();
   importSpinner.start('Reading archive');
 
-  const { gunzipSync } = await import('zlib');
+  const { gunzipSync } = await import('node:zlib');
   const compressed = await readFile(resolvedPath);
   let tarBuffer: Buffer;
 
@@ -583,9 +580,9 @@ async function importBackup(args: string[]): Promise<void> {
         await mkdir(targetPath, { recursive: true });
       } else {
         // Ensure parent directory exists
-        const { dirname } = await import('path');
+        const { dirname } = await import('node:path');
         await mkdir(dirname(targetPath), { recursive: true });
-        const { writeFile } = await import('fs/promises');
+        const { writeFile } = await import('node:fs/promises');
         await writeFile(targetPath, entry.data);
         extracted++;
       }
@@ -619,9 +616,7 @@ async function importBackup(args: string[]): Promise<void> {
       secrets = await SecretsManager.create();
     } catch (err) {
       p.log.error(`Failed to initialize secrets engine: ${String(err)}`);
-      p.log.info(
-        'You can manually re-enter secrets later via ' + theme.cmd('tinyclaw setup') + '.',
-      );
+      p.log.info(`You can manually re-enter secrets later via ${theme.cmd('tinyclaw setup')}.`);
     }
 
     if (secrets) {
@@ -653,7 +648,7 @@ async function importBackup(args: string[]): Promise<void> {
           break;
         }
 
-        if (value && value.trim()) {
+        if (value?.trim()) {
           await secrets.store(key, value.trim());
           stored++;
         } else {
@@ -692,7 +687,7 @@ async function importBackup(args: string[]): Promise<void> {
 
 function printHelp(): void {
   console.log();
-  console.log('  ' + theme.label('Usage'));
+  console.log(`  ${theme.label('Usage')}`);
   console.log(
     `    ${theme.cmd('tinyclaw backup export')} ${theme.dim('[path]')}     Export a .tinyclaw backup archive`,
   );
@@ -700,7 +695,7 @@ function printHelp(): void {
     `    ${theme.cmd('tinyclaw backup import')} ${theme.dim('<file>')}     Import a .tinyclaw backup archive`,
   );
   console.log();
-  console.log('  ' + theme.label('Export'));
+  console.log(`  ${theme.label('Export')}`);
   console.log(`    Bundles all portable data (heartware, config, memory, learning)`);
   console.log(`    into a single .tinyclaw file. Secrets are ${theme.warn('NOT')} included — only`);
   console.log(`    their key names are saved so you know what to re-enter on import.`);
@@ -708,11 +703,11 @@ function printHelp(): void {
     `    Saved to ~/.tinyclaw/backups/ by default. Use ${theme.dim('.')} for current directory.`,
   );
   console.log();
-  console.log('  ' + theme.label('Import'));
+  console.log(`  ${theme.label('Import')}`);
   console.log(`    Extracts the archive into ~/.tinyclaw/ and prompts you to`);
   console.log(`    re-enter any secret values (API keys, tokens, etc).`);
   console.log();
-  console.log('  ' + theme.label('Examples'));
+  console.log(`  ${theme.label('Examples')}`);
   console.log(`    ${theme.dim('$')} tinyclaw backup export`);
   console.log(`    ${theme.dim('$')} tinyclaw backup export .`);
   console.log(`    ${theme.dim('$')} tinyclaw backup import 2026-02-17T18-15-30.tinyclaw`);

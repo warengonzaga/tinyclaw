@@ -294,13 +294,13 @@ function matchesPattern(command: string, pattern: string): boolean {
   // Glob-style: pattern "git *" matches "git status", "git log", etc.
   if (pattern.endsWith(' *')) {
     const prefix = pattern.slice(0, -2);
-    if (command.startsWith(prefix + ' ') || command === prefix) return true;
+    if (command.startsWith(`${prefix} `) || command === prefix) return true;
   }
 
   // Prefix pattern: "npm run *" matches "npm run build"
   if (pattern.includes('*')) {
     const regex = new RegExp(
-      '^' + pattern.replace(/[.*+?^${}()|[\]\\]/g, (m) => (m === '*' ? '.*' : '\\' + m)) + '$',
+      `^${pattern.replace(/[.*+?^${}()|[\]\\]/g, (m) => (m === '*' ? '.*' : `\\${m}`))}$`,
     );
     if (regex.test(command)) return true;
   }

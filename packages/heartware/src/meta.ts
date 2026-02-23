@@ -11,10 +11,10 @@
  * Default URL: https://markdown.new/github.com/warengonzaga
  */
 
+import { existsSync } from 'node:fs';
+import { readFile, stat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { logger } from '@tinyclaw/logger';
-import { existsSync } from 'fs';
-import { readFile, stat, writeFile } from 'fs/promises';
-import { join } from 'path';
 
 /** Default remote URL for creator metadata */
 export const DEFAULT_META_URL = 'https://markdown.new/github.com/warengonzaga';
@@ -80,7 +80,7 @@ async function fetchRemoteContent(url: string, timeout: number): Promise<string>
 
     // Enforce size limit
     if (content.length > MAX_META_SIZE) {
-      return content.slice(0, MAX_META_SIZE) + '\n\n[Content truncated]';
+      return `${content.slice(0, MAX_META_SIZE)}\n\n[Content truncated]`;
     }
 
     return content;

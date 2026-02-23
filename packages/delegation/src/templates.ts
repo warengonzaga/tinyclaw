@@ -6,7 +6,6 @@
  * agent learning how to hire better freelancers through experience.
  */
 
-import type { QueryTier } from '@tinyclaw/router';
 import type { RoleTemplate } from '@tinyclaw/types';
 import type { DelegationStore } from './store.js';
 import type { TemplateManager } from './types.js';

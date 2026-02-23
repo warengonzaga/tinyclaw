@@ -121,9 +121,9 @@ export function parseShieldContent(content: string): ThreatEntry[] {
   // Find all fenced code blocks that contain threat definitions.
   // Threat blocks are identified by having an "id: THREAT-" field.
   const codeBlockRegex = /```[\s\S]*?```/g;
-  let match: RegExpExecArray | null;
+  let match = codeBlockRegex.exec(content);
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
+  while (match !== null) {
     const block = match[0];
 
     // Strip the opening/closing fences
@@ -134,6 +134,7 @@ export function parseShieldContent(content: string): ThreatEntry[] {
 
     // Only process blocks that look like threat definitions
     if (!inner.includes('id: THREAT-')) {
+      match = codeBlockRegex.exec(content);
       continue;
     }
 
@@ -141,6 +142,7 @@ export function parseShieldContent(content: string): ThreatEntry[] {
     if (entry) {
       threats.push(entry);
     }
+    match = codeBlockRegex.exec(content);
   }
 
   return threats;
@@ -172,7 +174,7 @@ export function parseThreatBlock(block: string): ThreatEntry | null {
   if (!VALID_CATEGORIES.has(category)) return null;
   if (!VALID_SEVERITIES.has(severity)) return null;
   if (!VALID_ACTIONS.has(action)) return null;
-  if (isNaN(confidence) || confidence < 0 || confidence > 1) return null;
+  if (Number.isNaN(confidence) || confidence < 0 || confidence > 1) return null;
 
   // Filter out revoked threats
   if (revoked === 'true') return null;
@@ -185,7 +187,7 @@ export function parseThreatBlock(block: string): ThreatEntry | null {
       return null; // Reject non-ISO date strings
     }
     const expiryDate = new Date(expiresAt);
-    if (!isNaN(expiryDate.getTime()) && expiryDate.getTime() < Date.now()) {
+    if (!Number.isNaN(expiryDate.getTime()) && expiryDate.getTime() < Date.now()) {
       return null;
     }
   }
@@ -219,19 +221,23 @@ export function parseAllThreats(content: string): ThreatEntry[] {
 
   const threats: ThreatEntry[] = [];
   const codeBlockRegex = /```[\s\S]*?```/g;
-  let match: RegExpExecArray | null;
+  let match = codeBlockRegex.exec(content);
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
+  while (match !== null) {
     const block = match[0];
     const inner = block
       .replace(/^```\w*\s*\n?/, '')
       .replace(/\n?```$/, '')
       .trim();
 
-    if (!inner.includes('id: THREAT-')) continue;
+    if (!inner.includes('id: THREAT-')) {
+      match = codeBlockRegex.exec(content);
+      continue;
+    }
 
     const entry = parseThreatBlockRaw(inner);
     if (entry) threats.push(entry);
+    match = codeBlockRegex.exec(content);
   }
 
   return threats;
@@ -259,7 +265,7 @@ function parseThreatBlockRaw(block: string): ThreatEntry | null {
   if (!VALID_CATEGORIES.has(category)) return null;
   if (!VALID_SEVERITIES.has(severity)) return null;
   if (!VALID_ACTIONS.has(action)) return null;
-  if (isNaN(confidence) || confidence < 0 || confidence > 1) return null;
+  if (Number.isNaN(confidence) || confidence < 0 || confidence > 1) return null;
 
   return {
     id,

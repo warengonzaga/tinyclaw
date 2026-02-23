@@ -14,6 +14,9 @@
  * Uses @clack/prompts for a beautiful, lightweight terminal experience.
  */
 
+import { execSync } from 'node:child_process';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import * as p from '@clack/prompts';
 import { ConfigManager } from '@tinyclaw/config';
 import {
@@ -47,9 +50,6 @@ import { logger, setLogMode } from '@tinyclaw/logger';
 import { buildProviderKeyName, SecretsManager } from '@tinyclaw/secrets';
 import type { StreamCallback } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
-import { execSync } from 'child_process';
-import { homedir } from 'os';
-import { join } from 'path';
 import QRCode from 'qrcode';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
@@ -350,7 +350,7 @@ export async function setupCommand(): Promise<void> {
       }
     } catch (err) {
       verifySpinner.stop(theme.warn('Verification failed'));
-      p.log.warn('Could not validate the key, but it has been saved.\n' + 'Error: ' + String(err));
+      p.log.warn(`Could not validate the key, but it has been saved.\nError: ${String(err)}`);
     }
 
     // --- Step 3: Default model confirmation -----------------------------
@@ -700,7 +700,7 @@ export async function setupCommand(): Promise<void> {
     ),
   );
 
-  p.outro(theme.success("You're all set!") + ' Run ' + theme.cmd('tinyclaw start') + ' to begin.');
+  p.outro(`${theme.success("You're all set!")} Run ${theme.cmd('tinyclaw start')} to begin.`);
 
   await cleanup(secretsManager, configManager);
 }

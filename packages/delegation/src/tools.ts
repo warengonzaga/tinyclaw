@@ -18,10 +18,8 @@ import { createBackgroundRunner } from './background.js';
 import { DELEGATION_TOOL_NAMES } from './handbook.js';
 import { createLifecycleManager } from './lifecycle.js';
 import { buildOrientationContext } from './orientation.js';
-import { runSubAgentV2 } from './runner.js';
-import type { DelegationIntercom, DelegationQueue, DelegationStore } from './store.js';
+import type { DelegationIntercom, DelegationQueue } from './store.js';
 import { createTemplateManager } from './templates.js';
-import type { TimeoutEstimator } from './timeout-estimator.js';
 import type {
   BackgroundRunner,
   DelegationV2Config,
@@ -47,7 +45,7 @@ const DEFAULT_SAFE_TOOLS = new Set([
 const MAX_BATCH_SIZE = 10;
 
 /** Fallback background sub-agent timeout (used when no estimator). */
-const BACKGROUND_TIMEOUT_MS_FALLBACK = 60_000;
+const _BACKGROUND_TIMEOUT_MS_FALLBACK = 60_000;
 
 // ---------------------------------------------------------------------------
 // Helper: filter tools for sub-agents
@@ -787,7 +785,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
 // ---------------------------------------------------------------------------
 
 /** Extract keyword tags from role + task text. */
-function extractTags(role: string, task: string): string[] {
+function _extractTags(role: string, task: string): string[] {
   const text = `${role} ${task}`.toLowerCase();
   const words = text
     .replace(/[^a-z0-9\s]/g, ' ')

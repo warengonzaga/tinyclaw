@@ -6,7 +6,7 @@
  * to test control-flow logic in isolation.
  */
 
-import { afterEach, beforeAll, beforeEach, describe, expect, jest, mock, test } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 // ── Mock @tinyclaw/secrets ───────────────────────────────────────────
 
@@ -162,7 +162,7 @@ mock.module('@tinyclaw/heartware', () => ({
   loadShieldContent: mock(() => Promise.resolve('')),
   parseSeed: mock((input: unknown) => {
     const n = Number(input);
-    return isNaN(n) ? undefined : n;
+    return Number.isNaN(n) ? undefined : n;
   }),
 }));
 

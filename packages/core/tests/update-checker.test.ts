@@ -6,9 +6,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   buildUpdateContext,
   checkForUpdate,
@@ -197,8 +197,8 @@ describe('checkForUpdate', () => {
 
     const result = await checkForUpdate('1.0.0', tempDir);
     expect(result).not.toBeNull();
-    expect(result!.latest).toBe('1.1.0');
-    expect(result!.updateAvailable).toBe(true);
+    expect(result?.latest).toBe('1.1.0');
+    expect(result?.updateAvailable).toBe(true);
   });
 
   test('re-evaluates updateAvailable against current version', async () => {
@@ -208,8 +208,8 @@ describe('checkForUpdate', () => {
 
     const result = await checkForUpdate('1.1.0', tempDir);
     expect(result).not.toBeNull();
-    expect(result!.updateAvailable).toBe(false);
-    expect(result!.current).toBe('1.1.0');
+    expect(result?.updateAvailable).toBe(false);
+    expect(result?.current).toBe('1.1.0');
   });
 
   test('returns null on network failure with no cache', async () => {

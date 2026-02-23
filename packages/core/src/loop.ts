@@ -5,7 +5,6 @@ import type {
   AgentContext,
   Message,
   PendingApproval,
-  ShieldDecision,
   ShieldEvent,
   ToolCall,
 } from '@tinyclaw/types';
@@ -306,7 +305,7 @@ function emitDelegationComplete(
   //   delegate_to_existing: "... (<uuid>) [task: <uuid>] ..."
   //   delegate_tasks:       multi-line output with multiple agent:/task: pairs
   const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
-  const allUUIDs = result.match(UUID_RE) || [];
+  const _allUUIDs = result.match(UUID_RE) || [];
 
   // For delegate_task:   "agent: <uuid>, task: <uuid>"   → agentId is matched first, taskId second
   // For delegate_background: "[id: <taskId>]\nSub-agent: Role (<agentId>)" → taskId first, agentId second
@@ -1001,7 +1000,7 @@ export async function agentLoop(
         // can craft a natural, conversational response instead of the
         // generic "Done!" that was causing a feedback loop in the history.
         const writeResult = toolResults[0]?.result || 'completed';
-        const writeSummary = summarizeToolResults([toolCall], toolResults);
+        const _writeSummary = summarizeToolResults([toolCall], toolResults);
         messages.push({
           role: 'assistant',
           content: `I used ${toolCall.name} and the result was: ${writeResult}`,

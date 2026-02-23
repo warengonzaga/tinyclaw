@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { existsSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createDatabase } from '@tinyclaw/core';
 import { createIntercom, type Intercom, type IntercomMessage } from '@tinyclaw/intercom';
 import type { Database } from '@tinyclaw/types';
-import { existsSync, unlinkSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
 import { type Blackboard, createBlackboard } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
@@ -76,9 +76,9 @@ describe('Blackboard', () => {
 
       const problem = blackboard.getProblem(problemId);
       expect(problem).not.toBeNull();
-      expect(problem!.problemText).toBe('Which database is best for this use case?');
-      expect(problem!.userId).toBe('user1');
-      expect(problem!.status).toBe('open');
+      expect(problem?.problemText).toBe('Which database is best for this use case?');
+      expect(problem?.userId).toBe('user1');
+      expect(problem?.status).toBe('open');
     });
 
     it('shows up in active problems', () => {
@@ -260,7 +260,7 @@ describe('Blackboard', () => {
       const problem = blackboard.getProblem(problemId);
 
       expect(problem).not.toBeNull();
-      expect(problem!.problemText).toBe('My problem');
+      expect(problem?.problemText).toBe('My problem');
     });
   });
 

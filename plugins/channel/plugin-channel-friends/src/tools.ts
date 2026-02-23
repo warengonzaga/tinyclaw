@@ -189,7 +189,7 @@ export function createFriendsTools(
 
           const lastSeenDate = new Date(f.lastSeen);
           const lastSeen =
-            f.lastSeen && !isNaN(lastSeenDate.getTime())
+            f.lastSeen && !Number.isNaN(lastSeenDate.getTime())
               ? lastSeenDate.toLocaleString()
               : 'Unknown';
           return `- **${f.nickname}** (@${f.username}) — ${status}, last seen: ${lastSeen}`;

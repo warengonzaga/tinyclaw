@@ -53,8 +53,8 @@ describe('Lifecycle Manager', () => {
 
     const fetched = lm.get(agent.id);
     expect(fetched).not.toBeNull();
-    expect(fetched!.id).toBe(agent.id);
-    expect(fetched!.role).toBe('Writer');
+    expect(fetched?.id).toBe(agent.id);
+    expect(fetched?.role).toBe('Writer');
 
     db.close();
   });
@@ -101,7 +101,7 @@ describe('Lifecycle Manager', () => {
     // Should match the research analyst
     const match = lm.findReusable('u1', 'Research Analyst');
     expect(match).not.toBeNull();
-    expect(match!.role).toBe('Technical Research Analyst');
+    expect(match?.role).toBe('Technical Research Analyst');
 
     // No match for unrelated role
     const noMatch = lm.findReusable('u1', 'Database Administrator Expert');
@@ -126,9 +126,9 @@ describe('Lifecycle Manager', () => {
     lm.recordTaskResult(agent.id, false);
 
     const updated = lm.get(agent.id);
-    expect(updated!.totalTasks).toBe(3);
-    expect(updated!.successfulTasks).toBe(2);
-    expect(updated!.performanceScore).toBeCloseTo(2 / 3);
+    expect(updated?.totalTasks).toBe(3);
+    expect(updated?.successfulTasks).toBe(2);
+    expect(updated?.performanceScore).toBeCloseTo(2 / 3);
 
     db.close();
   });
@@ -147,13 +147,13 @@ describe('Lifecycle Manager', () => {
     // Suspend
     lm.suspend(agent.id);
     const suspended = lm.get(agent.id);
-    expect(suspended!.status).toBe('suspended');
+    expect(suspended?.status).toBe('suspended');
 
     // Revive
     const revived = lm.revive(agent.id);
     expect(revived).not.toBeNull();
-    expect(revived!.status).toBe('active');
-    expect(revived!.deletedAt).toBeNull();
+    expect(revived?.status).toBe('active');
+    expect(revived?.deletedAt).toBeNull();
 
     db.close();
   });
@@ -188,8 +188,8 @@ describe('Lifecycle Manager', () => {
 
     const match = lm.findReusable('u1', 'Research Analyst');
     expect(match).not.toBeNull();
-    expect(match!.id).toBe(agent.id);
-    expect(match!.status).toBe('suspended');
+    expect(match?.id).toBe(agent.id);
+    expect(match?.status).toBe('suspended');
 
     db.close();
   });
@@ -208,8 +208,8 @@ describe('Lifecycle Manager', () => {
 
     const match = lm.findReusable('u1', 'Research Analyst');
     expect(match).not.toBeNull();
-    expect(match!.id).toBe(agent.id);
-    expect(match!.status).toBe('soft_deleted');
+    expect(match?.id).toBe(agent.id);
+    expect(match?.status).toBe('soft_deleted');
 
     db.close();
   });

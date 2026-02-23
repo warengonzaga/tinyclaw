@@ -9,7 +9,15 @@
  */
 
 import { logger } from '@tinyclaw/logger';
-import type { Message, Provider, ShieldEngine, ShieldEvent, Tool, ToolCall } from '@tinyclaw/types';
+import type {
+  LLMResponse,
+  Message,
+  Provider,
+  ShieldEngine,
+  ShieldEvent,
+  Tool,
+  ToolCall,
+} from '@tinyclaw/types';
 import { formatOrientation } from './orientation.js';
 import type { TimeoutEstimator } from './timeout-estimator.js';
 import type {
@@ -130,7 +138,7 @@ function buildSubAgentPrompt(role: string, orientation?: OrientationContext): st
   let prompt = '';
 
   if (orientation) {
-    prompt += formatOrientation(orientation) + '\n\n';
+    prompt += `${formatOrientation(orientation)}\n\n`;
   }
 
   prompt +=
@@ -166,7 +174,7 @@ interface AdaptiveLoopConfig {
   shield?: ShieldEngine;
 }
 
-async function runAgentLoop(
+async function _runAgentLoop(
   provider: Provider,
   tools: Tool[],
   messages: Message[],
@@ -248,7 +256,7 @@ async function runAdaptiveAgentLoop(
 
       iterations = i + 1;
 
-      let response;
+      let response: LLMResponse;
       try {
         response = await raceAbort(provider.chat(messages, tools));
       } catch (err: any) {

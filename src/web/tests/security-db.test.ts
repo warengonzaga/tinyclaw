@@ -28,10 +28,10 @@ describe('SecurityDatabase', () => {
       rmSync(dbPath, { force: true });
     } catch {}
     try {
-      rmSync(dbPath + '-wal', { force: true });
+      rmSync(`${dbPath}-wal`, { force: true });
     } catch {}
     try {
-      rmSync(dbPath + '-shm', { force: true });
+      rmSync(`${dbPath}-shm`, { force: true });
     } catch {}
   });
 
@@ -87,7 +87,7 @@ describe('SecurityDatabase', () => {
     db.recordFailure('1.2.3.4');
     db.setLockout('1.2.3.4', Date.now() + 60_000);
     const row = db.getRecoveryAttempts('1.2.3.4');
-    expect(row!.locked_until).toBeGreaterThan(Date.now());
+    expect(row?.locked_until).toBeGreaterThan(Date.now());
   });
 
   test('resetAttempts clears the record', () => {

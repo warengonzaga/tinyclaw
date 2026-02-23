@@ -21,8 +21,8 @@
  *   - Each execution runs in a fresh worker (no state leakage)
  */
 
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // Types

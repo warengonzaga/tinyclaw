@@ -115,5 +115,5 @@ export function formatOrientation(ctx: OrientationContext): string {
 
 function truncate(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars) + '...';
+  return `${text.slice(0, maxChars)}...`;
 }

@@ -1,4 +1,6 @@
 import { Database as BunDatabase, type SQLQueryBindings } from 'bun:sqlite';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import type {
   BackgroundTask,
   BlackboardEntry,
@@ -11,14 +13,12 @@ import type {
   SubAgentRecord,
   TaskMetricRecord,
 } from '@tinyclaw/types';
-import { mkdirSync } from 'fs';
-import { dirname } from 'path';
 
 export function createDatabase(path: string): Database {
   // Ensure directory exists
   try {
     mkdirSync(dirname(path), { recursive: true });
-  } catch (err) {
+  } catch (_err) {
     // Directory might already exist
   }
 
@@ -336,12 +336,12 @@ export function createDatabase(path: string): Database {
     LIMIT ?
   `);
 
-  const updateEpisodicAccessStmt = db.prepare(`
+  const _updateEpisodicAccessStmt = db.prepare(`
     UPDATE episodic_memory SET access_count = access_count + 1, last_accessed_at = ?
     WHERE id = ?
   `);
 
-  const pruneEpisodicEventsStmt = db.prepare(`
+  const _pruneEpisodicEventsStmt = db.prepare(`
     DELETE FROM episodic_memory
     WHERE user_id = ? AND importance < ? AND access_count <= ? AND created_at < ?
   `);
@@ -793,7 +793,7 @@ export function createDatabase(path: string): Database {
       const tags = `${record.eventType} ${record.userId}`;
       insertFTSStmt.run(
         record.id,
-        record.content + (record.outcome ? ' ' + record.outcome : ''),
+        record.content + (record.outcome ? ` ${record.outcome}` : ''),
         tags,
       );
     },

@@ -228,7 +228,7 @@ export function createFriendsServer(config: FriendsServerConfig) {
                 if (!pushClients.has(username)) {
                   pushClients.set(username, new Set());
                 }
-                pushClients.get(username)!.add(pushClient);
+                pushClients.get(username)?.add(pushClient);
 
                 // Heartbeat to keep connection alive
                 const heartbeat = setInterval(() => {

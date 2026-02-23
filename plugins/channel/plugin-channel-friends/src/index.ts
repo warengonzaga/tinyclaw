@@ -20,6 +20,9 @@
  * userId format: "friend:<username>"
  */
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { logger } from '@tinyclaw/logger';
 import type {
   ChannelPlugin,
@@ -29,9 +32,6 @@ import type {
   SecretsManagerInterface,
   Tool,
 } from '@tinyclaw/types';
-import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 import { createFriendsServer } from './server.js';
 import { InviteStore } from './store.js';
 import {

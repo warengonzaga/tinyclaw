@@ -6,8 +6,8 @@
  */
 
 import { logger } from '@tinyclaw/logger';
-import type { ProviderOrchestrator, QueryTier } from '@tinyclaw/router';
-import type { Tool } from '@tinyclaw/types';
+import type { QueryTier } from '@tinyclaw/router';
+import type { Provider, Tool } from '@tinyclaw/types';
 import { runSubAgent } from './runner.js';
 import type { DelegationToolConfig } from './types.js';
 
@@ -84,7 +84,7 @@ export function createDelegationTool(config: DelegationToolConfig): Tool {
       }
 
       // 1. Resolve provider
-      let provider;
+      let provider: Provider;
       try {
         if (tierOverride) {
           provider = orchestrator.getRegistry().getForTier(tierOverride as QueryTier);

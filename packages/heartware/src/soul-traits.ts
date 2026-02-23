@@ -9,7 +9,7 @@
  * character flavor, values, quirks, interaction modifiers).
  */
 
-import type { HumorType, InteractionStyle } from './types.js';
+import type { HumorType } from './types.js';
 
 // ============================================
 // Big Five Descriptors

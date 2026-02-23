@@ -1,10 +1,10 @@
+import { timingSafeEqual } from 'node:crypto';
+import { chmodSync, existsSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { DEFAULT_BASE_URL, DEFAULT_MODEL, DEFAULT_PROVIDER } from '@tinyclaw/core';
 import { generateSoulTraits } from '@tinyclaw/heartware';
 import { logger } from '@tinyclaw/logger';
 import type { ChannelSender, OutboundMessage } from '@tinyclaw/types';
-import { timingSafeEqual } from 'crypto';
-import { chmodSync, existsSync, statSync } from 'fs';
-import { join, resolve } from 'path';
 import { SecurityDatabase } from './security-db';
 
 // Inline ANSI helpers for log highlighting (no external dep needed)
@@ -631,7 +631,7 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'Setup already completed.' }, 403);
             }
 
-            let body;
+            let body: unknown;
             try {
               body = await request.json();
             } catch {
@@ -676,7 +676,7 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'Setup already completed.' }, 403);
             }
 
-            let body;
+            let body: unknown;
             try {
               body = await request.json();
             } catch {
@@ -783,7 +783,7 @@ export function createWebUI(config) {
               );
             }
 
-            let body;
+            let body: unknown;
             try {
               body = await request.json();
             } catch {
@@ -842,7 +842,7 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'No owner is configured.' }, 400);
             }
 
-            let body;
+            let body: unknown;
             try {
               body = await request.json();
             } catch {
@@ -900,7 +900,7 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'No owner is configured.' }, 400);
             }
 
-            let body;
+            let body: unknown;
             try {
               body = await request.json();
             } catch {
@@ -995,7 +995,7 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'Unauthorized.' }, 401);
             }
 
-            let body;
+            let body: unknown;
             try {
               body = await request.json();
             } catch {
@@ -1220,7 +1220,7 @@ export function createWebUI(config) {
               return jsonResponse({ error: 'Unauthorized' }, 401);
             }
 
-            let body;
+            let body: unknown;
             try {
               body = await request.json();
             } catch {
@@ -1464,7 +1464,7 @@ export function createWebUI(config) {
 
             try {
               body = await request.json();
-            } catch (error) {
+            } catch (_error) {
               return jsonResponse({ error: 'Invalid JSON' }, 400);
             }
 
@@ -1509,7 +1509,7 @@ export function createWebUI(config) {
                         clearInterval(heartbeat);
                         controller.close();
                       }
-                    } catch (error) {
+                    } catch (_error) {
                       // Controller already closed, ignore
                       isClosed = true;
                       clearInterval(heartbeat);
