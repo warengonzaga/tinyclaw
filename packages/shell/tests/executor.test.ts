@@ -1,8 +1,8 @@
-import { describe, it, expect, afterAll, beforeAll } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createShellExecutor, type ShellExecutor } from '../src/executor.js';
-import { writeFileSync, unlinkSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
 
 // Create temp helper scripts for cross-platform tests
 const TEMP_DIR = join(tmpdir(), 'tinyclaw-shell-tests');
@@ -19,12 +19,19 @@ describe('Shell Executor', () => {
   beforeAll(() => {
     mkdirSync(TEMP_DIR, { recursive: true });
     writeFileSync(SLEEP_SCRIPT, 'setTimeout(() => {}, 60000);');
-    writeFileSync(BIGOUT_SCRIPT, 'for (let i = 0; i < 500; i++) { console.log("Line " + i + ": This is a long line of output to test truncation behavior of the shell executor module"); }');
+    writeFileSync(
+      BIGOUT_SCRIPT,
+      'for (let i = 0; i < 500; i++) { console.log("Line " + i + ": This is a long line of output to test truncation behavior of the shell executor module"); }',
+    );
   });
 
   afterAll(() => {
-    try { unlinkSync(SLEEP_SCRIPT); } catch {}
-    try { unlinkSync(BIGOUT_SCRIPT); } catch {}
+    try {
+      unlinkSync(SLEEP_SCRIPT);
+    } catch {}
+    try {
+      unlinkSync(BIGOUT_SCRIPT);
+    } catch {}
   });
 
   // -----------------------------------------------------------------------

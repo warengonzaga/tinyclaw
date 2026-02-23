@@ -1,9 +1,9 @@
 /**
  * Shield Engine Tests
  */
-import { describe, it, expect } from 'bun:test';
-import { createShieldEngine } from '../src/engine.js';
+import { describe, expect, it } from 'bun:test';
 import type { ShieldEvent } from '@tinyclaw/types';
+import { createShieldEngine } from '../src/engine.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -112,7 +112,7 @@ describe('createShieldEngine', () => {
     const threats1 = engine.getThreats();
     const threats2 = engine.getThreats();
     expect(threats1).not.toBe(threats2); // different reference
-    expect(threats1).toEqual(threats2);  // same content
+    expect(threats1).toEqual(threats2); // same content
   });
 });
 

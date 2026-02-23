@@ -8,11 +8,11 @@
  * - Non-blocking failures (logs to console if file write fails)
  */
 
-import { appendFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import { createHash } from 'crypto';
-import type { AuditLogEntry } from './types.js';
+import { createHash } from 'node:crypto';
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ShieldDecision } from '@tinyclaw/types';
+import type { AuditLogEntry } from './types.js';
 
 /**
  * Audit logger for heartware operations
@@ -34,7 +34,7 @@ export class AuditLogger {
     // Ensure audit directory exists
     try {
       mkdirSync(auditDir, { recursive: true });
-    } catch (err) {
+    } catch (_err) {
       // Directory might already exist - this is fine
     }
   }
@@ -46,17 +46,17 @@ export class AuditLogger {
    * but the original operation is not blocked
    */
   log(entry: AuditLogEntry): void {
-    const logLine = JSON.stringify({
+    const logLine = `${JSON.stringify({
       ...entry,
-      timestamp: entry.timestamp || new Date().toISOString()
-    }) + '\n';
+      timestamp: entry.timestamp || new Date().toISOString(),
+    })}\n`;
 
     try {
       // Append-only write with explicit append flag
       // This makes tampering harder than with regular write
       appendFileSync(this.auditLogPath, logLine, {
         encoding: 'utf-8',
-        flag: 'a' // Append mode
+        flag: 'a', // Append mode
       });
     } catch (err) {
       // CRITICAL: Audit logging failure should not block operations
@@ -74,7 +74,7 @@ export class AuditLogger {
     operation: AuditLogEntry['operation'],
     file: string,
     contentHash?: string,
-    previousHash?: string
+    previousHash?: string,
   ): void {
     this.log({
       timestamp: new Date().toISOString(),
@@ -83,7 +83,7 @@ export class AuditLogger {
       file,
       success: true,
       contentHash,
-      previousHash
+      previousHash,
     });
   }
 
@@ -94,7 +94,7 @@ export class AuditLogger {
     userId: string,
     operation: AuditLogEntry['operation'],
     file: string,
-    error: Error
+    error: Error,
   ): void {
     this.log({
       timestamp: new Date().toISOString(),
@@ -103,7 +103,7 @@ export class AuditLogger {
       file,
       success: false,
       errorCode: (error as any).code,
-      errorMessage: error.message
+      errorMessage: error.message,
     });
   }
 
@@ -115,7 +115,7 @@ export class AuditLogger {
     operation: AuditLogEntry['operation'],
     file: string,
     success: boolean,
-    metadata: Record<string, unknown>
+    metadata: Record<string, unknown>,
   ): void {
     this.log({
       timestamp: new Date().toISOString(),
@@ -123,7 +123,7 @@ export class AuditLogger {
       operation,
       file,
       success,
-      metadata
+      metadata,
     });
   }
 
@@ -147,7 +147,7 @@ export class AuditLogger {
     outcome: 'blocked' | 'approved' | 'denied' | 'logged',
     userId?: string,
   ): void {
-    const logLine = JSON.stringify({
+    const logLine = `${JSON.stringify({
       timestamp: new Date().toISOString(),
       type: 'shield',
       action: decision.action,
@@ -159,7 +159,7 @@ export class AuditLogger {
       matchValue: decision.matchValue,
       reason: decision.reason,
       userId: userId ?? 'unknown',
-    }) + '\n';
+    })}\n`;
 
     try {
       appendFileSync(this.auditLogPath, logLine, {

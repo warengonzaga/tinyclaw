@@ -1,9 +1,9 @@
 /**
  * Shield Matcher Tests
  */
-import { describe, it, expect } from 'bun:test';
-import { parseDirectives, matchEvent } from '../src/matcher.js';
-import type { ThreatEntry, ShieldEvent } from '@tinyclaw/types';
+import { describe, expect, it } from 'bun:test';
+import type { ShieldEvent, ThreatEntry } from '@tinyclaw/types';
+import { matchEvent, parseDirectives } from '../src/matcher.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -15,7 +15,7 @@ function makeThreat(overrides: Partial<ThreatEntry> = {}): ThreatEntry {
     fingerprint: 'test-fp',
     category: 'tool',
     severity: 'high',
-    confidence: 0.90,
+    confidence: 0.9,
     action: 'block',
     title: 'Test Threat',
     description: 'Test threat description',
@@ -96,7 +96,8 @@ describe('matchEvent — tool.call', () => {
 
   it('should match SQL keywords in arguments', () => {
     const threat = makeThreat({
-      recommendationAgent: 'BLOCK: tool.call with arguments containing SQL syntax (DROP, DELETE, UNION, --)',
+      recommendationAgent:
+        'BLOCK: tool.call with arguments containing SQL syntax (DROP, DELETE, UNION, --)',
     });
 
     const event: ShieldEvent = {
@@ -112,7 +113,8 @@ describe('matchEvent — tool.call', () => {
 
   it('should not match when no SQL keywords present', () => {
     const threat = makeThreat({
-      recommendationAgent: 'BLOCK: tool.call with arguments containing SQL syntax (DROP, DELETE, UNION)',
+      recommendationAgent:
+        'BLOCK: tool.call with arguments containing SQL syntax (DROP, DELETE, UNION)',
     });
 
     const event: ShieldEvent = {

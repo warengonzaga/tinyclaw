@@ -81,8 +81,8 @@ export interface TimeoutEstimator {
 // Constants
 // ---------------------------------------------------------------------------
 
-const MIN_TIMEOUT_MS = 15_000;   // 15 seconds
-const MAX_TIMEOUT_MS = 300_000;  // 5 minutes
+const MIN_TIMEOUT_MS = 15_000; // 15 seconds
+const MAX_TIMEOUT_MS = 300_000; // 5 minutes
 const MIN_DATA_POINTS = 5;
 const MAX_EXTENSIONS = 2;
 const EXTENSION_TIME_MS = 30_000; // 30s per extension
@@ -115,11 +115,62 @@ const TASK_TYPE_TO_TIER: Record<string, string> = {
  * indicate that task type.
  */
 const TASK_TYPE_KEYWORDS: Record<string, string[]> = {
-  research: ['research', 'investigate', 'study', 'explore', 'survey', 'compare', 'analyze', 'review', 'find'],
-  code: ['code', 'implement', 'build', 'develop', 'program', 'create', 'fix', 'debug', 'refactor', 'write code'],
-  analysis: ['analysis', 'evaluate', 'assess', 'examine', 'data', 'metric', 'statistic', 'benchmark', 'report'],
-  writing: ['write', 'draft', 'compose', 'document', 'blog', 'article', 'email', 'summary', 'describe'],
-  simple_lookup: ['what is', 'define', 'explain', 'list', 'get', 'fetch', 'look up', 'check', 'status'],
+  research: [
+    'research',
+    'investigate',
+    'study',
+    'explore',
+    'survey',
+    'compare',
+    'analyze',
+    'review',
+    'find',
+  ],
+  code: [
+    'code',
+    'implement',
+    'build',
+    'develop',
+    'program',
+    'create',
+    'fix',
+    'debug',
+    'refactor',
+    'write code',
+  ],
+  analysis: [
+    'analysis',
+    'evaluate',
+    'assess',
+    'examine',
+    'data',
+    'metric',
+    'statistic',
+    'benchmark',
+    'report',
+  ],
+  writing: [
+    'write',
+    'draft',
+    'compose',
+    'document',
+    'blog',
+    'article',
+    'email',
+    'summary',
+    'describe',
+  ],
+  simple_lookup: [
+    'what is',
+    'define',
+    'explain',
+    'list',
+    'get',
+    'fetch',
+    'look up',
+    'check',
+    'status',
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -241,10 +292,7 @@ export function createTimeoutEstimator(db: DelegationStore): TimeoutEstimator {
 
       // Case 1: Used most iterations but still have time
       // Agent is making progress but running out of iterations
-      if (
-        currentIteration >= maxIterations * 0.7 &&
-        elapsedMs < timeoutMs * 0.8
-      ) {
+      if (currentIteration >= maxIterations * 0.7 && elapsedMs < timeoutMs * 0.8) {
         return {
           extend: true,
           extraMs: 0,
@@ -254,10 +302,7 @@ export function createTimeoutEstimator(db: DelegationStore): TimeoutEstimator {
 
       // Case 2: Running out of time but hasn't used many iterations
       // Agent is doing heavy computation per iteration
-      if (
-        elapsedMs >= timeoutMs * 0.9 &&
-        currentIteration < maxIterations * 0.5
-      ) {
+      if (elapsedMs >= timeoutMs * 0.9 && currentIteration < maxIterations * 0.5) {
         return {
           extend: true,
           extraMs: EXTENSION_TIME_MS,

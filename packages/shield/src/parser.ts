@@ -11,29 +11,29 @@
  * - recommendation_agent multi-line strings
  */
 
-import type {
-  ThreatEntry,
-  ThreatCategory,
-  ThreatSeverity,
-  ShieldAction,
-} from '@tinyclaw/types';
+import type { ShieldAction, ThreatCategory, ThreatEntry, ThreatSeverity } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const VALID_CATEGORIES: ReadonlySet<string> = new Set([
-  'prompt', 'tool', 'mcp', 'memory', 'supply_chain',
-  'vulnerability', 'fraud', 'policy_bypass', 'anomaly', 'skill', 'other',
+  'prompt',
+  'tool',
+  'mcp',
+  'memory',
+  'supply_chain',
+  'vulnerability',
+  'fraud',
+  'policy_bypass',
+  'anomaly',
+  'skill',
+  'other',
 ]);
 
-const VALID_SEVERITIES: ReadonlySet<string> = new Set([
-  'critical', 'high', 'medium', 'low',
-]);
+const VALID_SEVERITIES: ReadonlySet<string> = new Set(['critical', 'high', 'medium', 'low']);
 
-const VALID_ACTIONS: ReadonlySet<string> = new Set([
-  'block', 'require_approval', 'log',
-]);
+const VALID_ACTIONS: ReadonlySet<string> = new Set(['block', 'require_approval', 'log']);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -52,8 +52,10 @@ function extractField(block: string, field: string): string | null {
   let value = match[1].trim();
 
   // Strip surrounding quotes
-  if ((value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
     value = value.slice(1, -1);
   }
 
@@ -119,9 +121,9 @@ export function parseShieldContent(content: string): ThreatEntry[] {
   // Find all fenced code blocks that contain threat definitions.
   // Threat blocks are identified by having an "id: THREAT-" field.
   const codeBlockRegex = /```[\s\S]*?```/g;
-  let match: RegExpExecArray | null;
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
+  let match = codeBlockRegex.exec(content);
+  while (match !== null) {
     const block = match[0];
 
     // Strip the opening/closing fences
@@ -132,6 +134,7 @@ export function parseShieldContent(content: string): ThreatEntry[] {
 
     // Only process blocks that look like threat definitions
     if (!inner.includes('id: THREAT-')) {
+      match = codeBlockRegex.exec(content);
       continue;
     }
 
@@ -139,6 +142,7 @@ export function parseShieldContent(content: string): ThreatEntry[] {
     if (entry) {
       threats.push(entry);
     }
+    match = codeBlockRegex.exec(content);
   }
 
   return threats;
@@ -170,18 +174,20 @@ export function parseThreatBlock(block: string): ThreatEntry | null {
   if (!VALID_CATEGORIES.has(category)) return null;
   if (!VALID_SEVERITIES.has(severity)) return null;
   if (!VALID_ACTIONS.has(action)) return null;
-  if (isNaN(confidence) || confidence < 0 || confidence > 1) return null;
+  if (Number.isNaN(confidence) || confidence < 0 || confidence > 1) return null;
 
   // Filter out revoked threats
   if (revoked === 'true') return null;
 
   // Filter out expired threats (enforce ISO 8601 format)
   if (expiresAt && expiresAt !== 'null') {
-    if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(expiresAt)) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(expiresAt)
+    ) {
       return null; // Reject non-ISO date strings
     }
     const expiryDate = new Date(expiresAt);
-    if (!isNaN(expiryDate.getTime()) && expiryDate.getTime() < Date.now()) {
+    if (!Number.isNaN(expiryDate.getTime()) && expiryDate.getTime() < Date.now()) {
       return null;
     }
   }
@@ -196,9 +202,9 @@ export function parseThreatBlock(block: string): ThreatEntry | null {
     title,
     description,
     recommendationAgent,
-    expiresAt: (expiresAt === 'null' || !expiresAt) ? null : expiresAt,
+    expiresAt: expiresAt === 'null' || !expiresAt ? null : expiresAt,
     revoked: false,
-    revokedAt: (revokedAt === 'null' || !revokedAt) ? null : revokedAt,
+    revokedAt: revokedAt === 'null' || !revokedAt ? null : revokedAt,
   };
 }
 
@@ -215,19 +221,23 @@ export function parseAllThreats(content: string): ThreatEntry[] {
 
   const threats: ThreatEntry[] = [];
   const codeBlockRegex = /```[\s\S]*?```/g;
-  let match: RegExpExecArray | null;
 
-  while ((match = codeBlockRegex.exec(content)) !== null) {
+  let match = codeBlockRegex.exec(content);
+  while (match !== null) {
     const block = match[0];
     const inner = block
       .replace(/^```\w*\s*\n?/, '')
       .replace(/\n?```$/, '')
       .trim();
 
-    if (!inner.includes('id: THREAT-')) continue;
+    if (!inner.includes('id: THREAT-')) {
+      match = codeBlockRegex.exec(content);
+      continue;
+    }
 
     const entry = parseThreatBlockRaw(inner);
     if (entry) threats.push(entry);
+    match = codeBlockRegex.exec(content);
   }
 
   return threats;
@@ -255,7 +265,7 @@ function parseThreatBlockRaw(block: string): ThreatEntry | null {
   if (!VALID_CATEGORIES.has(category)) return null;
   if (!VALID_SEVERITIES.has(severity)) return null;
   if (!VALID_ACTIONS.has(action)) return null;
-  if (isNaN(confidence) || confidence < 0 || confidence > 1) return null;
+  if (Number.isNaN(confidence) || confidence < 0 || confidence > 1) return null;
 
   return {
     id,
@@ -267,8 +277,8 @@ function parseThreatBlockRaw(block: string): ThreatEntry | null {
     title,
     description,
     recommendationAgent,
-    expiresAt: (expiresAt === 'null' || !expiresAt) ? null : expiresAt,
+    expiresAt: expiresAt === 'null' || !expiresAt ? null : expiresAt,
     revoked: revoked === 'true',
-    revokedAt: (revokedAt === 'null' || !revokedAt) ? null : revokedAt,
+    revokedAt: revokedAt === 'null' || !revokedAt ? null : revokedAt,
   };
 }

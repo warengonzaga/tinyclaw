@@ -6,18 +6,11 @@
  * next conversation turn via notification injection in agentLoop.
  */
 
-import type { Provider, Tool, Message } from '@tinyclaw/types';
 import { logger } from '@tinyclaw/logger';
-import type { DelegationStore, DelegationQueue, DelegationIntercom } from './store.js';
-import type {
-  BackgroundRunner,
-  BackgroundTaskRecord,
-  LifecycleManager,
-  TemplateManager,
-  OrientationContext,
-} from './types.js';
-import type { TimeoutEstimator } from './timeout-estimator.js';
 import { runSubAgentV2 } from './runner.js';
+import type { DelegationIntercom, DelegationQueue, DelegationStore } from './store.js';
+import type { TimeoutEstimator } from './timeout-estimator.js';
+import type { BackgroundRunner, LifecycleManager, TemplateManager } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -59,9 +52,7 @@ export function createBackgroundRunner(
       } = config;
 
       // Enforce concurrency limit
-      const running = db.getUndeliveredTasks(userId).filter(
-        (t) => t.status === 'running',
-      );
+      const running = db.getUndeliveredTasks(userId).filter((t) => t.status === 'running');
       // Also check tasks that are in the undelivered list but not yet completed
       // getUndeliveredTasks returns completed+failed, so count running from all tasks
       const agent = db.getSubAgent(agentId);
@@ -130,7 +121,14 @@ export function createBackgroundRunner(
             if (timeoutEstimator) {
               const durationMs = Date.now() - startTime;
               const taskType = timeoutEstimator.classifyTask(task);
-              timeoutEstimator.record(userId, taskType, agent?.tierPreference ?? 'auto', durationMs, result.iterations, result.success);
+              timeoutEstimator.record(
+                userId,
+                taskType,
+                agent?.tierPreference ?? 'auto',
+                durationMs,
+                result.iterations,
+                result.success,
+              );
             }
 
             // Update task record
@@ -186,7 +184,10 @@ export function createBackgroundRunner(
             );
             if (!hasRunningTasks) {
               lifecycle.dismiss(agentId);
-              logger.info(`Sub-agent auto-dismissed (task ${result.success ? 'complete' : 'failed'})`, { agentId });
+              logger.info(
+                `Sub-agent auto-dismissed (task ${result.success ? 'complete' : 'failed'})`,
+                { agentId },
+              );
             }
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Unknown error';

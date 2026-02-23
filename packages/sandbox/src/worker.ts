@@ -97,7 +97,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
 
     // Execute user code
     // We use AsyncFunction to support await in user code
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
     const fn = new AsyncFunction('input', code);
     const result = await fn(input);
 

@@ -21,15 +21,14 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         properties: {
           key: {
             type: 'string',
-            description:
-              'Dot-notation key for the secret (e.g., "provider.ollama.apiKey")'
+            description: 'Dot-notation key for the secret (e.g., "provider.ollama.apiKey")',
           },
           value: {
             type: 'string',
-            description: 'The secret value to encrypt and store'
-          }
+            description: 'The secret value to encrypt and store',
+          },
         },
-        required: ['key', 'value']
+        required: ['key', 'value'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         if (typeof args.key !== 'string' || args.key.trim() === '') {
@@ -51,7 +50,7 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         } catch (err) {
           return `Error storing secret "${key}": ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -64,11 +63,10 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         properties: {
           key: {
             type: 'string',
-            description:
-              'Dot-notation key to check (e.g., "provider.ollama.apiKey")'
-          }
+            description: 'Dot-notation key to check (e.g., "provider.ollama.apiKey")',
+          },
         },
-        required: ['key']
+        required: ['key'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         if (typeof args.key !== 'string' || args.key.trim() === '') {
@@ -79,13 +77,11 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
 
         try {
           const exists = await manager.check(key);
-          return exists
-            ? `Secret "${key}" exists`
-            : `Secret "${key}" not found`;
+          return exists ? `Secret "${key}" exists` : `Secret "${key}" not found`;
         } catch (err) {
           return `Error checking secret "${key}": ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -99,11 +95,10 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         properties: {
           key: {
             type: 'string',
-            description:
-              'Dot-notation key to retrieve (e.g., "provider.ollama.apiKey")'
-          }
+            description: 'Dot-notation key to retrieve (e.g., "provider.ollama.apiKey")',
+          },
         },
-        required: ['key']
+        required: ['key'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         if (typeof args.key !== 'string' || args.key.trim() === '') {
@@ -121,7 +116,7 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         } catch (err) {
           return `Error retrieving secret "${key}": ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -137,10 +132,10 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
             type: 'string',
             description:
               'Optional glob pattern to filter keys (e.g., "provider.*.*"). ' +
-              'Note: * matches within a single dot-segment only. Omit to list all keys.'
-          }
+              'Note: * matches within a single dot-segment only. Omit to list all keys.',
+          },
         },
-        required: []
+        required: [],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const pattern = args.pattern as string | undefined;
@@ -149,9 +144,7 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
           const keys = await manager.list(pattern);
 
           if (keys.length === 0) {
-            return pattern
-              ? `No secrets found matching "${pattern}"`
-              : 'No secrets stored';
+            return pattern ? `No secrets found matching "${pattern}"` : 'No secrets stored';
           }
 
           let output = `Found ${keys.length} secret(s):\n`;
@@ -162,7 +155,7 @@ export function createSecretsTools(manager: SecretsManager): Tool[] {
         } catch (err) {
           return `Error listing secrets: ${(err as Error).message}`;
         }
-      }
-    }
+      },
+    },
   ];
 }

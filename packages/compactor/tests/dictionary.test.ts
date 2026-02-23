@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import {
   buildCodebook,
+  compressionStats,
   compressText,
   decompressText,
-  compressionStats,
 } from '../src/dictionary.js';
 
 describe('buildCodebook', () => {

@@ -53,12 +53,12 @@ describe('Template Manager', () => {
     // Should match research analyst
     const match = tm.findBestMatch('u1', 'research technical analysis task');
     expect(match).not.toBeNull();
-    expect(match!.name).toBe('Research Analyst');
+    expect(match?.name).toBe('Research Analyst');
 
     // Should match creative writer
     const match2 = tm.findBestMatch('u1', 'write creative blog post');
     expect(match2).not.toBeNull();
-    expect(match2!.name).toBe('Creative Writer');
+    expect(match2?.name).toBe('Creative Writer');
 
     db.close();
   });
@@ -108,8 +108,8 @@ describe('Template Manager', () => {
     });
 
     expect(updated).not.toBeNull();
-    expect(updated!.name).toBe('Technical Writer');
-    expect(updated!.tags).toEqual(['writing', 'technical', 'documentation']);
+    expect(updated?.name).toBe('Technical Writer');
+    expect(updated?.tags).toEqual(['writing', 'technical', 'documentation']);
 
     db.close();
   });

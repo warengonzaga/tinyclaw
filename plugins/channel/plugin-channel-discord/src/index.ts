@@ -15,26 +15,26 @@
  *   Prefixed to prevent collisions with web UI user IDs.
  */
 
-import {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  Events,
-  type Message as DiscordMessage,
-} from 'discord.js';
 import { logger } from '@tinyclaw/logger';
 import type {
   ChannelPlugin,
-  PluginRuntimeContext,
-  Tool,
-  SecretsManagerInterface,
   ConfigManagerInterface,
   OutboundMessage,
+  PluginRuntimeContext,
+  SecretsManagerInterface,
+  Tool,
 } from '@tinyclaw/types';
 import {
+  Client,
+  type Message as DiscordMessage,
+  Events,
+  GatewayIntentBits,
+  Partials,
+} from 'discord.js';
+import {
   createDiscordPairingTools,
-  DISCORD_TOKEN_SECRET_KEY,
   DISCORD_ENABLED_CONFIG_KEY,
+  DISCORD_TOKEN_SECRET_KEY,
 } from './pairing.js';
 
 let client: Client | null = null;
@@ -47,10 +47,7 @@ const discordPlugin: ChannelPlugin = {
   version: '0.1.0',
   channelPrefix: 'discord',
 
-  getPairingTools(
-    secrets: SecretsManagerInterface,
-    configManager: ConfigManagerInterface,
-  ): Tool[] {
+  getPairingTools(secrets: SecretsManagerInterface, configManager: ConfigManagerInterface): Tool[] {
     return createDiscordPairingTools(secrets, configManager);
   },
 
@@ -86,17 +83,13 @@ const discordPlugin: ChannelPlugin = {
       if (msg.author.bot) return;
 
       const isDM = msg.channel.isDMBased();
-      const isMention = client?.user
-        ? msg.mentions.users.has(client.user.id)
-        : false;
+      const isMention = client?.user ? msg.mentions.users.has(client.user.id) : false;
 
       // Only respond to DMs or @mentions
       if (!isDM && !isMention) return;
 
       // Strip @mention tokens from guild messages
-      const rawContent = msg.content
-        .replace(/<@!?[\d]+>/g, '')
-        .trim();
+      const rawContent = msg.content.replace(/<@!?[\d]+>/g, '').trim();
 
       if (!rawContent) return;
 

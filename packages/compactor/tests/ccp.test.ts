@@ -1,9 +1,6 @@
-import { describe, it, expect } from 'bun:test';
-import {
-  compressContext,
-  compressContextWithStats,
-} from '../src/ccp.js';
+import { describe, expect, it } from 'bun:test';
 import type { CcpLevel } from '../src/ccp.js';
+import { compressContext, compressContextWithStats } from '../src/ccp.js';
 
 describe('compressContext', () => {
   const sampleText =

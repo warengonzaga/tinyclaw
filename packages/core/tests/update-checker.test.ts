@@ -5,15 +5,15 @@
  * building, cache I/O, and the main checkForUpdate flow.
  */
 
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
-  isNewerVersion,
-  detectRuntime,
   buildUpdateContext,
   checkForUpdate,
+  detectRuntime,
+  isNewerVersion,
   sanitizeForPrompt,
   type UpdateInfo,
 } from '../src/update-checker.js';
@@ -193,29 +193,23 @@ describe('checkForUpdate', () => {
 
   test('returns cached result if cache is fresh', async () => {
     const cached = makeMockInfo({ checkedAt: Date.now() });
-    writeFileSync(
-      join(tempDir, 'data', 'update-check.json'),
-      JSON.stringify(cached),
-    );
+    writeFileSync(join(tempDir, 'data', 'update-check.json'), JSON.stringify(cached));
 
     const result = await checkForUpdate('1.0.0', tempDir);
     expect(result).not.toBeNull();
-    expect(result!.latest).toBe('1.1.0');
-    expect(result!.updateAvailable).toBe(true);
+    expect(result?.latest).toBe('1.1.0');
+    expect(result?.updateAvailable).toBe(true);
   });
 
   test('re-evaluates updateAvailable against current version', async () => {
     // Cache says latest=1.1.0, but we're now running 1.1.0
     const cached = makeMockInfo({ checkedAt: Date.now(), latest: '1.1.0' });
-    writeFileSync(
-      join(tempDir, 'data', 'update-check.json'),
-      JSON.stringify(cached),
-    );
+    writeFileSync(join(tempDir, 'data', 'update-check.json'), JSON.stringify(cached));
 
     const result = await checkForUpdate('1.1.0', tempDir);
     expect(result).not.toBeNull();
-    expect(result!.updateAvailable).toBe(false);
-    expect(result!.current).toBe('1.1.0');
+    expect(result?.updateAvailable).toBe(false);
+    expect(result?.current).toBe('1.1.0');
   });
 
   test('returns null on network failure with no cache', async () => {

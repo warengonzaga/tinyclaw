@@ -16,7 +16,7 @@
  *       child exits N   → supervisor exits N (error passthrough)
  */
 
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
 import { logger } from '@tinyclaw/logger';
 
 /**
@@ -58,16 +58,13 @@ export async function supervisedStart(): Promise<void> {
     restartTimestamps.push(now);
 
     // Prune timestamps outside the window
-    while (
-      restartTimestamps.length > 0 &&
-      restartTimestamps[0]! < now - RAPID_RESTART_WINDOW_MS
-    ) {
+    while (restartTimestamps.length > 0 && restartTimestamps[0]! < now - RAPID_RESTART_WINDOW_MS) {
       restartTimestamps.shift();
     }
 
     if (restartTimestamps.length > MAX_RAPID_RESTARTS) {
       logger.error(
-        `Agent restarted ${MAX_RAPID_RESTARTS} times within ${RAPID_RESTART_WINDOW_MS / 1000}s — aborting to prevent crash loop.`
+        `Agent restarted ${MAX_RAPID_RESTARTS} times within ${RAPID_RESTART_WINDOW_MS / 1000}s — aborting to prevent crash loop.`,
       );
       process.exit(1);
     }

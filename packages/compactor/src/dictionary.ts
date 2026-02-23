@@ -38,7 +38,7 @@ function generateCodes(n: number): string[] {
   // 2-letter codes: $AA .. $ZZ (676)
   for (let i = 0; i < 26 && codes.length < n; i++) {
     for (let j = 0; j < 26 && codes.length < n; j++) {
-      codes.push('$' + String.fromCharCode(A + i) + String.fromCharCode(A + j));
+      codes.push(`$${String.fromCharCode(A + i)}${String.fromCharCode(A + j)}`);
     }
   }
 
@@ -47,7 +47,10 @@ function generateCodes(n: number): string[] {
     for (let j = 0; j < 26 && codes.length < n; j++) {
       for (let k = 0; k < 26 && codes.length < n; k++) {
         codes.push(
-          '$' + String.fromCharCode(A + i) + String.fromCharCode(A + j) + String.fromCharCode(A + k),
+          '$' +
+            String.fromCharCode(A + i) +
+            String.fromCharCode(A + j) +
+            String.fromCharCode(A + k),
         );
       }
     }
@@ -63,11 +66,7 @@ function generateCodes(n: number): string[] {
 /**
  * Extract word n-grams from text, filtering by minimum phrase length.
  */
-function tokenizeNgrams(
-  text: string,
-  minN: number = 2,
-  maxN: number = 5,
-): Map<string, number> {
+function tokenizeNgrams(text: string, minN: number = 2, maxN: number = 5): Map<string, number> {
   const counter = new Map<string, number>();
   if (!text) return counter;
 
@@ -104,10 +103,7 @@ export interface BuildCodebookOptions {
  * Scans for high-frequency n-grams and returns a mapping of short codes
  * to the phrases they replace, sorted by savings potential.
  */
-export function buildCodebook(
-  texts: string[],
-  options: BuildCodebookOptions = {},
-): Codebook {
+export function buildCodebook(texts: string[], options: BuildCodebookOptions = {}): Codebook {
   const { minFreq = DEFAULT_MIN_FREQ, maxEntries = DEFAULT_MAX_ENTRIES } = options;
   if (!texts.length) return {};
 

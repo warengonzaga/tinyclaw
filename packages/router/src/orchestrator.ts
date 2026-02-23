@@ -12,11 +12,7 @@
 
 import { logger } from '@tinyclaw/logger';
 import type { Provider } from '@tinyclaw/types';
-import {
-  classifyQuery,
-  type ClassificationResult,
-  type QueryTier,
-} from './classifier.js';
+import { type ClassificationResult, classifyQuery, type QueryTier } from './classifier.js';
 import {
   createProviderRegistry,
   type ProviderRegistry,
@@ -121,9 +117,7 @@ export class ProviderOrchestrator {
       try {
         const available = await fallback.isAvailable();
         if (available) {
-          logger.info(
-            `Fell back to "${fallback.name}" for tier "${classification.tier}"`,
-          );
+          logger.info(`Fell back to "${fallback.name}" for tier "${classification.tier}"`);
           return { provider: fallback, classification, failedOver: true };
         }
       } catch {

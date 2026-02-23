@@ -1,18 +1,29 @@
 import { Database as BunDatabase, type SQLQueryBindings } from 'bun:sqlite';
-import type { Database, Message, CompactionRecord, SubAgentRecord, RoleTemplate, BackgroundTask, EpisodicRecord, TaskMetricRecord, BlackboardEntry, QueryTier } from '@tinyclaw/types';
-import { mkdirSync } from 'fs';
-import { dirname } from 'path';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import type {
+  BackgroundTask,
+  BlackboardEntry,
+  CompactionRecord,
+  Database,
+  EpisodicRecord,
+  Message,
+  QueryTier,
+  RoleTemplate,
+  SubAgentRecord,
+  TaskMetricRecord,
+} from '@tinyclaw/types';
 
 export function createDatabase(path: string): Database {
   // Ensure directory exists
   try {
     mkdirSync(dirname(path), { recursive: true });
-  } catch (err) {
+  } catch (_err) {
     // Directory might already exist
   }
-  
+
   const db = new BunDatabase(path);
-  
+
   // Create tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -151,19 +162,19 @@ export function createDatabase(path: string): Database {
   } catch {
     // Table already exists — safe to ignore
   }
-  
+
   const saveMessageStmt = db.prepare(`
     INSERT INTO messages (user_id, role, content, created_at)
     VALUES (?, ?, ?, ?)
   `);
-  
+
   const getHistoryStmt = db.prepare(`
     SELECT role, content FROM messages
     WHERE user_id = ?
     ORDER BY created_at DESC
     LIMIT ?
   `);
-  
+
   const saveMemoryStmt = db.prepare(`
     INSERT INTO memory (user_id, key, value, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?)
@@ -171,7 +182,7 @@ export function createDatabase(path: string): Database {
       value = excluded.value,
       updated_at = excluded.updated_at
   `);
-  
+
   const getMemoryStmt = db.prepare(`
     SELECT key, value FROM memory
     WHERE user_id = ?
@@ -325,12 +336,12 @@ export function createDatabase(path: string): Database {
     LIMIT ?
   `);
 
-  const updateEpisodicAccessStmt = db.prepare(`
+  const _updateEpisodicAccessStmt = db.prepare(`
     UPDATE episodic_memory SET access_count = access_count + 1, last_accessed_at = ?
     WHERE id = ?
   `);
 
-  const pruneEpisodicEventsStmt = db.prepare(`
+  const _pruneEpisodicEventsStmt = db.prepare(`
     DELETE FROM episodic_memory
     WHERE user_id = ? AND importance < ? AND access_count <= ? AND created_at < ?
   `);
@@ -487,12 +498,12 @@ export function createDatabase(path: string): Database {
     saveMessage(userId: string, role: string, content: string): void {
       saveMessageStmt.run(userId, role, content, Date.now());
     },
-    
+
     getHistory(userId: string, limit: number = 50): Message[] {
-      const rows = getHistoryStmt.all(userId, limit) as Array<{role: string, content: string}>;
-      return rows.reverse().map(row => ({
+      const rows = getHistoryStmt.all(userId, limit) as Array<{ role: string; content: string }>;
+      return rows.reverse().map((row) => ({
         role: row.role as Message['role'],
-        content: row.content
+        content: row.content,
       }));
     },
 
@@ -542,25 +553,34 @@ export function createDatabase(path: string): Database {
       const now = Date.now();
       saveMemoryStmt.run(userId, key, value, now, now);
     },
-    
+
     getMemory(userId: string): Record<string, string> {
-      const rows = getMemoryStmt.all(userId) as Array<{key: string, value: string}>;
+      const rows = getMemoryStmt.all(userId) as Array<{ key: string; value: string }>;
       const memory: Record<string, string> = {};
       for (const row of rows) {
         memory[row.key] = row.value;
       }
       return memory;
     },
-    
+
     // --- Sub-agents ---
 
     saveSubAgent(record: SubAgentRecord): void {
       saveSubAgentStmt.run(
-        record.id, record.userId, record.role, record.systemPrompt,
-        JSON.stringify(record.toolsGranted), record.tierPreference,
-        record.status, record.performanceScore, record.totalTasks,
-        record.successfulTasks, record.templateId,
-        record.createdAt, record.lastActiveAt, record.deletedAt,
+        record.id,
+        record.userId,
+        record.role,
+        record.systemPrompt,
+        JSON.stringify(record.toolsGranted),
+        record.tierPreference,
+        record.status,
+        record.performanceScore,
+        record.totalTasks,
+        record.successfulTasks,
+        record.templateId,
+        record.createdAt,
+        record.lastActiveAt,
+        record.deletedAt,
       );
     },
 
@@ -584,17 +604,39 @@ export function createDatabase(path: string): Database {
       const fields: string[] = [];
       const values: unknown[] = [];
 
-      if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
-      if (updates.performanceScore !== undefined) { fields.push('performance_score = ?'); values.push(updates.performanceScore); }
-      if (updates.totalTasks !== undefined) { fields.push('total_tasks = ?'); values.push(updates.totalTasks); }
-      if (updates.successfulTasks !== undefined) { fields.push('successful_tasks = ?'); values.push(updates.successfulTasks); }
-      if (updates.lastActiveAt !== undefined) { fields.push('last_active_at = ?'); values.push(updates.lastActiveAt); }
-      if (updates.deletedAt !== undefined) { fields.push('deleted_at = ?'); values.push(updates.deletedAt); }
-      if ('deletedAt' in updates && updates.deletedAt === null) { fields.push('deleted_at = NULL'); }
+      if (updates.status !== undefined) {
+        fields.push('status = ?');
+        values.push(updates.status);
+      }
+      if (updates.performanceScore !== undefined) {
+        fields.push('performance_score = ?');
+        values.push(updates.performanceScore);
+      }
+      if (updates.totalTasks !== undefined) {
+        fields.push('total_tasks = ?');
+        values.push(updates.totalTasks);
+      }
+      if (updates.successfulTasks !== undefined) {
+        fields.push('successful_tasks = ?');
+        values.push(updates.successfulTasks);
+      }
+      if (updates.lastActiveAt !== undefined) {
+        fields.push('last_active_at = ?');
+        values.push(updates.lastActiveAt);
+      }
+      if (updates.deletedAt !== undefined) {
+        fields.push('deleted_at = ?');
+        values.push(updates.deletedAt);
+      }
+      if ('deletedAt' in updates && updates.deletedAt === null) {
+        fields.push('deleted_at = NULL');
+      }
 
       if (fields.length === 0) return;
       values.push(id);
-      db.prepare(`UPDATE sub_agents SET ${fields.join(', ')} WHERE id = ?`).run(...values as SQLQueryBindings[]);
+      db.prepare(`UPDATE sub_agents SET ${fields.join(', ')} WHERE id = ?`).run(
+        ...(values as SQLQueryBindings[]),
+      );
     },
 
     deleteExpiredSubAgents(beforeTimestamp: number): number {
@@ -611,10 +653,17 @@ export function createDatabase(path: string): Database {
 
     saveRoleTemplate(template: RoleTemplate): void {
       saveRoleTemplateStmt.run(
-        template.id, template.userId, template.name, template.roleDescription,
-        JSON.stringify(template.defaultTools), template.defaultTier,
-        template.timesUsed, template.avgPerformance,
-        JSON.stringify(template.tags), template.createdAt, template.updatedAt,
+        template.id,
+        template.userId,
+        template.name,
+        template.roleDescription,
+        JSON.stringify(template.defaultTools),
+        template.defaultTier,
+        template.timesUsed,
+        template.avgPerformance,
+        JSON.stringify(template.tags),
+        template.createdAt,
+        template.updatedAt,
       );
     },
 
@@ -632,18 +681,44 @@ export function createDatabase(path: string): Database {
       const fields: string[] = [];
       const values: unknown[] = [];
 
-      if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-      if (updates.roleDescription !== undefined) { fields.push('role_description = ?'); values.push(updates.roleDescription); }
-      if (updates.defaultTools !== undefined) { fields.push('default_tools = ?'); values.push(JSON.stringify(updates.defaultTools)); }
-      if (updates.defaultTier !== undefined) { fields.push('default_tier = ?'); values.push(updates.defaultTier); }
-      if (updates.timesUsed !== undefined) { fields.push('times_used = ?'); values.push(updates.timesUsed); }
-      if (updates.avgPerformance !== undefined) { fields.push('avg_performance = ?'); values.push(updates.avgPerformance); }
-      if (updates.tags !== undefined) { fields.push('tags = ?'); values.push(JSON.stringify(updates.tags)); }
-      if (updates.updatedAt !== undefined) { fields.push('updated_at = ?'); values.push(updates.updatedAt); }
+      if (updates.name !== undefined) {
+        fields.push('name = ?');
+        values.push(updates.name);
+      }
+      if (updates.roleDescription !== undefined) {
+        fields.push('role_description = ?');
+        values.push(updates.roleDescription);
+      }
+      if (updates.defaultTools !== undefined) {
+        fields.push('default_tools = ?');
+        values.push(JSON.stringify(updates.defaultTools));
+      }
+      if (updates.defaultTier !== undefined) {
+        fields.push('default_tier = ?');
+        values.push(updates.defaultTier);
+      }
+      if (updates.timesUsed !== undefined) {
+        fields.push('times_used = ?');
+        values.push(updates.timesUsed);
+      }
+      if (updates.avgPerformance !== undefined) {
+        fields.push('avg_performance = ?');
+        values.push(updates.avgPerformance);
+      }
+      if (updates.tags !== undefined) {
+        fields.push('tags = ?');
+        values.push(JSON.stringify(updates.tags));
+      }
+      if (updates.updatedAt !== undefined) {
+        fields.push('updated_at = ?');
+        values.push(updates.updatedAt);
+      }
 
       if (fields.length === 0) return;
       values.push(id);
-      db.prepare(`UPDATE role_templates SET ${fields.join(', ')} WHERE id = ?`).run(...values as SQLQueryBindings[]);
+      db.prepare(`UPDATE role_templates SET ${fields.join(', ')} WHERE id = ?`).run(
+        ...(values as SQLQueryBindings[]),
+      );
     },
 
     deleteRoleTemplate(id: string): void {
@@ -654,13 +729,24 @@ export function createDatabase(path: string): Database {
 
     saveBackgroundTask(record: BackgroundTask): void {
       saveBackgroundTaskStmt.run(
-        record.id, record.userId, record.agentId, record.taskDescription,
-        record.status, record.result, record.startedAt,
-        record.completedAt, record.deliveredAt,
+        record.id,
+        record.userId,
+        record.agentId,
+        record.taskDescription,
+        record.status,
+        record.result,
+        record.startedAt,
+        record.completedAt,
+        record.deliveredAt,
       );
     },
 
-    updateBackgroundTask(id: string, status: string, result: string | null, completedAt: number | null): void {
+    updateBackgroundTask(
+      id: string,
+      status: string,
+      result: string | null,
+      completedAt: number | null,
+    ): void {
       updateBackgroundTaskStmt.run(status, result, completedAt, id);
     },
 
@@ -693,13 +779,23 @@ export function createDatabase(path: string): Database {
 
     saveEpisodicEvent(record: EpisodicRecord): void {
       saveEpisodicEventStmt.run(
-        record.id, record.userId, record.eventType, record.content,
-        record.outcome, record.importance, record.accessCount,
-        record.createdAt, record.lastAccessedAt,
+        record.id,
+        record.userId,
+        record.eventType,
+        record.content,
+        record.outcome,
+        record.importance,
+        record.accessCount,
+        record.createdAt,
+        record.lastAccessedAt,
       );
       // Also index in FTS5 for full-text search
       const tags = `${record.eventType} ${record.userId}`;
-      insertFTSStmt.run(record.id, record.content + (record.outcome ? ' ' + record.outcome : ''), tags);
+      insertFTSStmt.run(
+        record.id,
+        record.content + (record.outcome ? ` ${record.outcome}` : ''),
+        tags,
+      );
     },
 
     getEpisodicEvent(id: string): EpisodicRecord | null {
@@ -716,15 +812,32 @@ export function createDatabase(path: string): Database {
       const fields: string[] = [];
       const values: unknown[] = [];
 
-      if (updates.importance !== undefined) { fields.push('importance = ?'); values.push(updates.importance); }
-      if (updates.accessCount !== undefined) { fields.push('access_count = ?'); values.push(updates.accessCount); }
-      if (updates.lastAccessedAt !== undefined) { fields.push('last_accessed_at = ?'); values.push(updates.lastAccessedAt); }
-      if (updates.content !== undefined) { fields.push('content = ?'); values.push(updates.content); }
-      if (updates.outcome !== undefined) { fields.push('outcome = ?'); values.push(updates.outcome); }
+      if (updates.importance !== undefined) {
+        fields.push('importance = ?');
+        values.push(updates.importance);
+      }
+      if (updates.accessCount !== undefined) {
+        fields.push('access_count = ?');
+        values.push(updates.accessCount);
+      }
+      if (updates.lastAccessedAt !== undefined) {
+        fields.push('last_accessed_at = ?');
+        values.push(updates.lastAccessedAt);
+      }
+      if (updates.content !== undefined) {
+        fields.push('content = ?');
+        values.push(updates.content);
+      }
+      if (updates.outcome !== undefined) {
+        fields.push('outcome = ?');
+        values.push(updates.outcome);
+      }
 
       if (fields.length === 0) return;
       values.push(id);
-      db.prepare(`UPDATE episodic_memory SET ${fields.join(', ')} WHERE id = ?`).run(...values as SQLQueryBindings[]);
+      db.prepare(`UPDATE episodic_memory SET ${fields.join(', ')} WHERE id = ?`).run(
+        ...(values as SQLQueryBindings[]),
+      );
     },
 
     deleteEpisodicEvents(ids: string[]): void {
@@ -737,10 +850,15 @@ export function createDatabase(path: string): Database {
       }
     },
 
-    searchEpisodicFTS(query: string, userId: string, limit = 20): Array<{ id: string; rank: number }> {
+    searchEpisodicFTS(
+      query: string,
+      userId: string,
+      limit = 20,
+    ): Array<{ id: string; rank: number }> {
       if (!query.trim()) return [];
       try {
-        const rows = db.prepare(`
+        const rows = db
+          .prepare(`
           SELECT f.id, rank
           FROM memory_fts f
           JOIN episodic_memory e ON e.id = f.id
@@ -748,7 +866,8 @@ export function createDatabase(path: string): Database {
             AND e.user_id = ?
           ORDER BY rank
           LIMIT ?
-        `).all(query, userId, limit) as Array<{ id: string; rank: number }>;
+        `)
+          .all(query, userId, limit) as Array<{ id: string; rank: number }>;
         return rows;
       } catch {
         // FTS5 match can fail on malformed queries — graceful fallback
@@ -758,25 +877,34 @@ export function createDatabase(path: string): Database {
 
     decayEpisodicImportance(userId: string, olderThanDays: number, decayFactor: number): number {
       const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
-      const result = db.prepare(`
+      const result = db
+        .prepare(`
         UPDATE episodic_memory
         SET importance = importance * ?
         WHERE user_id = ? AND last_accessed_at < ? AND importance > 0.05
-      `).run(decayFactor, userId, cutoff);
+      `)
+        .run(decayFactor, userId, cutoff);
       return result.changes;
     },
 
-    pruneEpisodicEvents(userId: string, maxImportance: number, maxAccessCount: number, olderThanMs: number): number {
+    pruneEpisodicEvents(
+      userId: string,
+      maxImportance: number,
+      maxAccessCount: number,
+      olderThanMs: number,
+    ): number {
       const cutoff = Date.now() - olderThanMs;
       // First get IDs to prune (so we can clean FTS too)
-      const rows = db.prepare(`
+      const rows = db
+        .prepare(`
         SELECT id FROM episodic_memory
         WHERE user_id = ? AND importance < ? AND access_count <= ? AND created_at < ?
-      `).all(userId, maxImportance, maxAccessCount, cutoff) as Array<{ id: string }>;
+      `)
+        .all(userId, maxImportance, maxAccessCount, cutoff) as Array<{ id: string }>;
 
       if (rows.length === 0) return 0;
 
-      const ids = rows.map(r => r.id);
+      const ids = rows.map((r) => r.id);
       const placeholders = ids.map(() => '?').join(', ');
       db.prepare(`DELETE FROM episodic_memory WHERE id IN (${placeholders})`).run(...ids);
       for (const id of ids) {
@@ -789,8 +917,13 @@ export function createDatabase(path: string): Database {
 
     saveTaskMetric(record: TaskMetricRecord): void {
       saveTaskMetricStmt.run(
-        record.id, record.userId, record.taskType, record.tier,
-        record.durationMs, record.iterations, record.success ? 1 : 0,
+        record.id,
+        record.userId,
+        record.taskType,
+        record.tier,
+        record.durationMs,
+        record.iterations,
+        record.success ? 1 : 0,
         record.createdAt,
       );
     },
@@ -804,9 +937,17 @@ export function createDatabase(path: string): Database {
 
     saveBlackboardEntry(entry: BlackboardEntry): void {
       saveBlackboardEntryStmt.run(
-        entry.id, entry.userId, entry.problemId, entry.problemText,
-        entry.agentId, entry.agentRole, entry.proposal, entry.confidence,
-        entry.synthesis, entry.status, entry.createdAt,
+        entry.id,
+        entry.userId,
+        entry.problemId,
+        entry.problemText,
+        entry.agentId,
+        entry.agentRole,
+        entry.proposal,
+        entry.confidence,
+        entry.synthesis,
+        entry.status,
+        entry.createdAt,
       );
     },
 
@@ -831,14 +972,16 @@ export function createDatabase(path: string): Database {
 
     cleanupBlackboard(olderThanMs: number): number {
       const cutoff = Date.now() - olderThanMs;
-      const result = db.prepare(`
+      const result = db
+        .prepare(`
         DELETE FROM blackboard WHERE status = 'resolved' AND created_at < ?
-      `).run(cutoff);
+      `)
+        .run(cutoff);
       return result.changes;
     },
 
     close(): void {
       db.close();
-    }
+    },
   };
 }

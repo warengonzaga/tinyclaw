@@ -30,8 +30,16 @@ export interface LLMResponse {
 }
 
 export interface StreamEvent {
-  type: 'text' | 'tool_start' | 'tool_result' | 'done' | 'error'
-    | 'delegation_start' | 'delegation_complete' | 'background_start' | 'background_update';
+  type:
+    | 'text'
+    | 'tool_start'
+    | 'tool_result'
+    | 'done'
+    | 'error'
+    | 'delegation_start'
+    | 'delegation_complete'
+    | 'background_start'
+    | 'background_update';
   content?: string;
   tool?: string;
   result?: string;
@@ -235,7 +243,12 @@ export interface Database {
 
   // Background tasks
   saveBackgroundTask(record: BackgroundTask): void;
-  updateBackgroundTask(id: string, status: string, result: string | null, completedAt: number | null): void;
+  updateBackgroundTask(
+    id: string,
+    status: string,
+    result: string | null,
+    completedAt: number | null,
+  ): void;
   getUndeliveredTasks(userId: string): BackgroundTask[];
   getUserBackgroundTasks(userId: string): BackgroundTask[];
   getBackgroundTask(id: string): BackgroundTask | null;
@@ -248,9 +261,18 @@ export interface Database {
   getEpisodicEvents(userId: string, limit?: number): EpisodicRecord[];
   updateEpisodicEvent(id: string, updates: Partial<EpisodicRecord>): void;
   deleteEpisodicEvents(ids: string[]): void;
-  searchEpisodicFTS(query: string, userId: string, limit?: number): Array<{ id: string; rank: number }>;
+  searchEpisodicFTS(
+    query: string,
+    userId: string,
+    limit?: number,
+  ): Array<{ id: string; rank: number }>;
   decayEpisodicImportance(userId: string, olderThanDays: number, decayFactor: number): number;
-  pruneEpisodicEvents(userId: string, maxImportance: number, maxAccessCount: number, olderThanMs: number): number;
+  pruneEpisodicEvents(
+    userId: string,
+    maxImportance: number,
+    maxAccessCount: number,
+    olderThanMs: number,
+  ): number;
 
   // Task metrics (v3)
   saveTaskMetric(record: TaskMetricRecord): void;
@@ -357,12 +379,15 @@ export interface MemorySearchResult {
 
 export interface MemoryEngine {
   /** Store an episodic event. */
-  recordEvent(userId: string, event: {
-    type: EpisodicEventType;
-    content: string;
-    outcome?: string;
-    importance?: number;
-  }): string; // returns event id
+  recordEvent(
+    userId: string,
+    event: {
+      type: EpisodicEventType;
+      content: string;
+      outcome?: string;
+      importance?: number;
+    },
+  ): string; // returns event id
 
   /** Search memory using hybrid scoring: FTS5 BM25 + temporal decay + importance. */
   search(userId: string, query: string, limit?: number): MemorySearchResult[];
@@ -500,7 +525,9 @@ export interface ConfigManagerInterface {
   /** Watch a specific key for changes */
   onDidChange<V = unknown>(key: string, callback: (newValue?: V, oldValue?: V) => void): () => void;
   /** Watch the entire config for any change */
-  onDidAnyChange(callback: (newValue?: Record<string, unknown>, oldValue?: Record<string, unknown>) => void): () => void;
+  onDidAnyChange(
+    callback: (newValue?: Record<string, unknown>, oldValue?: Record<string, unknown>) => void,
+  ): () => void;
   /** Close the underlying config engine */
   close(): void;
 }
@@ -597,10 +624,7 @@ export interface ChannelPlugin extends PluginMeta {
    * Return pairing tools that the agent can invoke to configure this channel.
    * These tools are merged into AgentContext.tools before the agent loop starts.
    */
-  getPairingTools?(
-    secrets: SecretsManagerInterface,
-    configManager: ConfigManagerInterface,
-  ): Tool[];
+  getPairingTools?(secrets: SecretsManagerInterface, configManager: ConfigManagerInterface): Tool[];
   /**
    * Send an outbound message to a user on this channel.
    * Optional — channels that support proactive messaging implement this.
@@ -621,10 +645,7 @@ export interface ProviderPlugin extends PluginMeta {
   /** Create and return an initialized Provider instance. */
   createProvider(secrets: SecretsManagerInterface): Promise<Provider>;
   /** Optional pairing tools for conversational setup (API key, model config). */
-  getPairingTools?(
-    secrets: SecretsManagerInterface,
-    configManager: ConfigManagerInterface,
-  ): Tool[];
+  getPairingTools?(secrets: SecretsManagerInterface, configManager: ConfigManagerInterface): Tool[];
 }
 
 /** A tools plugin contributes additional agent tools. */
@@ -814,10 +835,7 @@ export interface OutboundGateway {
    * Register a channel sender for a given userId prefix.
    * Called during boot after channel plugins are loaded.
    */
-  register(
-    prefix: string,
-    sender: ChannelSender,
-  ): void;
+  register(prefix: string, sender: ChannelSender): void;
 
   /**
    * Unregister a channel sender (e.g. during shutdown).
@@ -828,18 +846,13 @@ export interface OutboundGateway {
    * Send a message to a specific user.
    * Resolves the userId prefix → channel sender → delivers.
    */
-  send(
-    userId: string,
-    message: OutboundMessage,
-  ): Promise<OutboundDeliveryResult>;
+  send(userId: string, message: OutboundMessage): Promise<OutboundDeliveryResult>;
 
   /**
    * Broadcast a message to all registered channels.
    * Each channel decides how to handle the broadcast (e.g. to all connected users).
    */
-  broadcast(
-    message: OutboundMessage,
-  ): Promise<OutboundDeliveryResult[]>;
+  broadcast(message: OutboundMessage): Promise<OutboundDeliveryResult[]>;
 
   /**
    * Get all registered channel prefixes.
@@ -880,15 +893,15 @@ export interface OutboundDeliveryResult {
 
 /** Categories of nudge notifications the agent can send proactively. */
 export type NudgeCategory =
-  | 'task_complete'       // A background task finished
-  | 'task_failed'         // A background task failed
-  | 'reminder'            // Scheduled reminder from the agent
-  | 'check_in'            // Periodic check-in / wellness nudge
-  | 'insight'             // Agent-initiated insight or suggestion
-  | 'system'              // System-level notification (updates, warnings)
-  | 'software_update'     // A new Tiny Claw version is available
-  | 'agent_initiated'     // Free-form agent-initiated outreach
-  | 'companion';          // AI-generated companion nudge (mood roulette)
+  | 'task_complete' // A background task finished
+  | 'task_failed' // A background task failed
+  | 'reminder' // Scheduled reminder from the agent
+  | 'check_in' // Periodic check-in / wellness nudge
+  | 'insight' // Agent-initiated insight or suggestion
+  | 'system' // System-level notification (updates, warnings)
+  | 'software_update' // A new Tiny Claw version is available
+  | 'agent_initiated' // Free-form agent-initiated outreach
+  | 'companion'; // AI-generated companion nudge (mood roulette)
 
 /** A nudge queued for delivery. */
 export interface Nudge {

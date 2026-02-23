@@ -12,12 +12,12 @@
  * - Validates file sizes
  */
 
-import { resolve, relative, normalize } from 'path';
+import { normalize, relative, resolve } from 'node:path';
 import { HeartwareSecurityError } from './errors.js';
 import type {
-  PathValidationResult,
   ContentValidationResult,
-  ContentValidationRule
+  ContentValidationRule,
+  PathValidationResult,
 } from './types.js';
 
 /**
@@ -34,23 +34,20 @@ const ALLOWED_FILES: readonly string[] = [
   'MEMORY.md',
   'BOOTSTRAP.md',
   'SHIELD.md',
-  'SEED.txt'
+  'SEED.txt',
 ] as const;
 
 /**
  * Files that cannot be written to by the agent.
  * These are generated once and remain permanent — like a real soul.
  */
-const IMMUTABLE_FILES: readonly string[] = [
-  'SOUL.md',
-  'SEED.txt'
-] as const;
+const IMMUTABLE_FILES: readonly string[] = ['SOUL.md', 'SEED.txt'] as const;
 
 /**
  * Memory file pattern: memory/YYYY-MM-DD.md
  * Allows daily memory logs but blocks other patterns
  */
-const MEMORY_FILE_PATTERN = /^memory[\/\\]\d{4}-\d{2}-\d{2}\.md$/;
+const MEMORY_FILE_PATTERN = /^memory[/\\]\d{4}-\d{2}-\d{2}\.md$/;
 
 /**
  * Suspicious content patterns (Layer 2 Security)
@@ -60,63 +57,63 @@ const SUSPICIOUS_PATTERNS: readonly ContentValidationRule[] = [
   {
     pattern: /eval\s*\(/gi,
     severity: 'block',
-    description: 'eval() detected - code execution risk'
+    description: 'eval() detected - code execution risk',
   },
   {
     pattern: /exec\s*\(/gi,
     severity: 'block',
-    description: 'exec() detected - command execution risk'
+    description: 'exec() detected - command execution risk',
   },
   {
     pattern: /require\s*\(/gi,
     severity: 'block',
-    description: 'require() detected - module loading risk'
+    description: 'require() detected - module loading risk',
   },
   {
     pattern: /import\s+.*from\s+['"`]/gi,
     severity: 'block',
-    description: 'import statement detected - module loading risk'
+    description: 'import statement detected - module loading risk',
   },
   {
     pattern: /__dirname/gi,
     severity: 'block',
-    description: '__dirname access detected - path disclosure risk'
+    description: '__dirname access detected - path disclosure risk',
   },
   {
     pattern: /__filename/gi,
     severity: 'block',
-    description: '__filename access detected - path disclosure risk'
+    description: '__filename access detected - path disclosure risk',
   },
   {
     pattern: /process\.env/gi,
     severity: 'block',
-    description: 'process.env access detected - environment variable risk'
+    description: 'process.env access detected - environment variable risk',
   },
   {
     pattern: /\.\.\/\.\.\//g,
     severity: 'block',
-    description: 'Path traversal in content detected'
+    description: 'Path traversal in content detected',
   },
   {
     pattern: /fs\.readFileSync/gi,
     severity: 'block',
-    description: 'File system access detected'
+    description: 'File system access detected',
   },
   {
     pattern: /fs\.writeFileSync/gi,
     severity: 'block',
-    description: 'File system write detected'
+    description: 'File system write detected',
   },
   {
     pattern: /child_process/gi,
     severity: 'block',
-    description: 'Child process access detected'
+    description: 'Child process access detected',
   },
   {
     pattern: /Function\s*\(/gi,
     severity: 'block',
-    description: 'Function constructor detected - code execution risk'
-  }
+    description: 'Function constructor detected - code execution risk',
+  },
 ] as const;
 
 /**
@@ -136,7 +133,7 @@ const SUSPICIOUS_PATTERNS: readonly ContentValidationRule[] = [
 export function validatePath(
   heartwareDir: string,
   requestedPath: string,
-  operation: 'read' | 'write' = 'read'
+  operation: 'read' | 'write' = 'read',
 ): PathValidationResult {
   // 1. Normalize path (removes .., ., converts slashes)
   const normalized = normalize(requestedPath);
@@ -152,8 +149,8 @@ export function validatePath(
       `Path traversal attempt blocked: ${requestedPath}`,
       {
         requestedPath,
-        relativePath: normalized
-      }
+        relativePath: normalized,
+      },
     );
   }
 
@@ -173,8 +170,8 @@ export function validatePath(
       `File not in whitelist: ${normalizedRelative}`,
       {
         relativePath: normalizedRelative,
-        requestedPath
-      }
+        requestedPath,
+      },
     );
   }
 
@@ -185,15 +182,15 @@ export function validatePath(
       `Cannot modify immutable file: ${normalizedRelative}. This file is permanently locked.`,
       {
         relativePath: normalizedRelative,
-        requestedPath
-      }
+        requestedPath,
+      },
     );
   }
 
   return {
     safe: true,
     resolved,
-    relativePath: normalizedRelative
+    relativePath: normalizedRelative,
   };
 }
 
@@ -207,10 +204,7 @@ export function validatePath(
  *
  * @throws HeartwareSecurityError if content contains blocking patterns
  */
-export function validateContent(
-  content: string,
-  filename: string
-): ContentValidationResult {
+export function validateContent(content: string, filename: string): ContentValidationResult {
   const warnings: string[] = [];
 
   for (const rule of SUSPICIOUS_PATTERNS) {
@@ -221,8 +215,8 @@ export function validateContent(
           `Blocked suspicious content: ${rule.description}`,
           {
             filename,
-            rule: rule.description
-          }
+            rule: rule.description,
+          },
         );
       } else {
         warnings.push(`Warning: ${rule.description} in ${filename}`);
@@ -232,7 +226,7 @@ export function validateContent(
 
   return {
     safe: true,
-    warnings
+    warnings,
   };
 }
 
@@ -243,7 +237,7 @@ export function validateContent(
  */
 export function validateFileSize(
   size: number,
-  maxSize: number = 1_048_576 // Default: 1MB
+  maxSize: number = 1_048_576, // Default: 1MB
 ): void {
   if (size > maxSize) {
     throw new HeartwareSecurityError(
@@ -252,8 +246,8 @@ export function validateFileSize(
       {
         size,
         maxSize,
-        limitMB: (maxSize / 1_048_576).toFixed(2)
-      }
+        limitMB: (maxSize / 1_048_576).toFixed(2),
+      },
     );
   }
 }

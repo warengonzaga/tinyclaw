@@ -10,7 +10,7 @@
  * can invoke them conversationally when a user asks to connect OpenAI.
  */
 
-import type { Tool, SecretsManagerInterface, ConfigManagerInterface } from '@tinyclaw/types';
+import type { ConfigManagerInterface, SecretsManagerInterface, Tool } from '@tinyclaw/types';
 
 /** Secret key for the OpenAI API key. */
 export const OPENAI_SECRET_KEY = 'provider.openai.apiKey';

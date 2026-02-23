@@ -1,6 +1,6 @@
 import { logger } from '@tinyclaw/logger';
-import type { Provider, Message, LLMResponse, Tool, ToolCall } from '@tinyclaw/types';
 import type { SecretsManager } from '@tinyclaw/secrets';
+import type { LLMResponse, Message, Provider, Tool, ToolCall } from '@tinyclaw/types';
 import { DEFAULT_MODEL } from './models.js';
 
 export interface OllamaConfig {
@@ -15,9 +15,10 @@ export interface OllamaConfig {
 // ---------------------------------------------------------------------------
 
 /** Convert internal Tool[] to the Ollama API tools format. */
-function toOllamaTools(
-  tools: Tool[],
-): { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } }[] {
+function toOllamaTools(tools: Tool[]): {
+  type: 'function';
+  function: { name: string; description: string; parameters: Record<string, unknown> };
+}[] {
   return tools.map((t) => ({
     type: 'function' as const,
     function: {
@@ -99,11 +100,11 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
 
   // Derive a human-readable short name from the model tag
   const shortName = model.split(':')[0];
-  
+
   return {
     id: 'ollama-cloud',
     name: `Ollama Cloud (${shortName})`,
-    
+
     async chat(messages: Message[], tools?: Tool[]): Promise<LLMResponse> {
       try {
         // Resolve API key: explicit value or secrets-engine lookup
@@ -111,7 +112,7 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         if (!apiKey) {
           throw new Error(
             'No API key available for Ollama. ' +
-            'Store one with: store_secret key="provider.ollama.apiKey" value="sk-..."'
+              'Store one with: store_secret key="provider.ollama.apiKey" value="sk-..."',
           );
         }
 
@@ -129,22 +130,22 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(body),
         });
-        
+
         if (!response.ok) {
           const errorBody = await response.text().catch(() => '');
           throw new Error(
             `Ollama API error: ${response.status} ${response.statusText}` +
-            (errorBody ? ` — ${errorBody}` : '')
+              (errorBody ? ` — ${errorBody}` : ''),
           );
         }
-        
+
         const data = await response.json();
-        
+
         // Debug: log raw API response to understand its structure
         logger.debug('Raw API response:', JSON.stringify(data).slice(0, 500));
 
@@ -164,9 +165,9 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         // 2. Text content
         const content =
           msg?.content ||
-          data.response ||              // Simple format
-          data.content ||               // Direct content
-          data.text ||                  // Text format
+          data.response || // Simple format
+          data.content || // Direct content
+          data.text || // Text format
           '';
 
         if (content) {
@@ -195,7 +196,7 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         throw error;
       }
     },
-    
+
     async isAvailable(): Promise<boolean> {
       try {
         const apiKey = config.apiKey ?? (await config.secrets?.resolveProviderKey('ollama'));
@@ -207,7 +208,7 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         const response = await fetch(`${baseUrl}/api/chat`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -234,6 +235,6 @@ export function createOllamaProvider(config: OllamaConfig): Provider {
         }
         return false;
       }
-    }
+    },
   };
 }

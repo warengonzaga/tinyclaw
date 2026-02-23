@@ -8,6 +8,7 @@
         "@wgtechlabs/log-engine": "^2.3.1",
       },
       "devDependencies": {
+        "@biomejs/biome": "^2.4.4",
         "@types/bun": "latest",
         "@types/node": "^22.10.0",
         "husky": "^9.1.7",
@@ -16,7 +17,7 @@
     },
     "packages/compactor": {
       "name": "@tinyclaw/compactor",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -28,7 +29,7 @@
     },
     "packages/config": {
       "name": "@tinyclaw/config",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
@@ -39,7 +40,7 @@
     },
     "packages/core": {
       "name": "@tinyclaw/core",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/delegation": "workspace:*",
         "@tinyclaw/logger": "workspace:*",
@@ -51,7 +52,7 @@
     },
     "packages/delegation": {
       "name": "@tinyclaw/delegation",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/router": "workspace:*",
@@ -65,7 +66,7 @@
     },
     "packages/gateway": {
       "name": "@tinyclaw/gateway",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -73,7 +74,7 @@
     },
     "packages/heartware": {
       "name": "@tinyclaw/heartware",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -81,29 +82,29 @@
     },
     "packages/intercom": {
       "name": "@tinyclaw/intercom",
-      "version": "1.1.0",
+      "version": "2.0.0",
     },
     "packages/learning": {
       "name": "@tinyclaw/learning",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/types": "workspace:*",
       },
     },
     "packages/logger": {
       "name": "@tinyclaw/logger",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@wgtechlabs/log-engine": "^2.3.0",
       },
     },
     "packages/matcher": {
       "name": "@tinyclaw/matcher",
-      "version": "1.1.0",
+      "version": "2.0.0",
     },
     "packages/memory": {
       "name": "@tinyclaw/memory",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/types": "workspace:*",
       },
@@ -113,7 +114,7 @@
     },
     "packages/nudge": {
       "name": "@tinyclaw/nudge",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -121,7 +122,7 @@
     },
     "packages/plugins": {
       "name": "@tinyclaw/plugins",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -129,7 +130,7 @@
     },
     "packages/pulse": {
       "name": "@tinyclaw/pulse",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -137,11 +138,11 @@
     },
     "packages/queue": {
       "name": "@tinyclaw/queue",
-      "version": "1.1.0",
+      "version": "2.0.0",
     },
     "packages/router": {
       "name": "@tinyclaw/router",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -149,11 +150,11 @@
     },
     "packages/sandbox": {
       "name": "@tinyclaw/sandbox",
-      "version": "1.1.0",
+      "version": "2.0.0",
     },
     "packages/secrets": {
       "name": "@tinyclaw/secrets",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -162,7 +163,7 @@
     },
     "packages/shell": {
       "name": "@tinyclaw/shell",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -170,7 +171,7 @@
     },
     "packages/shield": {
       "name": "@tinyclaw/shield",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -178,11 +179,11 @@
     },
     "packages/types": {
       "name": "@tinyclaw/types",
-      "version": "1.1.0",
+      "version": "2.0.0",
     },
     "plugins/channel/plugin-channel-discord": {
       "name": "@tinyclaw/plugin-channel-discord",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -191,7 +192,7 @@
     },
     "plugins/channel/plugin-channel-friends": {
       "name": "@tinyclaw/plugin-channel-friends",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -199,7 +200,7 @@
     },
     "plugins/provider/plugin-provider-openai": {
       "name": "@tinyclaw/plugin-provider-openai",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/logger": "workspace:*",
         "@tinyclaw/types": "workspace:*",
@@ -207,7 +208,7 @@
     },
     "src/cli": {
       "name": "tinyclaw",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "bin": {
         "tinyclaw": "./dist/index.js",
       },
@@ -245,7 +246,7 @@
     },
     "src/landing": {
       "name": "@tinyclaw/landing",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "svelte": "^5.20.1",
       },
@@ -258,7 +259,7 @@
     },
     "src/web": {
       "name": "@tinyclaw/web",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "dependencies": {
         "@tinyclaw/core": "workspace:*",
         "@tinyclaw/heartware": "workspace:*",
@@ -282,6 +283,24 @@
     "undici": "6.23.0",
   },
   "packages": {
+    "@biomejs/biome": ["@biomejs/biome@2.4.4", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.4.4", "@biomejs/cli-darwin-x64": "2.4.4", "@biomejs/cli-linux-arm64": "2.4.4", "@biomejs/cli-linux-arm64-musl": "2.4.4", "@biomejs/cli-linux-x64": "2.4.4", "@biomejs/cli-linux-x64-musl": "2.4.4", "@biomejs/cli-win32-arm64": "2.4.4", "@biomejs/cli-win32-x64": "2.4.4" }, "bin": { "biome": "bin/biome" } }, "sha512-tigwWS5KfJf0cABVd52NVaXyAVv4qpUXOWJ1rxFL8xF1RVoeS2q/LK+FHgYoKMclJCuRoCWAPy1IXaN9/mS61Q=="],
+
+    "@biomejs/cli-darwin-arm64": ["@biomejs/cli-darwin-arm64@2.4.4", "", { "os": "darwin", "cpu": "arm64" }, "sha512-jZ+Xc6qvD6tTH5jM6eKX44dcbyNqJHssfl2nnwT6vma6B1sj7ZLTGIk6N5QwVBs5xGN52r3trk5fgd3sQ9We9A=="],
+
+    "@biomejs/cli-darwin-x64": ["@biomejs/cli-darwin-x64@2.4.4", "", { "os": "darwin", "cpu": "x64" }, "sha512-Dh1a/+W+SUCXhEdL7TiX3ArPTFCQKJTI1mGncZNWfO+6suk+gYA4lNyJcBB+pwvF49uw0pEbUS49BgYOY4hzUg=="],
+
+    "@biomejs/cli-linux-arm64": ["@biomejs/cli-linux-arm64@2.4.4", "", { "os": "linux", "cpu": "arm64" }, "sha512-V/NFfbWhsUU6w+m5WYbBenlEAz8eYnSqRMDMAW3K+3v0tYVkNyZn8VU0XPxk/lOqNXLSCCrV7FmV/u3SjCBShg=="],
+
+    "@biomejs/cli-linux-arm64-musl": ["@biomejs/cli-linux-arm64-musl@2.4.4", "", { "os": "linux", "cpu": "arm64" }, "sha512-+sPAXq3bxmFwhVFJnSwkSF5Rw2ZAJMH3MF6C9IveAEOdSpgajPhoQhbbAK12SehN9j2QrHpk4J/cHsa/HqWaYQ=="],
+
+    "@biomejs/cli-linux-x64": ["@biomejs/cli-linux-x64@2.4.4", "", { "os": "linux", "cpu": "x64" }, "sha512-R4+ZCDtG9kHArasyBO+UBD6jr/FcFCTH8QkNTOCu0pRJzCWyWC4EtZa2AmUZB5h3e0jD7bRV2KvrENcf8rndBg=="],
+
+    "@biomejs/cli-linux-x64-musl": ["@biomejs/cli-linux-x64-musl@2.4.4", "", { "os": "linux", "cpu": "x64" }, "sha512-gGvFTGpOIQDb5CQ2VC0n9Z2UEqlP46c4aNgHmAMytYieTGEcfqhfCFnhs6xjt0S3igE6q5GLuIXtdQt3Izok+g=="],
+
+    "@biomejs/cli-win32-arm64": ["@biomejs/cli-win32-arm64@2.4.4", "", { "os": "win32", "cpu": "arm64" }, "sha512-trzCqM7x+Gn832zZHgr28JoYagQNX4CZkUZhMUac2YxvvyDRLJDrb5m9IA7CaZLlX6lTQmADVfLEKP1et1Ma4Q=="],
+
+    "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.4", "", { "os": "win32", "cpu": "x64" }, "sha512-gnOHKVPFAAPrpoPt2t+Q6FZ7RPry/FDV3GcpU53P3PtLNnQjBmKyN2Vh/JtqXet+H4pme8CC76rScwdjDcT1/A=="],
+
     "@clack/core": ["@clack/core@1.0.0", "", { "dependencies": { "picocolors": "^1.0.0", "sisteransi": "^1.0.5" } }, "sha512-Orf9Ltr5NeiEuVJS8Rk2XTw3IxNC2Bic3ash7GgYeA8LJ/zmSNpSQ/m5UAhe03lA6KFgklzZ5KTHs4OAMA/SAQ=="],
 
     "@clack/prompts": ["@clack/prompts@1.0.0", "", { "dependencies": { "@clack/core": "1.0.0", "picocolors": "^1.0.0", "sisteransi": "^1.0.5" } }, "sha512-rWPXg9UaCFqErJVQ+MecOaWsozjaxol4yjnmYcGNipAWzdaWa2x+VJmKfGq7L0APwBohQOYdHC+9RO4qRXej+A=="],
@@ -731,3 +750,4 @@
     "@tailwindcss/oxide-wasm32-wasi/tslib": ["tslib@2.8.1", "", { "bundled": true }, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
   }
 }
+

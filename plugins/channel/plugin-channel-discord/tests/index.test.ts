@@ -5,7 +5,7 @@
  * and the start/stop lifecycle guards.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import discordPlugin, { splitIntoChunks } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ describe('getPairingTools', () => {
       close: () => {},
     };
 
-    const tools = discordPlugin.getPairingTools!(mockSecrets as any, mockConfig as any);
+    const tools = discordPlugin.getPairingTools?.(mockSecrets as any, mockConfig as any);
     expect(tools).toHaveLength(2);
     expect(tools.map((t) => t.name)).toEqual(['discord_pair', 'discord_unpair']);
   });

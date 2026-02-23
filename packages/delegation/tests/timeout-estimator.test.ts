@@ -1,24 +1,35 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { existsSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createDatabase } from '@tinyclaw/core';
-import { createTimeoutEstimator, type TimeoutEstimator } from '../src/index.js';
 import type { Database } from '@tinyclaw/types';
-import { unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { createTimeoutEstimator, type TimeoutEstimator } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function createTestDb(): { db: Database; path: string } {
-  const path = join(tmpdir(), `tinyclaw-test-timeout-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  const path = join(
+    tmpdir(),
+    `tinyclaw-test-timeout-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
+  );
   const db = createDatabase(path);
   return { db, path };
 }
 
 function cleanupDb(db: Database, path: string): void {
-  try { db.close(); } catch { /* ignore */ }
-  try { if (existsSync(path)) unlinkSync(path); } catch { /* ignore */ }
+  try {
+    db.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (existsSync(path)) unlinkSync(path);
+  } catch {
+    /* ignore */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +70,9 @@ describe('TimeoutEstimator', () => {
     });
 
     it('classifies analysis tasks', () => {
-      expect(estimator.classifyTask('Analyze the sales data and generate a report')).toBe('analysis');
+      expect(estimator.classifyTask('Analyze the sales data and generate a report')).toBe(
+        'analysis',
+      );
       expect(estimator.classifyTask('Evaluate the benchmark results')).toBe('analysis');
     });
 

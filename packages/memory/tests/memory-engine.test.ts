@@ -1,24 +1,35 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { existsSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createDatabase } from '@tinyclaw/core';
-import { createMemoryEngine } from '../src/index.js';
 import type { Database, MemoryEngine } from '@tinyclaw/types';
-import { unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { createMemoryEngine } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function createTestDb(): { db: Database; path: string } {
-  const path = join(tmpdir(), `tinyclaw-test-memory-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  const path = join(
+    tmpdir(),
+    `tinyclaw-test-memory-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
+  );
   const db = createDatabase(path);
   return { db, path };
 }
 
 function cleanupDb(db: Database, path: string): void {
-  try { db.close(); } catch { /* ignore */ }
-  try { if (existsSync(path)) unlinkSync(path); } catch { /* ignore */ }
+  try {
+    db.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (existsSync(path)) unlinkSync(path);
+  } catch {
+    /* ignore */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -57,12 +68,12 @@ describe('MemoryEngine', () => {
 
       const event = engine.getEvent(id);
       expect(event).not.toBeNull();
-      expect(event!.userId).toBe('user1');
-      expect(event!.eventType).toBe('fact_stored');
-      expect(event!.content).toBe('User prefers dark mode');
-      expect(event!.outcome).toBeNull();
-      expect(event!.importance).toBe(0.6); // Default for fact_stored
-      expect(event!.accessCount).toBe(0);
+      expect(event?.userId).toBe('user1');
+      expect(event?.eventType).toBe('fact_stored');
+      expect(event?.content).toBe('User prefers dark mode');
+      expect(event?.outcome).toBeNull();
+      expect(event?.importance).toBe(0.6); // Default for fact_stored
+      expect(event?.accessCount).toBe(0);
     });
 
     it('stores event with custom importance', () => {
@@ -74,12 +85,15 @@ describe('MemoryEngine', () => {
       });
 
       const event = engine.getEvent(id);
-      expect(event!.importance).toBe(0.85);
-      expect(event!.outcome).toBe('TensorFlow recommended');
+      expect(event?.importance).toBe(0.85);
+      expect(event?.outcome).toBe('TensorFlow recommended');
     });
 
     it('uses correct default importance per event type', () => {
-      const types: Array<{ type: Parameters<typeof engine.recordEvent>[1]['type']; expected: number }> = [
+      const types: Array<{
+        type: Parameters<typeof engine.recordEvent>[1]['type'];
+        expected: number;
+      }> = [
         { type: 'correction', expected: 0.9 },
         { type: 'preference_learned', expected: 0.8 },
         { type: 'fact_stored', expected: 0.6 },
@@ -90,7 +104,7 @@ describe('MemoryEngine', () => {
       for (const { type, expected } of types) {
         const id = engine.recordEvent('user1', { type, content: `Test ${type}` });
         const event = engine.getEvent(id);
-        expect(event!.importance).toBe(expected);
+        expect(event?.importance).toBe(expected);
       }
     });
 
@@ -185,7 +199,7 @@ describe('MemoryEngine', () => {
 
       expect(recentResult).toBeDefined();
       expect(oldResult).toBeDefined();
-      expect(recentResult!.relevanceScore).toBeGreaterThan(oldResult!.relevanceScore);
+      expect(recentResult?.relevanceScore).toBeGreaterThan(oldResult?.relevanceScore);
     });
 
     it('reinforce: bumped memories score higher', () => {
@@ -216,7 +230,7 @@ describe('MemoryEngine', () => {
       // Reinforced memory should have higher temporal score component
       // (access count boosts temporal score)
       const event2 = engine.getEvent(id2);
-      expect(event2!.accessCount).toBe(3);
+      expect(event2?.accessCount).toBe(3);
     });
 
     it('returns empty results for no matches', () => {
@@ -295,7 +309,7 @@ describe('MemoryEngine', () => {
 
       // Check importance was reduced
       const event = engine.getEvent(id);
-      expect(event!.importance).toBeLessThan(0.6);
+      expect(event?.importance).toBeLessThan(0.6);
     });
 
     it('prunes low-importance old entries', () => {
@@ -458,13 +472,13 @@ describe('MemoryEngine', () => {
       });
 
       const before = engine.getEvent(id);
-      expect(before!.accessCount).toBe(0);
+      expect(before?.accessCount).toBe(0);
 
       engine.reinforce(id);
 
       const after = engine.getEvent(id);
-      expect(after!.accessCount).toBe(1);
-      expect(after!.lastAccessedAt).toBeGreaterThanOrEqual(before!.lastAccessedAt);
+      expect(after?.accessCount).toBe(1);
+      expect(after?.lastAccessedAt).toBeGreaterThanOrEqual(before?.lastAccessedAt);
     });
 
     it('handles non-existent id gracefully', () => {
@@ -485,7 +499,7 @@ describe('MemoryEngine', () => {
       engine.reinforce(id);
 
       const event = engine.getEvent(id);
-      expect(event!.accessCount).toBe(5);
+      expect(event?.accessCount).toBe(5);
     });
   });
 
@@ -592,7 +606,7 @@ describe('MemoryEngine', () => {
       });
 
       const event = engine.getEvent(id);
-      expect(event!.content).toBe(longContent);
+      expect(event?.content).toBe(longContent);
     });
 
     it('handles unicode content', () => {
@@ -602,18 +616,20 @@ describe('MemoryEngine', () => {
       });
 
       const event = engine.getEvent(id);
-      expect(event!.content).toContain('Filipino');
-      expect(event!.content).toContain('🇵🇭');
+      expect(event?.content).toContain('Filipino');
+      expect(event?.content).toContain('🇵🇭');
     });
 
     it('handles concurrent operations without corruption', () => {
       // Rapid-fire event recording
       const ids: string[] = [];
       for (let i = 0; i < 50; i++) {
-        ids.push(engine.recordEvent('user1', {
-          type: 'fact_stored',
-          content: `Concurrent event ${i}`,
-        }));
+        ids.push(
+          engine.recordEvent('user1', {
+            type: 'fact_stored',
+            content: `Concurrent event ${i}`,
+          }),
+        );
       }
 
       expect(ids.length).toBe(50);
@@ -678,11 +694,11 @@ describe('MemoryEngine', () => {
 
       // The event should have high access count
       const event = engine.getEvent(id);
-      expect(event!.accessCount).toBe(20);
+      expect(event?.accessCount).toBe(20);
 
       // After consolidation with decay, importance should still be reasonable
       // (access count provides resistance via temporal score bonus)
-      const resultsBefore = engine.search('user1', 'pattern testing');
+      const _resultsBefore = engine.search('user1', 'pattern testing');
 
       // Age it slightly
       const eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;

@@ -6,20 +6,16 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { runSubAgent, createDelegationTool } from '../src/index.js';
-import type { Provider, Tool, Message, LLMResponse } from '@tinyclaw/types';
-import type { ProviderOrchestrator } from '@tinyclaw/router';
-import type { ProviderRegistry } from '@tinyclaw/router';
+import type { ProviderOrchestrator, ProviderRegistry } from '@tinyclaw/router';
+import type { LLMResponse, Message, Provider, Tool } from '@tinyclaw/types';
+import { createDelegationTool, runSubAgent } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
 // ---------------------------------------------------------------------------
 
 /** Create a mock provider that returns the given responses in sequence. */
-function createMockProvider(
-  responses: LLMResponse[],
-  id = 'mock-provider',
-): Provider {
+function createMockProvider(responses: LLMResponse[], id = 'mock-provider'): Provider {
   let callIndex = 0;
   return {
     id,
@@ -111,9 +107,7 @@ describe('runSubAgent', () => {
     const provider = createMockProvider([
       {
         type: 'tool_calls',
-        toolCalls: [
-          { id: 'tc-1', name: 'heartware_read', arguments: { filename: 'FRIEND.md' } },
-        ],
+        toolCalls: [{ id: 'tc-1', name: 'heartware_read', arguments: { filename: 'FRIEND.md' } }],
       },
       { type: 'text', content: 'Based on the file, here is the summary.' },
     ]);
@@ -160,9 +154,7 @@ describe('runSubAgent', () => {
     const provider = createMockProvider(
       Array.from({ length: 15 }, () => ({
         type: 'tool_calls' as const,
-        toolCalls: [
-          { id: `tc-${Math.random()}`, name: 'heartware_list', arguments: {} },
-        ],
+        toolCalls: [{ id: `tc-${Math.random()}`, name: 'heartware_list', arguments: {} }],
       })),
     );
 
@@ -209,9 +201,7 @@ describe('runSubAgent', () => {
     const provider = createMockProvider([
       {
         type: 'tool_calls',
-        toolCalls: [
-          { id: 'tc-1', name: 'nonexistent_tool', arguments: {} },
-        ],
+        toolCalls: [{ id: 'tc-1', name: 'nonexistent_tool', arguments: {} }],
       },
       { type: 'text', content: 'Tool was not found, proceeding without it.' },
     ]);
@@ -240,9 +230,7 @@ describe('runSubAgent', () => {
     const provider = createMockProvider([
       {
         type: 'tool_calls',
-        toolCalls: [
-          { id: 'tc-1', name: 'failing_tool', arguments: {} },
-        ],
+        toolCalls: [{ id: 'tc-1', name: 'failing_tool', arguments: {} }],
       },
       { type: 'text', content: 'Recovered from tool error.' },
     ]);
@@ -282,9 +270,7 @@ describe('runSubAgent', () => {
   });
 
   test('handles empty content in text response', async () => {
-    const provider = createMockProvider([
-      { type: 'text', content: '' },
-    ]);
+    const provider = createMockProvider([{ type: 'text', content: '' }]);
 
     const result = await runSubAgent({
       task: 'Empty response task',
@@ -361,8 +347,8 @@ describe('createDelegationTool', () => {
       createMockTool('heartware_list'),
       createMockTool('heartware_write'), // NOT in default safe set
       createMockTool('memory_recall'),
-      createMockTool('memory_add'),       // NOT in default safe set
-      createMockTool('config_set'),       // NOT in default safe set
+      createMockTool('memory_add'), // NOT in default safe set
+      createMockTool('config_set'), // NOT in default safe set
     ];
 
     const tool = createDelegationTool({ orchestrator, allTools });

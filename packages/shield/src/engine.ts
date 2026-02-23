@@ -14,14 +14,14 @@
 
 import { logger } from '@tinyclaw/logger';
 import type {
+  ShieldAction,
+  ShieldDecision,
   ShieldEngine,
   ShieldEvent,
-  ShieldDecision,
-  ShieldAction,
   ThreatEntry,
 } from '@tinyclaw/types';
-import { parseShieldContent } from './parser.js';
 import { matchEvent } from './matcher.js';
+import { parseShieldContent } from './parser.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -71,7 +71,7 @@ export function createShieldEngine(content: string): ShieldEngine {
 
   logger.info('Shield engine initialized', {
     activeThreats: threats.length,
-    threatIds: threats.map(t => t.id),
+    threatIds: threats.map((t) => t.id),
   });
 
   return {

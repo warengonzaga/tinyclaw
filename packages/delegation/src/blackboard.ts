@@ -17,7 +17,7 @@
  */
 
 import type { BlackboardEntry } from '@tinyclaw/types';
-import type { DelegationStore, DelegationIntercom } from './store.js';
+import type { DelegationIntercom, DelegationStore } from './store.js';
 
 // ---------------------------------------------------------------------------
 // Types

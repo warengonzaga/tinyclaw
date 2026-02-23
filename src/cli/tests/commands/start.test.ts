@@ -6,7 +6,7 @@
  * to test control-flow logic in isolation.
  */
 
-import { afterEach, beforeAll, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 // ── Mock @tinyclaw/secrets ───────────────────────────────────────────
 
@@ -118,10 +118,18 @@ mock.module('@tinyclaw/queue', () => ({
 
 mock.module('@tinyclaw/logger', () => ({
   logger: {
-    log: mock((...args: any[]) => { console.log(...args); }),
-    info: mock((...args: any[]) => { console.log(...args); }),
-    warn: mock((...args: any[]) => { console.log(...args); }),
-    error: mock((...args: any[]) => { console.log(...args); }),
+    log: mock((...args: any[]) => {
+      console.log(...args);
+    }),
+    info: mock((...args: any[]) => {
+      console.log(...args);
+    }),
+    warn: mock((...args: any[]) => {
+      console.log(...args);
+    }),
+    error: mock((...args: any[]) => {
+      console.log(...args);
+    }),
     debug: mock(() => {}),
   },
   setLogMode: mock(() => {}),
@@ -154,7 +162,7 @@ mock.module('@tinyclaw/heartware', () => ({
   loadShieldContent: mock(() => Promise.resolve('')),
   parseSeed: mock((input: unknown) => {
     const n = Number(input);
-    return isNaN(n) ? undefined : n;
+    return Number.isNaN(n) ? undefined : n;
   }),
 }));
 
@@ -361,7 +369,6 @@ describe('startCommand', () => {
     await startCommand();
     expect(mockGetStats).toHaveBeenCalled();
   });
-
 });
 
 describe('startCommand — missing API key', () => {

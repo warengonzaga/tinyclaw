@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { createHybridMatcher } from '../src/index.js';
 
 describe('HybridMatcher', () => {
@@ -114,8 +114,8 @@ describe('HybridMatcher', () => {
 
     const result = matcher.findBest('research data analyst', candidates);
     expect(result).not.toBeNull();
-    expect(result!.id).toBe('2');
-    expect(result!.result.score).toBeGreaterThan(0.3);
+    expect(result?.id).toBe('2');
+    expect(result?.result.score).toBeGreaterThan(0.3);
   });
 
   it('findBest returns null when no candidate exceeds minScore', () => {
@@ -146,7 +146,7 @@ describe('HybridMatcher', () => {
     const result = matcher.findBest('data analysis python', candidates);
     expect(result).not.toBeNull();
     // Should pick candidate 1 (most overlap) or 2 (close match)
-    expect(['1', '2']).toContain(result!.id);
+    expect(['1', '2']).toContain(result?.id);
   });
 
   // -----------------------------------------------------------------------
@@ -210,9 +210,7 @@ describe('HybridMatcher', () => {
     const strict = createHybridMatcher({ minScore: 0.8 });
     const lenient = createHybridMatcher({ minScore: 0.1 });
 
-    const candidates = [
-      { id: '1', text: 'software developer python' },
-    ];
+    const candidates = [{ id: '1', text: 'software developer python' }];
 
     // "software engineer python" has synonym match but not exact
     const strictResult = strict.findBest('software engineer python', candidates);
@@ -287,10 +285,7 @@ describe('HybridMatcher', () => {
     const matcher = createHybridMatcher();
 
     // These should NOT match well
-    const result = matcher.score(
-      'Quantum Physics Researcher',
-      'Creative Poetry Writer',
-    );
+    const result = matcher.score('Quantum Physics Researcher', 'Creative Poetry Writer');
     expect(result.score).toBeLessThan(0.2);
   });
 });

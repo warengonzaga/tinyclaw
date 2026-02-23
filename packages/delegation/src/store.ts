@@ -7,12 +7,12 @@
  */
 
 import type {
-  Message,
-  SubAgentRecord,
-  RoleTemplate,
   BackgroundTask,
-  TaskMetricRecord,
   BlackboardEntry,
+  Message,
+  RoleTemplate,
+  SubAgentRecord,
+  TaskMetricRecord,
 } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
@@ -38,7 +38,12 @@ export interface DelegationStore {
 
   // Background tasks
   saveBackgroundTask(record: BackgroundTask): void;
-  updateBackgroundTask(id: string, status: string, result: string | null, completedAt: number | null): void;
+  updateBackgroundTask(
+    id: string,
+    status: string,
+    result: string | null,
+    completedAt: number | null,
+  ): void;
   getUndeliveredTasks(userId: string): BackgroundTask[];
   getUserBackgroundTasks(userId: string): BackgroundTask[];
   getBackgroundTask(id: string): BackgroundTask | null;

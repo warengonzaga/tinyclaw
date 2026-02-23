@@ -19,10 +19,7 @@ const CORRECTION_PATTERNS = [
   /(remember|note) that i (.+)/i,
 ];
 
-export function detectSignals(
-  userMessage: string,
-  assistantMessage: string
-): Signal[] {
+export function detectSignals(userMessage: string, assistantMessage: string): Signal[] {
   const signals: Signal[] = [];
   const lower = userMessage.toLowerCase().trim();
 

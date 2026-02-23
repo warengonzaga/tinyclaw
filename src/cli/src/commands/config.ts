@@ -23,10 +23,10 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigManager } from '@tinyclaw/config';
 import {
-  DEFAULT_MODEL,
-  DEFAULT_BASE_URL,
-  BUILTIN_MODELS,
   BUILTIN_MODEL_TAGS,
+  BUILTIN_MODELS,
+  DEFAULT_BASE_URL,
+  DEFAULT_MODEL,
 } from '@tinyclaw/core';
 import { theme } from '../ui/theme.js';
 
@@ -40,15 +40,27 @@ type LogLevel = (typeof LOG_LEVELS)[number];
 
 function printUsage(): void {
   console.log();
-  console.log('  ' + theme.label('Usage'));
-  console.log(`    ${theme.cmd('tinyclaw config model')}                 Show current model configuration`);
-  console.log(`    ${theme.cmd('tinyclaw config model list')}            List available built-in models`);
-  console.log(`    ${theme.cmd('tinyclaw config model builtin')} <tag>   Switch the built-in model`);
-  console.log(`    ${theme.cmd('tinyclaw config model primary')}         Show current primary provider`);
-  console.log(`    ${theme.cmd('tinyclaw config model primary clear')}   Remove primary provider override`);
+  console.log(`  ${theme.label('Usage')}`);
+  console.log(
+    `    ${theme.cmd('tinyclaw config model')}                 Show current model configuration`,
+  );
+  console.log(
+    `    ${theme.cmd('tinyclaw config model list')}            List available built-in models`,
+  );
+  console.log(
+    `    ${theme.cmd('tinyclaw config model builtin')} <tag>   Switch the built-in model`,
+  );
+  console.log(
+    `    ${theme.cmd('tinyclaw config model primary')}         Show current primary provider`,
+  );
+  console.log(
+    `    ${theme.cmd('tinyclaw config model primary clear')}   Remove primary provider override`,
+  );
   console.log();
   console.log(`    ${theme.cmd('tinyclaw config logging')}               Show current log level`);
-  console.log(`    ${theme.cmd('tinyclaw config logging')} <level>       Set log level (debug|info|warn|error|silent)`);
+  console.log(
+    `    ${theme.cmd('tinyclaw config logging')} <level>       Set log level (debug|info|warn|error|silent)`,
+  );
   console.log();
 }
 
@@ -61,24 +73,29 @@ function printUsage(): void {
  */
 async function showModelConfig(configManager: ConfigManager): Promise<void> {
   const builtinModel = configManager.get<string>('providers.starterBrain.model') ?? DEFAULT_MODEL;
-  const builtinBaseUrl = configManager.get<string>('providers.starterBrain.baseUrl') ?? DEFAULT_BASE_URL;
+  const builtinBaseUrl =
+    configManager.get<string>('providers.starterBrain.baseUrl') ?? DEFAULT_BASE_URL;
 
   const primaryModel = configManager.get<string>('providers.primary.model');
   const primaryBaseUrl = configManager.get<string>('providers.primary.baseUrl');
 
   console.log();
-  console.log('  ' + theme.label('Model Configuration'));
+  console.log(`  ${theme.label('Model Configuration')}`);
   console.log();
 
   // Built-in section
-  console.log(`  ${theme.label('Built-in')} ${theme.dim('(Ollama Cloud - always available as fallback)')}`);
+  console.log(
+    `  ${theme.label('Built-in')} ${theme.dim('(Ollama Cloud - always available as fallback)')}`,
+  );
   console.log(`    Model    : ${theme.brand(builtinModel)}`);
   console.log(`    Base URL : ${theme.dim(builtinBaseUrl)}`);
   console.log();
 
   // Primary section
   if (primaryModel) {
-    console.log(`  ${theme.label('Primary')} ${theme.dim('(overrides built-in as default provider)')}`);
+    console.log(
+      `  ${theme.label('Primary')} ${theme.dim('(overrides built-in as default provider)')}`,
+    );
     console.log(`    Model    : ${theme.brand(primaryModel)}`);
     if (primaryBaseUrl) {
       console.log(`    Base URL : ${theme.dim(primaryBaseUrl)}`);
@@ -91,7 +108,9 @@ async function showModelConfig(configManager: ConfigManager): Promise<void> {
     console.log(`    No primary provider set. Built-in is used as the default.`);
     console.log();
     console.log(`  ${theme.dim('To add a primary provider, install a provider plugin and')}`);
-    console.log(`  ${theme.dim('ask Tiny Claw to set it as primary. You can also tell Tiny Claw:')}`);
+    console.log(
+      `  ${theme.dim('ask Tiny Claw to set it as primary. You can also tell Tiny Claw:')}`,
+    );
     console.log(`  ${theme.dim('"list my providers" or "set OpenAI as my primary provider"')}`);
   }
 
@@ -105,7 +124,7 @@ async function listModels(configManager: ConfigManager): Promise<void> {
   const currentModel = configManager.get<string>('providers.starterBrain.model') ?? DEFAULT_MODEL;
 
   console.log();
-  console.log('  ' + theme.label('Available Built-in Models'));
+  console.log(`  ${theme.label('Available Built-in Models')}`);
   console.log();
 
   for (const model of BUILTIN_MODELS) {
@@ -191,7 +210,7 @@ async function handlePrimary(configManager: ConfigManager, action?: string): Pro
 
   console.log();
   if (primaryModel) {
-    console.log('  ' + theme.label('Primary Provider'));
+    console.log(`  ${theme.label('Primary Provider')}`);
     console.log();
     console.log(`    Model      : ${theme.brand(primaryModel)}`);
     if (primaryBaseUrl) {
@@ -201,7 +220,9 @@ async function handlePrimary(configManager: ConfigManager, action?: string): Pro
       console.log(`    API Key    : ${theme.dim(`stored as "${primaryApiKeyRef}"`)}`);
     }
     console.log();
-    console.log(`  ${theme.dim('Clear with:')} ${theme.cmd('tinyclaw config model primary clear')}`);
+    console.log(
+      `  ${theme.dim('Clear with:')} ${theme.cmd('tinyclaw config model primary clear')}`,
+    );
   } else {
     console.log(`  ${theme.label('Primary Provider')} ${theme.dim('(not configured)')}`);
     console.log();
@@ -226,7 +247,7 @@ async function showLogLevel(configManager: ConfigManager): Promise<void> {
   const current = configManager.get<string>('logging.level') ?? 'info';
 
   console.log();
-  console.log('  ' + theme.label('Log Level'));
+  console.log(`  ${theme.label('Log Level')}`);
   console.log();
 
   for (const level of LOG_LEVELS) {
@@ -238,7 +259,9 @@ async function showLogLevel(configManager: ConfigManager): Promise<void> {
 
   console.log();
   console.log(`  ${theme.dim('Change with:')} ${theme.cmd('tinyclaw config logging <level>')}`);
-  console.log(`  ${theme.dim('Override per session with:')} ${theme.cmd('tinyclaw start --verbose')}`);
+  console.log(
+    `  ${theme.dim('Override per session with:')} ${theme.cmd('tinyclaw start --verbose')}`,
+  );
   console.log();
 }
 

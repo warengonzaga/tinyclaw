@@ -13,17 +13,17 @@
 
 import { logger } from '@tinyclaw/logger';
 import type { Provider } from '@tinyclaw/types';
+import { deduplicateMessages } from './dedup.js';
+import { preCompress } from './rules.js';
+import { generateTiers } from './tiers.js';
+import { estimateTokens } from './tokens.js';
 import type {
-  CompactorStore,
+  CompactionResult,
   CompactorConfig,
   CompactorEngine,
-  CompactionResult,
+  CompactorStore,
 } from './types.js';
 import { DEFAULT_COMPACTOR_CONFIG } from './types.js';
-import { estimateTokens } from './tokens.js';
-import { preCompress } from './rules.js';
-import { deduplicateMessages } from './dedup.js';
-import { generateTiers } from './tiers.js';
 
 // ---------------------------------------------------------------------------
 // Factory
@@ -57,10 +57,7 @@ export function createCompactor(
   };
 
   return {
-    async compactIfNeeded(
-      userId: string,
-      provider: Provider,
-    ): Promise<CompactionResult | null> {
+    async compactIfNeeded(userId: string, provider: Provider): Promise<CompactionResult | null> {
       const count = db.getMessageCount(userId);
       if (count < cfg.threshold) return null;
 
@@ -84,18 +81,13 @@ export function createCompactor(
       // 3. Deduplicate near-identical messages
       let dedupGroupsRemoved = 0;
       if (cfg.dedup.enabled) {
-        const dedupResult = deduplicateMessages(
-          oldMessages,
-          cfg.dedup.similarityThreshold,
-        );
+        const dedupResult = deduplicateMessages(oldMessages, cfg.dedup.similarityThreshold);
         oldMessages = dedupResult.messages;
         dedupGroupsRemoved = dedupResult.groupsRemoved;
       }
 
       // 4. Estimate tokens of cleaned content
-      const summaryContent = oldMessages
-        .map((m) => `${m.role}: ${m.content}`)
-        .join('\n');
+      const summaryContent = oldMessages.map((m) => `${m.role}: ${m.content}`).join('\n');
       const tokensBefore = estimateTokens(summaryContent);
 
       // 5. Send to LLM for summarization

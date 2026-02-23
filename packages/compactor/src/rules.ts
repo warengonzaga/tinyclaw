@@ -22,27 +22,44 @@
 // ---------------------------------------------------------------------------
 
 // Matches most emoji: emoticons, dingbats, symbols, skin tones, ZWJ sequences
+// biome-ignore lint/suspicious/noMisleadingCharacterClass: intentional emoji regex with variation selectors and combining characters
 const EMOJI_REGEX =
+  // biome-ignore lint/suspicious/noMisleadingCharacterClass: intentional emoji regex with variation selectors and combining characters
   /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu;
 
 // Markdown header
 const HEADER_RE = /^(#{1,6})\s+(.*)/;
 
 // Table separator line
-const TABLE_SEP_RE = /^[\s|:\-]+$/;
+const TABLE_SEP_RE = /^[\s|:-]+$/;
 
 // Bullet line
 const BULLET_RE = /^(\s*[-*+]\s+)(.*)/;
 
 // Chinese fullwidth punctuation -> ASCII equivalents (each saves ~1 token)
 const ZH_PUNCT_MAP: Record<string, string> = {
-  '\uFF0C': ',', '\u3002': '.', '\uFF1B': ';', '\uFF1A': ':', '\uFF01': '!', '\uFF1F': '?',
-  '\u201C': '"', '\u201D': '"', '\u2018': "'", '\u2019': "'",
-  '\uFF08': '(', '\uFF09': ')', '\u3010': '[', '\u3011': ']',
-  '\u3001': ',', '\u2026': '...', '\uFF5E': '~',
+  '\uFF0C': ',',
+  '\u3002': '.',
+  '\uFF1B': ';',
+  '\uFF1A': ':',
+  '\uFF01': '!',
+  '\uFF1F': '?',
+  '\u201C': '"',
+  '\u201D': '"',
+  '\u2018': "'",
+  '\u2019': "'",
+  '\uFF08': '(',
+  '\uFF09': ')',
+  '\u3010': '[',
+  '\u3011': ']',
+  '\u3001': ',',
+  '\u2026': '...',
+  '\uFF5E': '~',
 };
 const ZH_PUNCT_RE = new RegExp(
-  Object.keys(ZH_PUNCT_MAP).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+  Object.keys(ZH_PUNCT_MAP)
+    .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|'),
   'g',
 );
 
@@ -65,7 +82,10 @@ export function normalizeCjkPunctuation(text: string): string {
  * Remove emoji characters from text.
  */
 export function stripEmoji(text: string): string {
-  return text.replace(EMOJI_REGEX, '').replace(/\s{2,}/g, ' ').trim();
+  return text
+    .replace(EMOJI_REGEX, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 /**
@@ -159,7 +179,7 @@ export function removeEmptySections(text: string): string {
     const body = sec.bodyLines.join('\n').trim();
     if (!sec.header && !body) continue;
     if (sec.header && !body && !hasChild[i]) continue; // empty section, no children
-    if (sec.header) result.push('#'.repeat(sec.level) + ' ' + sec.header);
+    if (sec.header) result.push(`${'#'.repeat(sec.level)} ${sec.header}`);
     if (body) result.push(body);
     result.push(''); // blank line between sections
   }
@@ -182,16 +202,20 @@ export function compressMarkdownTable(text: string): string {
 
   while (i < lines.length) {
     const line = lines[i];
-    if (
-      line.includes('|') &&
-      i + 1 < lines.length &&
-      TABLE_SEP_RE.test(lines[i + 1].trim())
-    ) {
-      const headers = line.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+    if (line.includes('|') && i + 1 < lines.length && TABLE_SEP_RE.test(lines[i + 1].trim())) {
+      const headers = line
+        .trim()
+        .replace(/^\||\|$/g, '')
+        .split('|')
+        .map((c) => c.trim());
       i += 2; // skip header + separator
       const rows: string[][] = [];
       while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
-        const cells = lines[i].trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+        const cells = lines[i]
+          .trim()
+          .replace(/^\||\|$/g, '')
+          .split('|')
+          .map((c) => c.trim());
         rows.push(cells);
         i++;
       }
@@ -199,7 +223,7 @@ export function compressMarkdownTable(text: string): string {
       if (headers.length >= 5) {
         // Wide tables: preserve rows without header/separator
         for (const row of rows) {
-          result.push('| ' + row.join(' | ') + ' |');
+          result.push(`| ${row.join(' | ')} |`);
         }
       } else if (headers.length === 2) {
         // 2-column: key: value format
@@ -258,7 +282,7 @@ function similarityRatio(a: string, b: string): number {
     intersection += Math.min(countA, bigramsB.get(bg) ?? 0);
   }
 
-  const total = (a.length - 1) + (b.length - 1);
+  const total = a.length - 1 + (b.length - 1);
   return total === 0 ? 0 : (2 * intersection) / total;
 }
 
