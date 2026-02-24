@@ -239,7 +239,9 @@ describe('parseShieldContent', () => {
   });
 
   it('should handle null/undefined gracefully', () => {
+    // biome-ignore lint/suspicious/noExplicitAny: intentionally testing invalid input types
     expect(parseShieldContent(null as any)).toEqual([]);
+    // biome-ignore lint/suspicious/noExplicitAny: intentionally testing invalid input types
     expect(parseShieldContent(undefined as any)).toEqual([]);
   });
 });

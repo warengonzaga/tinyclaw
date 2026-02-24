@@ -147,7 +147,10 @@ function evaluateCondition(
       const openIdx = condition.indexOf('(');
       const closeIdx = openIdx >= 0 ? condition.indexOf(')', openIdx + 1) : -1;
       if (openIdx >= 0 && closeIdx > openIdx) {
-        const keywords = condition.slice(openIdx + 1, closeIdx).split(',').map((k) => k.trim().toLowerCase());
+        const keywords = condition
+          .slice(openIdx + 1, closeIdx)
+          .split(',')
+          .map((k) => k.trim().toLowerCase());
         for (const keyword of keywords) {
           if (keyword && argsStr.includes(keyword)) {
             return { matchedOn: 'tool.args', matchValue: keyword };
@@ -319,7 +322,7 @@ function evaluateCondition(
           }
         }
       }
-      return { matchedOn: 'tool.call', matchValue: event.toolName! };
+      return { matchedOn: 'tool.call', matchValue: event.toolName ?? '' };
     }
     return null;
   }
