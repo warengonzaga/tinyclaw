@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'path';
+import { join, resolve } from 'node:path';
 
 const CLI_ENTRY = resolve(__dirname, '../src/index.ts');
 

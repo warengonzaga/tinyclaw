@@ -182,8 +182,8 @@ describe('delegate_task', () => {
 
     // Task stats updated by background runner
     const updated = result.lifecycle.get(agents[0].id);
-    expect(updated!.totalTasks).toBe(1);
-    expect(updated!.successfulTasks).toBe(1);
+    expect(updated?.totalTasks).toBe(1);
+    expect(updated?.successfulTasks).toBe(1);
 
     db.close();
   });
@@ -220,7 +220,7 @@ describe('delegate_task', () => {
     await Bun.sleep(400);
 
     const updated = result.lifecycle.get(agents[0].id);
-    expect(updated!.totalTasks).toBe(2);
+    expect(updated?.totalTasks).toBe(2);
 
     db.close();
   });
@@ -564,7 +564,7 @@ describe('delegate_to_existing', () => {
 
     // Agent should have 2 completed tasks
     const updated = result.lifecycle.get(agentId);
-    expect(updated!.totalTasks).toBe(2);
+    expect(updated?.totalTasks).toBe(2);
 
     db.close();
   });

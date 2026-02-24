@@ -7,7 +7,7 @@
  * filesystem side-effects.
  */
 
-import { afterEach, beforeEach, describe, expect, jest, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 // ── Mock @clack/prompts ──────────────────────────────────────────────
 
@@ -153,7 +153,7 @@ mock.module('child_process', () => ({
 
 const mockParseSeed = mock((input: unknown) => {
   const n = Number(input);
-  if (!input || isNaN(n)) return 42;
+  if (!input || Number.isNaN(n)) return 42;
   return n;
 });
 const mockGenerateRandomSeed = mock(() => 42);
@@ -250,7 +250,7 @@ beforeEach(() => {
   mockSha256.mockImplementation(() => Promise.resolve('abc123'));
   mockParseSeed.mockImplementation((input: unknown) => {
     const n = Number(input);
-    if (!input || isNaN(n)) return 42;
+    if (!input || Number.isNaN(n)) return 42;
     return n;
   });
   mockGenerateRandomSeed.mockImplementation(() => 42);
@@ -331,7 +331,7 @@ describe('setupCommand — existing configuration', () => {
     let callCount = 0;
     mockConfirm.mockImplementation(() => {
       callCount++;
-      return callCount === 1 ? true : false;
+      return callCount === 1;
     });
 
     await setupCommand();
@@ -344,7 +344,7 @@ describe('setupCommand — existing configuration', () => {
     let callCount = 0;
     mockConfirm.mockImplementation(() => {
       callCount++;
-      return callCount === 1 ? true : false;
+      return callCount === 1;
     });
 
     await setupCommand();

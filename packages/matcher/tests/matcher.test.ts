@@ -114,8 +114,8 @@ describe('HybridMatcher', () => {
 
     const result = matcher.findBest('research data analyst', candidates);
     expect(result).not.toBeNull();
-    expect(result!.id).toBe('2');
-    expect(result!.result.score).toBeGreaterThan(0.3);
+    expect(result?.id).toBe('2');
+    expect(result?.result.score).toBeGreaterThan(0.3);
   });
 
   it('findBest returns null when no candidate exceeds minScore', () => {
@@ -146,7 +146,7 @@ describe('HybridMatcher', () => {
     const result = matcher.findBest('data analysis python', candidates);
     expect(result).not.toBeNull();
     // Should pick candidate 1 (most overlap) or 2 (close match)
-    expect(['1', '2']).toContain(result!.id);
+    expect(['1', '2']).toContain(result?.id);
   });
 
   // -----------------------------------------------------------------------

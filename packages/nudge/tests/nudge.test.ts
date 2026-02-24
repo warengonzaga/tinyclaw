@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import type {
   ChannelSender,
   NudgeEngine,
@@ -371,7 +371,7 @@ describe('wireNudgeToIntercom', () => {
     const intercom = {
       on(topic: string, handler: (event: any) => void) {
         if (!handlers.has(topic)) handlers.set(topic, []);
-        handlers.get(topic)!.push(handler);
+        handlers.get(topic)?.push(handler);
         return () => {
           const list = handlers.get(topic);
           if (list) {
@@ -408,7 +408,7 @@ describe('wireNudgeToIntercom', () => {
     const intercom = {
       on(topic: string, handler: (event: any) => void) {
         if (!handlers.has(topic)) handlers.set(topic, []);
-        handlers.get(topic)!.push(handler);
+        handlers.get(topic)?.push(handler);
         return () => {};
       },
     };

@@ -8,10 +8,10 @@
  * - Non-blocking failures (logs to console if file write fails)
  */
 
+import { createHash } from 'node:crypto';
+import { appendFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ShieldDecision } from '@tinyclaw/types';
-import { createHash } from 'crypto';
-import { appendFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
 import type { AuditLogEntry } from './types.js';
 
 /**
@@ -34,7 +34,7 @@ export class AuditLogger {
     // Ensure audit directory exists
     try {
       mkdirSync(auditDir, { recursive: true });
-    } catch (err) {
+    } catch (_err) {
       // Directory might already exist - this is fine
     }
   }
@@ -46,11 +46,10 @@ export class AuditLogger {
    * but the original operation is not blocked
    */
   log(entry: AuditLogEntry): void {
-    const logLine =
-      JSON.stringify({
-        ...entry,
-        timestamp: entry.timestamp || new Date().toISOString(),
-      }) + '\n';
+    const logLine = `${JSON.stringify({
+      ...entry,
+      timestamp: entry.timestamp || new Date().toISOString(),
+    })}\n`;
 
     try {
       // Append-only write with explicit append flag
@@ -148,20 +147,19 @@ export class AuditLogger {
     outcome: 'blocked' | 'approved' | 'denied' | 'logged',
     userId?: string,
   ): void {
-    const logLine =
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        type: 'shield',
-        action: decision.action,
-        outcome,
-        scope: decision.scope,
-        threatId: decision.threatId,
-        fingerprint: decision.fingerprint,
-        matchedOn: decision.matchedOn,
-        matchValue: decision.matchValue,
-        reason: decision.reason,
-        userId: userId ?? 'unknown',
-      }) + '\n';
+    const logLine = `${JSON.stringify({
+      timestamp: new Date().toISOString(),
+      type: 'shield',
+      action: decision.action,
+      outcome,
+      scope: decision.scope,
+      threatId: decision.threatId,
+      fingerprint: decision.fingerprint,
+      matchedOn: decision.matchedOn,
+      matchValue: decision.matchValue,
+      reason: decision.reason,
+      userId: userId ?? 'unknown',
+    })}\n`;
 
     try {
       appendFileSync(this.auditLogPath, logLine, {

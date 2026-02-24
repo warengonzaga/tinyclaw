@@ -40,7 +40,7 @@ type LogLevel = (typeof LOG_LEVELS)[number];
 
 function printUsage(): void {
   console.log();
-  console.log('  ' + theme.label('Usage'));
+  console.log(`  ${theme.label('Usage')}`);
   console.log(
     `    ${theme.cmd('tinyclaw config model')}                 Show current model configuration`,
   );
@@ -80,7 +80,7 @@ async function showModelConfig(configManager: ConfigManager): Promise<void> {
   const primaryBaseUrl = configManager.get<string>('providers.primary.baseUrl');
 
   console.log();
-  console.log('  ' + theme.label('Model Configuration'));
+  console.log(`  ${theme.label('Model Configuration')}`);
   console.log();
 
   // Built-in section
@@ -124,7 +124,7 @@ async function listModels(configManager: ConfigManager): Promise<void> {
   const currentModel = configManager.get<string>('providers.starterBrain.model') ?? DEFAULT_MODEL;
 
   console.log();
-  console.log('  ' + theme.label('Available Built-in Models'));
+  console.log(`  ${theme.label('Available Built-in Models')}`);
   console.log();
 
   for (const model of BUILTIN_MODELS) {
@@ -210,7 +210,7 @@ async function handlePrimary(configManager: ConfigManager, action?: string): Pro
 
   console.log();
   if (primaryModel) {
-    console.log('  ' + theme.label('Primary Provider'));
+    console.log(`  ${theme.label('Primary Provider')}`);
     console.log();
     console.log(`    Model      : ${theme.brand(primaryModel)}`);
     if (primaryBaseUrl) {
@@ -247,7 +247,7 @@ async function showLogLevel(configManager: ConfigManager): Promise<void> {
   const current = configManager.get<string>('logging.level') ?? 'info';
 
   console.log();
-  console.log('  ' + theme.label('Log Level'));
+  console.log(`  ${theme.label('Log Level')}`);
   console.log();
 
   for (const level of LOG_LEVELS) {

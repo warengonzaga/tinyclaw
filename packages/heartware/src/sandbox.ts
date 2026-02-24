@@ -12,7 +12,7 @@
  * - Validates file sizes
  */
 
-import { normalize, relative, resolve } from 'path';
+import { normalize, relative, resolve } from 'node:path';
 import { HeartwareSecurityError } from './errors.js';
 import type {
   ContentValidationResult,

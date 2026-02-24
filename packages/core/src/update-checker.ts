@@ -123,7 +123,7 @@ export function isNewerVersion(current: string, latest: string): boolean {
       .split('.')
       .map((s) => {
         const n = Number(s);
-        return isNaN(n) ? 0 : n;
+        return Number.isNaN(n) ? 0 : n;
       })
       .slice(0, 3);
   const [cMaj = 0, cMin = 0, cPat = 0] = parse(current);

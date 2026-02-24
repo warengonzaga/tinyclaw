@@ -14,12 +14,12 @@
  * Uses @clack/prompts for interactive confirmation.
  */
 
+import { access, readFile, rm } from 'node:fs/promises';
+import { homedir, platform } from 'node:os';
+import { join } from 'node:path';
 import * as p from '@clack/prompts';
 import { generateSoul, parseSeed } from '@tinyclaw/heartware';
 import { setLogMode } from '@tinyclaw/logger';
-import { access, readFile, rm } from 'fs/promises';
-import { homedir, platform } from 'os';
-import { join } from 'path';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
 
@@ -104,7 +104,7 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
   if (!dataExists && (!flags.force || !secretsExist)) {
     p.intro(theme.brand('Purge'));
     p.log.info("Nothing to purge — Tiny Claw hasn't been set up yet.");
-    p.outro('Run ' + theme.cmd('tinyclaw setup') + ' to get started.');
+    p.outro(`Run ${theme.cmd('tinyclaw setup')} to get started.`);
     return;
   }
 
@@ -260,5 +260,5 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
     return;
   }
 
-  p.outro(theme.success('Done!') + ' Run ' + theme.cmd('tinyclaw setup') + ' to reconfigure.');
+  p.outro(`${theme.success('Done!')} Run ${theme.cmd('tinyclaw setup')} to reconfigure.`);
 }

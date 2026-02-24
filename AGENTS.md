@@ -29,6 +29,8 @@ Reference: https://github.com/wgtechlabs/clean-commit
 
 ## Rules
 
+- **Every single commit** must follow this format — including the very first commit (e.g. initial plan, scaffold, or setup)
+- Never use plain messages like `"Initial plan"` or `"WIP"` — always use the Clean Commit format
 - Use lowercase for type
 - Use `!` immediately after type (no space) to signal a breaking change — only for `new`, `update`, `remove`, `security`
 - Use present tense ("add" not "added")

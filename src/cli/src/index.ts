@@ -23,10 +23,10 @@ import { theme } from './ui/theme.js';
 
 function showHelp(): void {
   showBanner();
-  console.log('  ' + theme.label('Usage'));
+  console.log(`  ${theme.label('Usage')}`);
   console.log(`    ${theme.cmd('tinyclaw')} ${theme.dim('<command>')}`);
   console.log();
-  console.log('  ' + theme.label('Commands'));
+  console.log(`  ${theme.label('Commands')}`);
   console.log(
     `    ${theme.cmd('setup')}    Interactive setup wizard (use --web for browser onboarding)`,
   );
@@ -38,7 +38,7 @@ function showHelp(): void {
     `    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`,
   );
   console.log();
-  console.log('  ' + theme.label('Options'));
+  console.log(`  ${theme.label('Options')}`);
   console.log(`    ${theme.dim('--verbose')}       Show debug-level logs during start`);
   console.log(`    ${theme.dim('--version, -v')}   Show version number`);
   console.log(`    ${theme.dim('--help, -h')}      Show this help message`);

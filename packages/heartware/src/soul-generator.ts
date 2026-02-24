@@ -14,7 +14,7 @@
  * Additional hash rounds with domain separation provide discrete selections.
  */
 
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import {
   AMBIGUITY_STYLES,
   AWAKENING_EVENTS,

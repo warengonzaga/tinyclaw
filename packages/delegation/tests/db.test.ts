@@ -37,14 +37,14 @@ describe('sub_agents table', () => {
 
     const record = db.getSubAgent('sa-1');
     expect(record).not.toBeNull();
-    expect(record!.id).toBe('sa-1');
-    expect(record!.userId).toBe('user-1');
-    expect(record!.role).toBe('Research Analyst');
-    expect(record!.toolsGranted).toEqual(['heartware_read', 'memory_recall']);
-    expect(record!.tierPreference).toBe('complex');
-    expect(record!.status).toBe('active');
-    expect(record!.performanceScore).toBe(0.5);
-    expect(record!.templateId).toBeNull();
+    expect(record?.id).toBe('sa-1');
+    expect(record?.userId).toBe('user-1');
+    expect(record?.role).toBe('Research Analyst');
+    expect(record?.toolsGranted).toEqual(['heartware_read', 'memory_recall']);
+    expect(record?.tierPreference).toBe('complex');
+    expect(record?.status).toBe('active');
+    expect(record?.performanceScore).toBe(0.5);
+    expect(record?.templateId).toBeNull();
 
     db.close();
   });
@@ -163,10 +163,10 @@ describe('sub_agents table', () => {
     });
 
     const updated = db.getSubAgent('sa-1');
-    expect(updated!.status).toBe('soft_deleted');
-    expect(updated!.performanceScore).toBe(0.8);
-    expect(updated!.totalTasks).toBe(5);
-    expect(updated!.successfulTasks).toBe(4);
+    expect(updated?.status).toBe('soft_deleted');
+    expect(updated?.performanceScore).toBe(0.8);
+    expect(updated?.totalTasks).toBe(5);
+    expect(updated?.successfulTasks).toBe(4);
 
     db.close();
   });
@@ -247,9 +247,9 @@ describe('role_templates table', () => {
 
     const template = db.getRoleTemplate('rt-1');
     expect(template).not.toBeNull();
-    expect(template!.name).toBe('Research Analyst');
-    expect(template!.defaultTools).toEqual(['heartware_read']);
-    expect(template!.tags).toEqual(['research', 'analysis']);
+    expect(template?.name).toBe('Research Analyst');
+    expect(template?.defaultTools).toEqual(['heartware_read']);
+    expect(template?.tags).toEqual(['research', 'analysis']);
 
     db.close();
   });
@@ -308,10 +308,10 @@ describe('role_templates table', () => {
     });
 
     const updated = db.getRoleTemplate('rt-1');
-    expect(updated!.name).toBe('Technical Writer');
-    expect(updated!.tags).toEqual(['writing', 'technical']);
-    expect(updated!.timesUsed).toBe(3);
-    expect(updated!.avgPerformance).toBe(0.85);
+    expect(updated?.name).toBe('Technical Writer');
+    expect(updated?.tags).toEqual(['writing', 'technical']);
+    expect(updated?.timesUsed).toBe(3);
+    expect(updated?.avgPerformance).toBe(0.85);
 
     db.close();
   });
@@ -364,9 +364,9 @@ describe('background_tasks table', () => {
 
     const task = db.getBackgroundTask('bt-1');
     expect(task).not.toBeNull();
-    expect(task!.id).toBe('bt-1');
-    expect(task!.status).toBe('running');
-    expect(task!.result).toBeNull();
+    expect(task?.id).toBe('bt-1');
+    expect(task?.status).toBe('running');
+    expect(task?.result).toBeNull();
 
     db.close();
   });
@@ -390,9 +390,9 @@ describe('background_tasks table', () => {
     db.updateBackgroundTask('bt-1', 'completed', 'Task result here', now + 5000);
 
     const updated = db.getBackgroundTask('bt-1');
-    expect(updated!.status).toBe('completed');
-    expect(updated!.result).toBe('Task result here');
-    expect(updated!.completedAt).toBe(now + 5000);
+    expect(updated?.status).toBe('completed');
+    expect(updated?.result).toBe('Task result here');
+    expect(updated?.completedAt).toBe(now + 5000);
 
     db.close();
   });
@@ -469,8 +469,8 @@ describe('background_tasks table', () => {
     db.markTaskDelivered('bt-1');
 
     const task = db.getBackgroundTask('bt-1');
-    expect(task!.status).toBe('delivered');
-    expect(task!.deliveredAt).not.toBeNull();
+    expect(task?.status).toBe('delivered');
+    expect(task?.deliveredAt).not.toBeNull();
 
     db.close();
   });

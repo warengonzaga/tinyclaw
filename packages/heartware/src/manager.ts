@@ -10,10 +10,10 @@
  * All operations go through these layers in the correct order
  */
 
+import { existsSync } from 'node:fs';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { logger } from '@tinyclaw/logger';
-import { existsSync } from 'fs';
-import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
 import { AuditLogger, computeContentHash } from './audit.js';
 import { BackupManager } from './backup.js';
 import { fetchCreatorMeta } from './meta.js';
@@ -243,7 +243,7 @@ export class HeartwareManager {
           if (matches.length > 0) {
             results.push({ file, matches });
           }
-        } catch (err) {}
+        } catch (_err) {}
       }
 
       this.auditLogger.logSuccess(this.config.userId, 'search', 'heartware/', undefined, undefined);

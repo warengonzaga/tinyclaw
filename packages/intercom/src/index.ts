@@ -74,8 +74,6 @@ export function createIntercom(historyLimit = DEFAULT_HISTORY_LIMIT): Intercom {
   const history = new Map<IntercomTopic, IntercomMessage[]>();
   /** Global event history (all topics, in emission order) */
   const globalHistory: IntercomMessage[] = [];
-  /** Monotonic sequence counter for stable ordering when timestamps collide */
-  let sequence = 0;
 
   function getOrCreateHandlers(topic: IntercomTopic): Set<(event: IntercomMessage) => void> {
     let set = handlers.get(topic);
@@ -118,7 +116,6 @@ export function createIntercom(historyLimit = DEFAULT_HISTORY_LIMIT): Intercom {
         userId,
         data,
       };
-      const seq = sequence++;
 
       // Store in per-topic history (ring buffer — drop oldest if over limit)
       const list = getOrCreateHistory(topic);

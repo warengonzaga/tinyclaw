@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
 const CLI_ENTRY = resolve(__dirname, '../src/index.ts');
 

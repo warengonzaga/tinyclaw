@@ -23,6 +23,7 @@
 
 // Matches most emoji: emoticons, dingbats, symbols, skin tones, ZWJ sequences
 const EMOJI_REGEX =
+  // biome-ignore lint/suspicious/noMisleadingCharacterClass: intentional emoji range including combining chars
   /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu;
 
 // Markdown header
@@ -177,7 +178,7 @@ export function removeEmptySections(text: string): string {
     const body = sec.bodyLines.join('\n').trim();
     if (!sec.header && !body) continue;
     if (sec.header && !body && !hasChild[i]) continue; // empty section, no children
-    if (sec.header) result.push('#'.repeat(sec.level) + ' ' + sec.header);
+    if (sec.header) result.push(`${'#'.repeat(sec.level)} ${sec.header}`);
     if (body) result.push(body);
     result.push(''); // blank line between sections
   }
@@ -221,7 +222,7 @@ export function compressMarkdownTable(text: string): string {
       if (headers.length >= 5) {
         // Wide tables: preserve rows without header/separator
         for (const row of rows) {
-          result.push('| ' + row.join(' | ') + ' |');
+          result.push(`| ${row.join(' | ')} |`);
         }
       } else if (headers.length === 2) {
         // 2-column: key: value format

@@ -6,14 +6,14 @@
  * starts automatically via the supervisor restart mechanism.
  */
 
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { ConfigManager } from '@tinyclaw/config';
 import { logger, setLogMode } from '@tinyclaw/logger';
 import { SecretsManager } from '@tinyclaw/secrets';
 import type { StreamCallback } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
-import { existsSync, readdirSync, statSync } from 'fs';
-import { homedir } from 'os';
-import { join, resolve } from 'path';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 import { theme } from '../ui/theme.js';
 

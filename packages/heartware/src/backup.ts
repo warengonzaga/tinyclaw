@@ -16,8 +16,8 @@ import {
   readFileSync,
   statSync,
   unlinkSync,
-} from 'fs';
-import { basename, join } from 'path';
+} from 'node:fs';
+import { basename, join } from 'node:path';
 import { computeContentHash } from './audit.js';
 import type { BackupMetadata } from './types.js';
 
@@ -41,7 +41,7 @@ export class BackupManager {
     // Create backup directory if it doesn't exist
     try {
       mkdirSync(this.backupDir, { recursive: true });
-    } catch (err) {
+    } catch (_err) {
       // Directory might already exist - this is fine
     }
   }
@@ -100,7 +100,7 @@ export class BackupManager {
         .filter((f) => f.startsWith(`${filename}.`) && f.endsWith('.bak'))
         .sort()
         .reverse(); // Most recent first
-    } catch (err) {
+    } catch (_err) {
       return [];
     }
   }
@@ -206,7 +206,7 @@ export class BackupManager {
       }
 
       return totalSize;
-    } catch (err) {
+    } catch (_err) {
       return 0;
     }
   }

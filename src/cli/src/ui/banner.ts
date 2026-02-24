@@ -45,9 +45,9 @@ try {
  * Print the branded banner to stdout
  */
 export function showBanner(): void {
-  console.log(theme.brand('\n' + LOGO));
+  console.log(theme.brand(`\n${LOGO}`));
   console.log(
-    `  ${theme.dim('v' + getVersion())} ${theme.dim('—')} ${theme.dim('Your Personal Autonomous AI Companion 🐜')}`,
+    `  ${theme.dim(`v${getVersion()}`)} ${theme.dim('—')} ${theme.dim('Your Personal Autonomous AI Companion 🐜')}`,
   );
   console.log(
     `  ${theme.dim('The original Tiny Claw — an alternative to OpenClaw, written from scratch 🐜')}`,

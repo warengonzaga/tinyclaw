@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { describe, expect, it } from 'bun:test';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   DEFAULT_META_URL,
   fetchCreatorMeta,
@@ -83,7 +83,7 @@ describe('Creator Meta — Fetch', () => {
     writeFileSync(cachePath, content, 'utf-8');
 
     // Backdate the file modification time to make it stale
-    const { utimesSync } = require('fs');
+    const { utimesSync } = require('node:fs');
     const staleTime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
     utimesSync(cachePath, staleTime, staleTime);
 

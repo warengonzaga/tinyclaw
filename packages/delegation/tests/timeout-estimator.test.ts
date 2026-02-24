@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { existsSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createDatabase } from '@tinyclaw/core';
 import type { Database } from '@tinyclaw/types';
-import { existsSync, unlinkSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
 import { createTimeoutEstimator, type TimeoutEstimator } from '../src/index.js';
 
 // ---------------------------------------------------------------------------

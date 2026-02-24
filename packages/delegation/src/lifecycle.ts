@@ -6,11 +6,10 @@
  * and message persistence.
  */
 
-import type { QueryTier } from '@tinyclaw/router';
-import type { Message, SubAgentRecord } from '@tinyclaw/types';
+import type { SubAgentRecord } from '@tinyclaw/types';
 import { formatOrientation } from './orientation.js';
 import type { DelegationStore } from './store.js';
-import type { LifecycleManager, OrientationContext } from './types.js';
+import type { LifecycleManager } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Constants

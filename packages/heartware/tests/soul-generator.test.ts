@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { HeartwareSecurityError } from '../src/errors.js';
 import { validatePath } from '../src/sandbox.js';
 import {
@@ -11,7 +11,6 @@ import {
   parseSeed,
   renderSoulMarkdown,
 } from '../src/soul-generator.js';
-import type { SoulTraits } from '../src/types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -399,7 +398,9 @@ describe('Soul Generator — Diversity', () => {
       allColors.add(traits.preferences.favoriteColor);
       allHumors.add(traits.humor);
       allCreatures.add(traits.character.creatureType);
-      traits.values.forEach((v) => allValues.add(v));
+      traits.values.forEach((v) => {
+        allValues.add(v);
+      });
     }
 
     // Should hit most of the pools

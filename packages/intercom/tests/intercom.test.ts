@@ -214,8 +214,8 @@ describe('Intercom', () => {
     const after = Date.now();
 
     expect(received).not.toBeNull();
-    expect(received!.timestamp).toBeGreaterThanOrEqual(before);
-    expect(received!.timestamp).toBeLessThanOrEqual(after);
+    expect(received?.timestamp).toBeGreaterThanOrEqual(before);
+    expect(received?.timestamp).toBeLessThanOrEqual(after);
   });
 
   it('emit with no data defaults to empty object', () => {
@@ -227,7 +227,7 @@ describe('Intercom', () => {
     });
     intercom.emit('task:completed', 'user1');
 
-    expect(received!.data).toEqual({});
+    expect(received?.data).toEqual({});
   });
 
   // -----------------------------------------------------------------------
