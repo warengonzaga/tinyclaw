@@ -150,6 +150,9 @@ export const OWNER_ONLY_TOOLS: ReadonlySet<string> = new Set([
   // Discord channel management
   'discord_pair',
   'discord_unpair',
+  // Telegram channel management
+  'telegram_pair',
+  'telegram_unpair',
 ]);
 
 /**
