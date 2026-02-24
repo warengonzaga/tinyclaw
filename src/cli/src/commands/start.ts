@@ -41,7 +41,6 @@ import {
 import { createIntercom } from '@tinyclaw/intercom';
 import { createLearningEngine } from '@tinyclaw/learning';
 import { type LogModeName, logger, setLogMode } from '@tinyclaw/logger';
-import { createHybridMatcher } from '@tinyclaw/matcher';
 import { createMemoryEngine } from '@tinyclaw/memory';
 import {
   createCompanionJobs,
@@ -345,8 +344,6 @@ export async function startCommand(): Promise<void> {
   if (primaryModel) {
     // Find a plugin provider whose id matches the primary config.
     // Convention: the provider ID from the plugin is used to look up matching.
-    const _primaryBaseUrl = configManager.get<string>('providers.primary.baseUrl');
-    const _primaryApiKeyRef = configManager.get<string>('providers.primary.apiKeyRef');
 
     // Try to find a matching plugin provider by checking if any plugin
     // provider's id is referenced in the tier mapping or matches a known pattern.
@@ -484,10 +481,6 @@ export async function startCommand(): Promise<void> {
   logger.info('Compactor initialized (tiered compression + dedup + pre-compression)', undefined, {
     emoji: '✅',
   });
-
-  // Hybrid semantic matcher (standalone, no deps)
-  const _matcher = createHybridMatcher();
-  logger.info('Hybrid matcher initialized', undefined, { emoji: '✅' });
 
   // Timeout estimator (after db — uses task_metrics table)
   const timeoutEstimator = createTimeoutEstimator(db);
@@ -1252,7 +1245,7 @@ export async function startCommand(): Promise<void> {
         gateway.register(channel.channelPrefix, {
           name: channel.name,
           async send(userId, message) {
-            await channel.sendToUser?.(userId, message);
+            await channel.sendToUser(userId, message);
           },
         });
       }

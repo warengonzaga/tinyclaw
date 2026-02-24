@@ -336,16 +336,6 @@ export function createDatabase(path: string): Database {
     LIMIT ?
   `);
 
-  const _updateEpisodicAccessStmt = db.prepare(`
-    UPDATE episodic_memory SET access_count = access_count + 1, last_accessed_at = ?
-    WHERE id = ?
-  `);
-
-  const _pruneEpisodicEventsStmt = db.prepare(`
-    DELETE FROM episodic_memory
-    WHERE user_id = ? AND importance < ? AND access_count <= ? AND created_at < ?
-  `);
-
   // --- FTS5 prepared statements ---
 
   const insertFTSStmt = db.prepare(`

@@ -432,7 +432,8 @@ describe('setup and MFA flow', () => {
     const setCookie = recoverRes.headers.get('set-cookie') || '';
     const cookieMatch = setCookie.match(/tinyclaw_session=([^;]+)/);
     expect(cookieMatch).not.toBeNull();
-    const sessionCookie = `tinyclaw_session=${cookieMatch?.[1]}`;
+    if (!cookieMatch) throw new Error('session cookie not found');
+    const sessionCookie = `tinyclaw_session=${cookieMatch[1]}`;
 
     const recoverBody = await recoverRes.json();
     expect(recoverBody.ok).toBe(true);
