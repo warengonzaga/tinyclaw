@@ -45,6 +45,11 @@ jobs:
             if echo "$msg" | grep -qE "^Merge "; then
               continue
             fi
+            # Allow Copilot agent initial plan commits (auto-generated before repo conventions are read)
+            if echo "$msg" | grep -qE "^Initial plan$"; then
+              echo "⚠ Skipping bot commit: $msg"
+              continue
+            fi
             if ! echo "$msg" | grep -qP "$PATTERN"; then
               echo "✖ Invalid commit message: $msg"
               FAILED=1
