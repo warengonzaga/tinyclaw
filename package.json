@@ -29,7 +29,7 @@
     "cli": "bun run src/cli/src/index.ts",
     "dev:purge": "bun run cli purge --force",
     "dev:landing": "bun run --cwd src/landing dev",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
