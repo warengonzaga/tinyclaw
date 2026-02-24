@@ -265,7 +265,10 @@ function resetRecoveryRateLimit(key: string): void {
 /**
  * Get the IP address from a request.
  */
-function getClientIP(request: Request, server: any): string {
+function getClientIP(
+  request: Request,
+  server: { requestIP?(req: Request): { address: string } | null },
+): string {
   // Check standard proxy headers first
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) return forwarded.split(',')[0].trim();
@@ -641,7 +644,7 @@ export function createWebUI(config) {
             const secret = String(body?.secret ?? '')
               .trim()
               .toUpperCase();
-            if (!secret || !isClaimTokenValid() || !timingSafeCompare(secret, claimToken!)) {
+            if (!secret || !isClaimTokenValid() || !timingSafeCompare(secret, claimToken ?? '')) {
               return jsonResponse(
                 {
                   error:

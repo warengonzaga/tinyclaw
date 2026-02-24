@@ -116,7 +116,7 @@ describe('GET /api/health', () => {
 describe('setup and MFA flow', () => {
   let ui: ReturnType<typeof createWebUI>;
   let port: number;
-  const configStore = new Map<string, any>();
+  const configStore = new Map<string, unknown>();
   const storedSecrets: Array<{ key: string; value: string }> = [];
 
   const configManager = {
@@ -148,7 +148,7 @@ describe('setup and MFA flow', () => {
     port = randomPort();
     const logs: string[] = [];
     const originalLog = console.log;
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       logs.push(args.map(String).join(' '));
     };
 
@@ -216,7 +216,7 @@ describe('setup and MFA flow', () => {
     port = randomPort();
     const logs: string[] = [];
     const originalLog = console.log;
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       logs.push(args.map(String).join(' '));
     };
 
@@ -268,7 +268,7 @@ describe('setup and MFA flow', () => {
     port = randomPort();
     const logs: string[] = [];
     const originalLog = console.log;
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       logs.push(args.map(String).join(' '));
     };
 
@@ -372,7 +372,7 @@ describe('setup and MFA flow', () => {
     port = randomPort();
     const logs: string[] = [];
     const originalLog = console.log;
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       logs.push(args.map(String).join(' '));
     };
 

@@ -126,7 +126,11 @@ export class SecurityDatabase {
       )
       .run(ip, now, now);
 
-    return this.getRecoveryAttempts(ip)!;
+    const result = this.getRecoveryAttempts(ip);
+    if (!result) {
+      return { ip, failed_attempts: 1, last_attempt_at: now, locked_until: null };
+    }
+    return result;
   }
 
   /** Set a lockout timestamp for an IP. */
