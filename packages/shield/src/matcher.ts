@@ -144,9 +144,10 @@ function evaluateCondition(
     if (lc.includes('arguments containing')) {
       const argsStr = JSON.stringify(event.toolArgs ?? {}).toLowerCase();
       // Extract keywords from parenthetical list
-      const parenMatch = condition.match(/\(([^)]+)\)/);
-      if (parenMatch) {
-        const keywords = parenMatch[1].split(',').map((k) => k.trim().toLowerCase());
+      const openIdx = condition.indexOf('(');
+      const closeIdx = openIdx >= 0 ? condition.indexOf(')', openIdx + 1) : -1;
+      if (openIdx >= 0 && closeIdx > openIdx) {
+        const keywords = condition.slice(openIdx + 1, closeIdx).split(',').map((k) => k.trim().toLowerCase());
         for (const keyword of keywords) {
           if (keyword && argsStr.includes(keyword)) {
             return { matchedOn: 'tool.args', matchValue: keyword };
@@ -204,7 +205,7 @@ function evaluateCondition(
 
       // Handle OR operator
       if (expected.includes(' or ')) {
-        const alternatives = expected.split(/\s+or\s+/i);
+        const alternatives = expected.split(' or ');
         for (const alt of alternatives) {
           const trimmed = alt.trim();
           if (eventDomain === trimmed || eventDomain.endsWith(`.${trimmed}`)) {
