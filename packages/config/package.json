@@ -33,6 +33,6 @@
     "@tinyclaw/types": "workspace:*",
     "@tinyclaw/logger": "workspace:*",
     "@wgtechlabs/config-engine": "^0.1.0",
-    "zod": "^3.24.0"
+    "zod": "^4.3.6"
   }
 }
