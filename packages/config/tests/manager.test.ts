@@ -47,7 +47,7 @@ describe('ConfigManager — factory', () => {
   });
 
   test('config path points to the cwd directory', () => {
-    expect(manager.path).toContain(tmpDir.replace(/\\/g, '/').split('/').pop()!);
+    expect(manager.path).toContain(tmpDir.replace(/\\/g, '/').split('/').pop() ?? '');
   });
 
   test('config path ends with config.db', () => {
