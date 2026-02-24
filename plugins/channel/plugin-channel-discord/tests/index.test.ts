@@ -65,6 +65,7 @@ describe('getPairingTools', () => {
       close: () => {},
     };
 
+    // biome-ignore lint/suspicious/noExplicitAny: partial mock objects for testing
     const tools = discordPlugin.getPairingTools?.(mockSecrets as any, mockConfig as any);
     expect(tools).toHaveLength(2);
     expect(tools.map((t) => t.name)).toEqual(['discord_pair', 'discord_unpair']);
