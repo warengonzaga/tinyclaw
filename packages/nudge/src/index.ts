@@ -26,6 +26,7 @@ import type {
   NudgePreferences,
   OutboundGateway,
   OutboundPriority,
+  OutboundSource,
   Tool,
 } from '@tinyclaw/types';
 
@@ -75,7 +76,7 @@ function isQuietHours(start?: string, end?: string): boolean {
 /**
  * Map nudge category to outbound message source.
  */
-function categoryToSource(category: NudgeCategory): string {
+function categoryToSource(category: NudgeCategory): OutboundSource {
   switch (category) {
     case 'task_complete':
     case 'task_failed':
@@ -88,7 +89,7 @@ function categoryToSource(category: NudgeCategory): string {
     case 'agent_initiated':
       return 'agent';
     case 'companion':
-      return 'companion';
+      return 'agent';
     case 'system':
     case 'software_update':
       return 'system';
@@ -240,7 +241,7 @@ export function createNudgeEngine(options: CreateNudgeEngineOptions): NudgeEngin
         const result = await gateway.send(nudge.userId, {
           content: nudge.content,
           priority: nudge.priority,
-          source: categoryToSource(nudge.category) as any,
+          source: categoryToSource(nudge.category),
           metadata: {
             nudgeId: nudge.id,
             category: nudge.category,
@@ -361,7 +362,7 @@ export function createNudgeEngine(options: CreateNudgeEngineOptions): NudgeEngin
  */
 export function wireNudgeToIntercom(
   nudgeEngine: NudgeEngine,
-  intercom: { on(topic: string, handler: (event: any) => void): () => void },
+  intercom: { on(topic: string, handler: (event: unknown) => void): () => void },
 ): () => void {
   const unsubs: Array<() => void> = [];
 

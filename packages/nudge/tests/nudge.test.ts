@@ -272,7 +272,7 @@ describe('NudgeEngine', () => {
         { category: 'system' as const, expectedSource: 'system' },
       ];
 
-      for (const { category, expectedSource } of categories) {
+      for (const { category } of categories) {
         engine.schedule({
           userId: 'web:owner',
           category,
@@ -367,9 +367,9 @@ describe('wireNudgeToIntercom', () => {
     const engine = createNudgeEngine({ gateway: mockGw.gateway });
 
     // Create a minimal intercom mock
-    const handlers = new Map<string, Array<(event: any) => void>>();
+    const handlers = new Map<string, Array<(event: unknown) => void>>();
     const intercom = {
-      on(topic: string, handler: (event: any) => void) {
+      on(topic: string, handler: (event: unknown) => void) {
         if (!handlers.has(topic)) handlers.set(topic, []);
         handlers.get(topic)?.push(handler);
         return () => {
@@ -404,9 +404,9 @@ describe('wireNudgeToIntercom', () => {
     const mockGw = createMockGateway();
     const engine = createNudgeEngine({ gateway: mockGw.gateway });
 
-    const handlers = new Map<string, Array<(event: any) => void>>();
+    const handlers = new Map<string, Array<(event: unknown) => void>>();
     const intercom = {
-      on(topic: string, handler: (event: any) => void) {
+      on(topic: string, handler: (event: unknown) => void) {
         if (!handlers.has(topic)) handlers.set(topic, []);
         handlers.get(topic)?.push(handler);
         return () => {};
@@ -436,7 +436,7 @@ describe('wireNudgeToIntercom', () => {
 
     let subCount = 0;
     const intercom = {
-      on(_topic: string, _handler: any) {
+      on(_topic: string, _handler: unknown) {
         subCount++;
         return () => {
           subCount--;

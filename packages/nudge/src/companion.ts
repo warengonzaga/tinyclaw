@@ -377,7 +377,7 @@ export function createCompanionJobs(options: CompanionNudgeOptions): PulseJob[] 
   };
 
   // Expose touchActivity so start.ts can wire it to user message events
-  (quickCheckinJob as any).__touchActivity = touchActivity;
+  (quickCheckinJob as PulseJob & { __touchActivity?: () => void }).__touchActivity = touchActivity;
 
   return [quickCheckinJob, bootGreetingJob];
 }
@@ -392,5 +392,5 @@ export function createCompanionJobs(options: CompanionNudgeOptions): PulseJob[] 
  */
 export function getCompanionTouchActivity(jobs: PulseJob[]): (() => void) | undefined {
   const checkin = jobs.find((j) => j.id === 'companion-quick-checkin');
-  return (checkin as any)?.__touchActivity;
+  return (checkin as PulseJob & { __touchActivity?: () => void })?.__touchActivity;
 }
