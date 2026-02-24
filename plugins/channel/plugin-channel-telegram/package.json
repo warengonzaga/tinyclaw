@@ -1,0 +1,38 @@
+{
+  "name": "@tinyclaw/plugin-channel-telegram",
+  "version": "2.0.0",
+  "description": "Telegram channel plugin for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "plugins/channel/plugin-channel-telegram"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/plugins/channel/plugin-channel-telegram#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": [
+    "tinyclaw",
+    "plugin",
+    "channel",
+    "telegram"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tinyclaw/logger": "workspace:*",
+    "@tinyclaw/types": "workspace:*"
+  }
+}
