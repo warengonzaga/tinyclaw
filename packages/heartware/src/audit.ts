@@ -102,7 +102,7 @@ export class AuditLogger {
       operation,
       file,
       success: false,
-      errorCode: (error as any).code,
+      errorCode: (error as Error & { code?: string }).code,
       errorMessage: error.message,
     });
   }
