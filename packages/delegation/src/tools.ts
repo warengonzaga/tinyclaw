@@ -121,7 +121,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
   async function selectProvider(tier?: string): Promise<Provider> {
     if (tier && tier !== 'auto') {
       const registry = orchestrator.getRegistry();
-      const provider = registry.getForTier(tier as any);
+      const provider = registry.getForTier(tier as QueryTier);
       if (provider) return provider;
     }
     return orchestrator.selectActiveProvider();
@@ -450,7 +450,7 @@ export function createDelegationTools(config: DelegationToolsConfig): {
             userId,
             role,
             toolsGranted: [...safeToolSet, ...additionalTools],
-            tierPreference: tier !== 'auto' ? (tier as any) : undefined,
+            tierPreference: tier !== 'auto' ? (tier as QueryTier) : undefined,
             orientation,
           });
         }
@@ -684,7 +684,10 @@ export function createDelegationTools(config: DelegationToolsConfig): {
           if (!templateId) return 'Error: template_id is required for update.';
           if (!updates) return 'Error: updates object is required.';
 
-          const result = templates.update(templateId, updates as any);
+          const result = templates.update(
+            templateId,
+            updates as Parameters<TemplateManager['update']>[1],
+          );
           if (!result) return `Error: Template ${templateId} not found.`;
           return `Template "${result.name}" updated successfully.`;
         }

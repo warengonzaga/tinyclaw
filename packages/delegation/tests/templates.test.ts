@@ -137,19 +137,22 @@ describe('Template Manager', () => {
 
     // Initial: avgPerformance = 0.5, timesUsed = 0
     tm.recordUsage(template.id, 1.0); // (0.5 * 0 + 1.0) / 1 = 1.0
-    let t = db.getRoleTemplate(template.id)!;
-    expect(t.timesUsed).toBe(1);
-    expect(t.avgPerformance).toBeCloseTo(1.0);
+    let t = db.getRoleTemplate(template.id);
+    expect(t).toBeDefined();
+    expect(t?.timesUsed).toBe(1);
+    expect(t?.avgPerformance).toBeCloseTo(1.0);
 
     tm.recordUsage(template.id, 0.0); // (1.0 * 1 + 0.0) / 2 = 0.5
-    t = db.getRoleTemplate(template.id)!;
-    expect(t.timesUsed).toBe(2);
-    expect(t.avgPerformance).toBeCloseTo(0.5);
+    t = db.getRoleTemplate(template.id);
+    expect(t).toBeDefined();
+    expect(t?.timesUsed).toBe(2);
+    expect(t?.avgPerformance).toBeCloseTo(0.5);
 
     tm.recordUsage(template.id, 0.8); // (0.5 * 2 + 0.8) / 3 = 0.6
-    t = db.getRoleTemplate(template.id)!;
-    expect(t.timesUsed).toBe(3);
-    expect(t.avgPerformance).toBeCloseTo(0.6);
+    t = db.getRoleTemplate(template.id);
+    expect(t).toBeDefined();
+    expect(t?.timesUsed).toBe(3);
+    expect(t?.avgPerformance).toBeCloseTo(0.6);
 
     db.close();
   });

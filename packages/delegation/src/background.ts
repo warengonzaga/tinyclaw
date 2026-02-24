@@ -7,6 +7,7 @@
  */
 
 import { logger } from '@tinyclaw/logger';
+import type { QueryTier } from '@tinyclaw/types';
 import { runSubAgentV2 } from './runner.js';
 import type { DelegationIntercom, DelegationQueue, DelegationStore } from './store.js';
 import type { TimeoutEstimator } from './timeout-estimator.js';
@@ -155,7 +156,7 @@ export function createBackgroundRunner(
                       name: templateAutoCreate.role,
                       roleDescription: `${templateAutoCreate.role}: ${task}`,
                       defaultTools: templateAutoCreate.defaultTools,
-                      defaultTier: templateAutoCreate.defaultTier as any,
+                      defaultTier: templateAutoCreate.defaultTier as QueryTier,
                       tags,
                     });
                     logger.info('Auto-created role template', { role: templateAutoCreate.role });

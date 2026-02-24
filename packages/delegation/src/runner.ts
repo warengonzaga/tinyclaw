@@ -259,8 +259,8 @@ async function runAdaptiveAgentLoop(
       let response: LLMResponse;
       try {
         response = await raceAbort(provider.chat(messages, tools));
-      } catch (err: any) {
-        if (err?.name === 'AbortError') break;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') break;
         throw err;
       }
 
