@@ -63,7 +63,10 @@ export function generateTotpSecret(length = 32): string {
 
 /** Decode a Base32 string to bytes. */
 function base32Decode(input: string): Uint8Array {
-  const cleaned = input.toUpperCase().replace(/=+$/g, '');
+  let cleaned = input.toUpperCase();
+  let end = cleaned.length;
+  while (end > 0 && cleaned[end - 1] === '=') end--;
+  cleaned = cleaned.slice(0, end);
   let bits = 0;
   let value = 0;
   const bytes: number[] = [];
