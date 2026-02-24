@@ -195,7 +195,7 @@ let consoleOutput: string[];
 beforeEach(() => {
   originalConsoleLog = console.log;
   consoleOutput = [];
-  console.log = (...args: any[]) => {
+  console.log = (...args: unknown[]) => {
     consoleOutput.push(args.map(String).join(' '));
   };
 
@@ -312,7 +312,7 @@ describe('setupCommand', () => {
 describe('setupCommand — cancellation', () => {
   test('exits early when API key entry is cancelled', async () => {
     const cancelSymbol = Symbol.for('cancel');
-    mockPassword.mockImplementation(() => cancelSymbol as any);
+    mockPassword.mockImplementation(() => cancelSymbol as unknown);
     mockIsCancel.mockImplementation((val) => val === cancelSymbol);
 
     await setupCommand();

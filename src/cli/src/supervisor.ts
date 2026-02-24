@@ -58,7 +58,10 @@ export async function supervisedStart(): Promise<void> {
     restartTimestamps.push(now);
 
     // Prune timestamps outside the window
-    while (restartTimestamps.length > 0 && restartTimestamps[0]! < now - RAPID_RESTART_WINDOW_MS) {
+    while (
+      restartTimestamps.length > 0 &&
+      (restartTimestamps[0] ?? 0) < now - RAPID_RESTART_WINDOW_MS
+    ) {
       restartTimestamps.shift();
     }
 
@@ -69,8 +72,8 @@ export async function supervisedStart(): Promise<void> {
       process.exit(1);
     }
 
-    const execPath = process.argv[0]!;
-    const scriptPath = process.argv[1]!;
+    const execPath = process.argv[0] ?? 'bun';
+    const scriptPath = process.argv[1] ?? '';
 
     // Forward start flags to the supervised child process
     const extraArgs: string[] = [];

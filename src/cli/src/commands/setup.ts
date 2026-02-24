@@ -248,7 +248,7 @@ export async function setupCommand(): Promise<void> {
 
   if (fullyConfigured) {
     // Build existing config summary with soul info
-    const soul = generateSoul(savedSeed!);
+    const soul = generateSoul(savedSeed ?? 0);
     const st = soul.traits;
 
     p.log.info(

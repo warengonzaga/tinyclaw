@@ -39,7 +39,7 @@ describe('showBanner', () => {
   beforeEach(() => {
     originalLog = console.log;
     output = [];
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       output.push(args.map(String).join(' '));
     };
   });

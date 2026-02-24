@@ -23,7 +23,7 @@ function getVersion(): string {
       cachedVersion = 'unknown';
     }
   }
-  return cachedVersion!;
+  return cachedVersion ?? 'unknown';
 }
 
 // Generate the logo at module load time (synchronous, fast)

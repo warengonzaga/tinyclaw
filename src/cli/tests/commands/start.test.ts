@@ -118,16 +118,16 @@ mock.module('@tinyclaw/queue', () => ({
 
 mock.module('@tinyclaw/logger', () => ({
   logger: {
-    log: mock((...args: any[]) => {
+    log: mock((...args: unknown[]) => {
       console.log(...args);
     }),
-    info: mock((...args: any[]) => {
+    info: mock((...args: unknown[]) => {
       console.log(...args);
     }),
-    warn: mock((...args: any[]) => {
+    warn: mock((...args: unknown[]) => {
       console.log(...args);
     }),
-    error: mock((...args: any[]) => {
+    error: mock((...args: unknown[]) => {
       console.log(...args);
     }),
     debug: mock(() => {}),
@@ -316,7 +316,7 @@ beforeEach(() => {
   consoleOutput = [];
   exitCode = undefined;
 
-  console.log = (...args: any[]) => {
+  console.log = (...args: unknown[]) => {
     consoleOutput.push(args.map(String).join(' '));
   };
 
@@ -361,6 +361,7 @@ describe('startCommand', () => {
   test('initializes provider orchestrator', async () => {
     await startCommand();
     // The orchestrator's registry is queried during boot to log available providers
+    // biome-ignore lint/suspicious/noExplicitAny: accessing mock constructor for assertion
     const orchestratorMock = (await import('@tinyclaw/router')).ProviderOrchestrator as any;
     expect(orchestratorMock).toHaveBeenCalled();
   });

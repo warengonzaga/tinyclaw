@@ -1338,10 +1338,11 @@ export async function startCommand(): Promise<void> {
 
     // 1. Web UI
     try {
-      if (typeof (webUI as any).stop === 'function') {
-        await (webUI as any).stop();
-      } else if (typeof (webUI as any).close === 'function') {
-        await (webUI as any).close();
+      const webClosable = webUI as unknown as Record<string, unknown>;
+      if (typeof webClosable.stop === 'function') {
+        await (webClosable.stop as () => Promise<void>)();
+      } else if (typeof webClosable.close === 'function') {
+        await (webClosable.close as () => Promise<void>)();
       }
       logger.info('Web UI stopped');
     } catch (err) {
@@ -1350,8 +1351,9 @@ export async function startCommand(): Promise<void> {
 
     // 2. Learning engine
     try {
-      if (typeof (learning as any).close === 'function') {
-        await (learning as any).close();
+      const learningClosable = learning as unknown as Record<string, unknown>;
+      if (typeof learningClosable.close === 'function') {
+        await (learningClosable.close as () => Promise<void>)();
       }
       logger.info('Learning engine closed');
     } catch (err) {
@@ -1360,8 +1362,9 @@ export async function startCommand(): Promise<void> {
 
     // 3. Heartware
     try {
-      if (typeof (heartwareManager as any).close === 'function') {
-        await (heartwareManager as any).close();
+      const heartwareClosable = heartwareManager as unknown as Record<string, unknown>;
+      if (typeof heartwareClosable.close === 'function') {
+        await (heartwareClosable.close as () => Promise<void>)();
       }
       logger.info('Heartware manager closed');
     } catch (err) {
