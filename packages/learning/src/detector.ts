@@ -15,7 +15,7 @@ const NEGATIVE_PATTERNS = [
 const CORRECTION_PATTERNS = [
   /^(actually|i meant|i prefer|next time|please don'?t|instead)/i,
   /i (prefer|like|want|need) (.+)/i,
-  /don'?t (.+), (instead )?(.+)/i,
+  /don'?t ([^,]+), (instead )?(.+)/i,
   /(remember|note) that i (.+)/i,
 ];
 
