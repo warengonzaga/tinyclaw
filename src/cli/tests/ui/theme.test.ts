@@ -9,16 +9,7 @@ import { describe, expect, test } from 'bun:test';
 import { theme } from '../../src/ui/theme.js';
 
 describe('theme', () => {
-  const allHelpers = [
-    'brand',
-    'success',
-    'warn',
-    'error',
-    'dim',
-    'bold',
-    'cmd',
-    'label',
-  ] as const;
+  const allHelpers = ['brand', 'success', 'warn', 'error', 'dim', 'bold', 'cmd', 'label'] as const;
 
   test('exports all expected helpers', () => {
     for (const name of allHelpers) {

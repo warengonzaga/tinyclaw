@@ -4,7 +4,7 @@
  * Validates getVersion() and showBanner() output.
  */
 
-import { afterEach, beforeEach, describe, expect, test, jest } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { getVersion, showBanner } from '../../src/ui/banner.js';
 
 describe('getVersion', () => {
@@ -39,7 +39,7 @@ describe('showBanner', () => {
   beforeEach(() => {
     originalLog = console.log;
     output = [];
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       output.push(args.map(String).join(' '));
     };
   });

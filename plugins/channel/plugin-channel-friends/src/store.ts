@@ -169,10 +169,10 @@ export class InviteStore {
     const newCode = generateInviteCode();
 
     // New code, clear session so they must re-authenticate
-    this.db.run(
-      `UPDATE friends SET invite_code = ?, session_token = NULL WHERE username = ?`,
-      [newCode, sanitized],
-    );
+    this.db.run(`UPDATE friends SET invite_code = ?, session_token = NULL WHERE username = ?`, [
+      newCode,
+      sanitized,
+    ]);
 
     return newCode;
   }
@@ -180,20 +180,17 @@ export class InviteStore {
   /** Update a friend's nickname. */
   updateNickname(username: string, newNickname: string): boolean {
     const sanitized = username.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    const result = this.db.run(
-      `UPDATE friends SET nickname = ? WHERE username = ?`,
-      [newNickname, sanitized],
-    );
+    const result = this.db.run(`UPDATE friends SET nickname = ? WHERE username = ?`, [
+      newNickname,
+      sanitized,
+    ]);
     return result.changes > 0;
   }
 
   /** Touch last_seen timestamp. */
   touchLastSeen(username: string): void {
     const sanitized = username.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    this.db.run(
-      `UPDATE friends SET last_seen = ? WHERE username = ?`,
-      [Date.now(), sanitized],
-    );
+    this.db.run(`UPDATE friends SET last_seen = ? WHERE username = ?`, [Date.now(), sanitized]);
   }
 
   /** Revoke a friend's access — clears session and invite code. */
@@ -221,9 +218,7 @@ export class InviteStore {
   /** Check if a username already exists. */
   exists(username: string): boolean {
     const sanitized = username.toLowerCase().replace(/[^a-z0-9_]/g, '_');
-    const row = this.db
-      .query(`SELECT 1 FROM friends WHERE username = ?`)
-      .get(sanitized);
+    const row = this.db.query(`SELECT 1 FROM friends WHERE username = ?`).get(sanitized);
     return row !== null;
   }
 

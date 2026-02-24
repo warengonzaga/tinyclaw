@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { createPermissionEngine } from '../src/permissions.js';
 
 describe('Shell Permission Engine', () => {
@@ -224,8 +224,8 @@ describe('Shell Permission Engine', () => {
       engine.approve('make test', true);
 
       const approvals = engine.listApprovals();
-      const buildApproval = approvals.find(a => a.command === 'make build');
-      const testApproval = approvals.find(a => a.command === 'make test');
+      const buildApproval = approvals.find((a) => a.command === 'make build');
+      const testApproval = approvals.find((a) => a.command === 'make test');
 
       expect(buildApproval?.persistent).toBe(false);
       expect(testApproval?.persistent).toBe(true);
@@ -273,10 +273,13 @@ describe('Shell Permission Engine', () => {
     });
 
     it('restores saved approvals', () => {
-      const engine = createPermissionEngine([], [
-        { command: 'make build', persistent: true, approvedAt: Date.now() },
-        { command: 'docker ps', persistent: false, approvedAt: Date.now() },
-      ]);
+      const engine = createPermissionEngine(
+        [],
+        [
+          { command: 'make build', persistent: true, approvedAt: Date.now() },
+          { command: 'docker ps', persistent: false, approvedAt: Date.now() },
+        ],
+      );
 
       expect(engine.evaluate('make build').decision).toBe('allow');
       expect(engine.evaluate('docker ps').decision).toBe('allow');

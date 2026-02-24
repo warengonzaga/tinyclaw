@@ -1,8 +1,14 @@
-import type { AgentContext, Message, ToolCall, PendingApproval, ShieldEvent, ShieldDecision } from '@tinyclaw/types';
-import { OWNER_ONLY_TOOLS, isOwner } from '@tinyclaw/types';
-import { logger } from '@tinyclaw/logger';
 import { DELEGATION_HANDBOOK, DELEGATION_TOOL_NAMES } from '@tinyclaw/delegation';
+import { logger } from '@tinyclaw/logger';
 import { SHELL_TOOL_NAMES } from '@tinyclaw/shell';
+import type {
+  AgentContext,
+  Message,
+  PendingApproval,
+  ShieldEvent,
+  ToolCall,
+} from '@tinyclaw/types';
+import { isOwner, OWNER_ONLY_TOOLS } from '@tinyclaw/types';
 import { BUILTIN_MODEL_TAGS } from './models.js';
 
 /**
@@ -10,9 +16,7 @@ import { BUILTIN_MODEL_TAGS } from './models.js';
  * bypass shield's `require_approval` action to avoid double-approval UX.
  * Shield `block` is still honored for these tools.
  */
-const SELF_GATED_TOOLS: ReadonlySet<string> = new Set([
-  ...SHELL_TOOL_NAMES,
-]);
+const SELF_GATED_TOOLS: ReadonlySet<string> = new Set([...SHELL_TOOL_NAMES]);
 
 // ---------------------------------------------------------------------------
 // Text Sanitization — strip em-dashes from LLM output
@@ -28,12 +32,14 @@ function stripDashes(text: string): string {
   // Replace "—" (unspaced em-dash) with ", "
   // Replace " – " (spaced en-dash) with ", "
   // Replace "–" (unspaced en-dash) with ", "
-  return text
-    .replace(/\s*—\s*/g, ', ')
-    .replace(/\s*–\s*/g, ', ')
-    // Clean up double commas or comma-period that may result
-    .replace(/,\s*,/g, ',')
-    .replace(/,\s*\./g, '.');
+  return (
+    text
+      .replace(/\s*—\s*/g, ', ')
+      .replace(/\s*–\s*/g, ', ')
+      // Clean up double commas or comma-period that may result
+      .replace(/,\s*,/g, ',')
+      .replace(/,\s*\./g, '.')
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -70,13 +76,13 @@ const INJECTION_PATTERNS: RegExp[] = [
  * These are recognizable by the LLM as content boundaries.
  */
 const UNTRUSTED_BOUNDARY_START = '<<<EXTERNAL_UNTRUSTED_CONTENT>>>';
-const UNTRUSTED_BOUNDARY_END   = '<<</EXTERNAL_UNTRUSTED_CONTENT>>>';
+const UNTRUSTED_BOUNDARY_END = '<<</EXTERNAL_UNTRUSTED_CONTENT>>>';
 
 /**
  * Check if a message contains prompt injection patterns.
  */
 function containsInjectionPatterns(text: string): boolean {
-  return INJECTION_PATTERNS.some(pattern => pattern.test(text));
+  return INJECTION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 /**
@@ -86,7 +92,7 @@ function containsInjectionPatterns(text: string): boolean {
 const INTERNAL_USER_PREFIXES = ['pulse:', 'companion:', 'system:'];
 
 function isInternalUser(userId: string): boolean {
-  return INTERNAL_USER_PREFIXES.some(prefix => userId.startsWith(prefix));
+  return INTERNAL_USER_PREFIXES.some((prefix) => userId.startsWith(prefix));
 }
 
 /**
@@ -228,7 +234,11 @@ const OWNER_ONLY_REFUSAL =
  * Check whether a tool call is allowed for the given user.
  * Returns null if allowed, or a refusal message if blocked.
  */
-function checkToolAuthority(toolName: string, userId: string, ownerId: string | undefined): string | null {
+function checkToolAuthority(
+  toolName: string,
+  userId: string,
+  ownerId: string | undefined,
+): string | null {
   if (!ownerId) return null; // No owner set yet — allow everything (pre-claim)
   if (isOwner(userId, ownerId)) return null; // Owner can do anything
   if (OWNER_ONLY_TOOLS.has(toolName)) return OWNER_ONLY_REFUSAL;
@@ -239,11 +249,9 @@ function checkToolAuthority(toolName: string, userId: string, ownerId: string | 
  * Safely extract a summary from a delegate_tasks batch.
  * Returns the joined role names and the task count.
  */
-function extractBatchTasksSummary(
-  tasks: unknown,
-): { roles: string; count: number } {
+function extractBatchTasksSummary(tasks: unknown): { roles: string; count: number } {
   const arr: Array<Record<string, unknown>> = Array.isArray(tasks) ? tasks : [];
-  const roles = arr.map(t => String(t.role || 'Sub-agent')).join(', ');
+  const roles = arr.map((t) => String(t.role || 'Sub-agent')).join(', ');
   return { roles, count: arr.length };
 }
 
@@ -297,23 +305,22 @@ function emitDelegationComplete(
   //   delegate_to_existing: "... (<uuid>) [task: <uuid>] ..."
   //   delegate_tasks:       multi-line output with multiple agent:/task: pairs
   const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
-  const allUUIDs = result.match(UUID_RE) || [];
+  const _allUUIDs = result.match(UUID_RE) || [];
 
   // For delegate_task:   "agent: <uuid>, task: <uuid>"   → agentId is matched first, taskId second
   // For delegate_background: "[id: <taskId>]\nSub-agent: Role (<agentId>)" → taskId first, agentId second
   // For delegate_to_existing: "(<agentId>) [task: <taskId>]" → agentId first, taskId second
   // Heuristic: look for labelled UUIDs first, then fall back to positional
-  const agentIdMatch = result.match(/\bagent:\s*([0-9a-f-]{36})/i)
-                    || result.match(/\(([0-9a-f-]{36})\)/);
-  const taskIdMatch = result.match(/\btask:\s*([0-9a-f-]{36})/i)
-                   || result.match(/\bid:\s*([0-9a-f-]{36})/i);
+  const agentIdMatch =
+    result.match(/\bagent:\s*([0-9a-f-]{36})/i) || result.match(/\(([0-9a-f-]{36})\)/);
+  const taskIdMatch =
+    result.match(/\btask:\s*([0-9a-f-]{36})/i) || result.match(/\bid:\s*([0-9a-f-]{36})/i);
   const agentId = agentIdMatch?.[1]?.trim();
   const taskId = taskIdMatch?.[1]?.trim();
 
   // delegate_tasks (batch) — summarise all dispatched tasks
-  const batchSummary = toolCall.name === 'delegate_tasks'
-    ? extractBatchTasksSummary(args.tasks)
-    : null;
+  const batchSummary =
+    toolCall.name === 'delegate_tasks' ? extractBatchTasksSummary(args.tasks) : null;
   const role = batchSummary ? batchSummary.roles : String(args.role || args.agent_id || '');
   const taskDesc = batchSummary ? `${batchSummary.count} tasks` : String(args.task || '');
 
@@ -360,13 +367,13 @@ function extractToolCallFromText(text: string): ToolCall | null {
   return {
     id: crypto.randomUUID(),
     name: toolName,
-    arguments: normalizeToolArguments(rest)
+    arguments: normalizeToolArguments(rest),
   };
 }
 
 function summarizeToolResults(
   toolCalls: ToolCall[],
-  toolResults: Array<{ id: string; result: string }>
+  toolResults: Array<{ id: string; result: string }>,
 ): string {
   const summaries: string[] = [];
 
@@ -382,9 +389,9 @@ function summarizeToolResults(
 
     // Write operations - confirm success
     if (name === 'heartware_write') {
-      summaries.push(filename 
-        ? `Done! I've saved that to ${filename}. ✓` 
-        : 'Done! Saved successfully. ✓');
+      summaries.push(
+        filename ? `Done! I've saved that to ${filename}. ✓` : 'Done! Saved successfully. ✓',
+      );
       continue;
     }
 
@@ -414,7 +421,7 @@ function summarizeToolResults(
 
     // Read operations - summarize what was found
     if (name === 'heartware_read') {
-      const lines = result.split('\n').filter(l => l.trim()).length;
+      const lines = result.split('\n').filter((l) => l.trim()).length;
       summaries.push(`Read ${filename || 'file'} (${lines} lines).`);
       continue;
     }
@@ -426,7 +433,7 @@ function summarizeToolResults(
     }
 
     if (name === 'heartware_list') {
-      const fileCount = result.split('\n').filter(l => l.trim()).length;
+      const fileCount = result.split('\n').filter((l) => l.trim()).length;
       summaries.push(`Found ${fileCount} files.`);
       continue;
     }
@@ -444,15 +451,20 @@ function summarizeToolResults(
   return summaries.join(' ');
 }
 
-function getBaseSystemPrompt(heartwareContext?: string, modelInfo?: { model: string; provider: string }, ownerId?: string): string {
+function getBaseSystemPrompt(
+  heartwareContext?: string,
+  modelInfo?: { model: string; provider: string },
+  ownerId?: string,
+): string {
   let prompt = `You are Tiny Claw 🐜, a helpful AI companion.
 
 You are small but mighty, focused, efficient, and always learning.
 
 ## Owner Authority
 
-${ownerId
-  ? `Your owner's userId is \`${ownerId}\`. You are loyal to this person. They set you up, and you serve them.
+${
+  ownerId
+    ? `Your owner's userId is \`${ownerId}\`. You are loyal to this person. They set you up, and you serve them.
 
 **Rules:**
 - **Owner messages** (userId = \`${ownerId}\`): Full access. Follow their commands, use any tool, modify config/heartware/secrets.
@@ -460,8 +472,9 @@ ${ownerId
 - You may chat with anyone, answer questions, and be helpful, but you only **take orders** from your owner.
 - When a friend asks you to remember something about them, you may add it to FRIENDS.md (this is allowed).
 - FRIEND.md is about your owner. FRIENDS.md is about everyone else you meet.`
-  : `No owner has been claimed yet. The first person to complete the claim flow becomes your owner.
-Until then, treat everyone as a potential owner and allow all actions.`}
+    : `No owner has been claimed yet. The first person to complete the claim flow becomes your owner.
+Until then, treat everyone as a potential owner and allow all actions.`
+}
 
 ## Current Runtime
 - **Model:** ${modelInfo?.model ?? 'unknown'}
@@ -501,7 +514,7 @@ To update your identity (like nickname):
 {"action": "identity_update", "name": "Anty", "tagline": "Your small-but-mighty AI companion"}
 
 To switch to a different built-in model:
-{"action": "builtin_model_switch", "model": "${BUILTIN_MODEL_TAGS.find(t => t !== modelInfo?.model) ?? BUILTIN_MODEL_TAGS[1]}"}
+{"action": "builtin_model_switch", "model": "${BUILTIN_MODEL_TAGS.find((t) => t !== modelInfo?.model) ?? BUILTIN_MODEL_TAGS[1]}"}
 
 **Available tools:**
 - heartware_read, heartware_write, heartware_list, heartware_search
@@ -583,9 +596,10 @@ export async function agentLoop(
   message: string,
   userId: string,
   context: AgentContext,
-  rawOnStream?: (event: import('@tinyclaw/types').StreamEvent) => void
+  rawOnStream?: (event: import('@tinyclaw/types').StreamEvent) => void,
 ): Promise<string> {
-  const { db, provider, learning, tools, heartwareContext, shield, modelName, providerName } = context;
+  const { db, provider, learning, tools, heartwareContext, shield, modelName, providerName } =
+    context;
 
   // Wrap onStream to automatically strip em-dashes from all text events
   const onStream: typeof rawOnStream = rawOnStream
@@ -599,9 +613,10 @@ export async function agentLoop(
     : undefined;
 
   // Build model info for system prompt injection
-  const modelInfo = modelName || providerName
-    ? { model: modelName ?? 'unknown', provider: providerName ?? 'unknown' }
-    : undefined;
+  const modelInfo =
+    modelName || providerName
+      ? { model: modelName ?? 'unknown', provider: providerName ?? 'unknown' }
+      : undefined;
 
   // ---------------------------------------------------------------------------
   // Shield — check for pending approval from a previous turn
@@ -609,7 +624,6 @@ export async function agentLoop(
 
   const pending = getPendingApproval(userId);
   if (pending) {
-
     // Interpret the user's natural-language answer.
     // We inject a focused system prompt and let the LLM classify the response.
     const classifyMessages: Message[] = [
@@ -636,7 +650,7 @@ export async function agentLoop(
     if (/^\s*APPROVED\s*$/.test(verdict)) {
       // Execute the previously blocked tool call
       logger.info('Shield: approval granted', { tool: pending.toolCall.name, userId });
-      const tool = tools.find(t => t.name === pending.toolCall.name);
+      const tool = tools.find((t) => t.name === pending.toolCall.name);
       if (tool) {
         try {
           // Emit delegation SSE events so the sidebar updates immediately
@@ -664,7 +678,10 @@ export async function agentLoop(
         }
       } else {
         // Tool no longer registered — inform the user and persist the event
-        logger.error('Shield: approved tool no longer available', { tool: pending.toolCall.name, userId });
+        logger.error('Shield: approved tool no longer available', {
+          tool: pending.toolCall.name,
+          userId,
+        });
         const errorMsg = `Approved, but tool **${pending.toolCall.name}** is no longer available. It may have been unregistered.`;
         if (onStream) {
           onStream({ type: 'text', content: errorMsg });
@@ -686,7 +703,10 @@ export async function agentLoop(
       return responseText;
     } else {
       // UNCLEAR — re-ask: push the entry back to the front of the queue
-      logger.info('Shield: approval response unclear, re-asking', { tool: pending.toolCall.name, userId });
+      logger.info('Shield: approval response unclear, re-asking', {
+        tool: pending.toolCall.name,
+        userId,
+      });
       const queue = pendingApprovals.get(userId) ?? [];
       pending.createdAt = Date.now();
       queue.unshift(pending);
@@ -730,7 +750,7 @@ export async function agentLoop(
   // Load context — prepend compaction summary if one exists
   const compactionSummary = context.compactor
     ? context.compactor.getLatestSummary(userId)
-    : db.getLatestCompaction(userId)?.summary ?? null;
+    : (db.getLatestCompaction(userId)?.summary ?? null);
 
   const rawHistory = db.getHistory(userId, 20);
   const history: Message[] = [];
@@ -789,27 +809,33 @@ export async function agentLoop(
     ...history,
     { role: 'user', content: sanitizedMessage },
   ];
-  
+
   // Agent loop (with tool execution if needed)
   let jsonToolReplies = 0;
   let sentToolProgress = false;
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     const response = await provider.chat(messages, tools);
-    
-    logger.debug('LLM Response:', { type: response.type, contentLength: response.content?.length, content: response.content?.slice(0, 200) });
-    
+
+    logger.debug('LLM Response:', {
+      type: response.type,
+      contentLength: response.content?.length,
+      content: response.content?.slice(0, 200),
+    });
+
     if (response.type === 'text') {
       const rawToolCall = extractToolCallFromText(response.content || '');
       // Only treat as a tool call if the extracted name matches a registered tool.
       // This prevents the LLM's stray JSON from being misinterpreted as tool
       // invocations, which was causing a "Working on that... Done!" loop.
-      const toolCall = rawToolCall && tools.some(t => t.name === rawToolCall.name) ? rawToolCall : null;
+      const toolCall =
+        rawToolCall && tools.some((t) => t.name === rawToolCall.name) ? rawToolCall : null;
 
       if (toolCall) {
         jsonToolReplies += 1;
         if (jsonToolReplies > MAX_JSON_TOOL_REPLIES) {
-          const fallback = "I ran the tool but couldn't produce a final response. Can you rephrase or ask for a summary?";
+          const fallback =
+            "I ran the tool but couldn't produce a final response. Can you rephrase or ask for a summary?";
           if (onStream) {
             onStream({ type: 'text', content: fallback });
             onStream({ type: 'done' });
@@ -820,7 +846,7 @@ export async function agentLoop(
           return fallback;
         }
 
-        const toolResults: Array<{id: string, result: string}> = [];
+        const toolResults: Array<{ id: string; result: string }> = [];
 
         if (onStream) {
           onStream({ type: 'tool_start', tool: toolCall.name });
@@ -837,7 +863,7 @@ export async function agentLoop(
           }
         }
 
-        const tool = tools.find(t => t.name === toolCall.name);
+        const tool = tools.find((t) => t.name === toolCall.name);
         if (!tool) {
           const errorMsg = `Error: Tool ${toolCall.name} not found`;
           toolResults.push({ id: toolCall.id, result: errorMsg });
@@ -907,7 +933,10 @@ export async function agentLoop(
                 return approvalMsg;
               }
               // Self-gated: log and fall through to tool execution
-              logger.info('Shield: skipping approval for self-gated tool', { tool: toolCall.name, reason: decision.reason });
+              logger.info('Shield: skipping approval for self-gated tool', {
+                tool: toolCall.name,
+                reason: decision.reason,
+              });
             }
 
             // action === 'log' — proceed normally, decision is already logged by engine
@@ -933,31 +962,36 @@ export async function agentLoop(
         }
 
         // For read/search/recall operations, send result back to LLM for natural response
-        const isReadOperation = toolCall.name.includes('read') || 
-                                toolCall.name.includes('search') || 
-                                toolCall.name.includes('recall') ||
-                                toolCall.name.includes('list');
-        
+        const isReadOperation =
+          toolCall.name.includes('read') ||
+          toolCall.name.includes('search') ||
+          toolCall.name.includes('recall') ||
+          toolCall.name.includes('list');
+
         // Delegation tools now run in background — feed the quick status message
         // back so the LLM can tell the user in a natural way.
         const isDelegation = isDelegationTool(toolCall.name);
 
-        if ((isReadOperation || isDelegation) && toolResults[0] && !toolResults[0].result.startsWith('Error')) {
+        if (
+          (isReadOperation || isDelegation) &&
+          toolResults[0] &&
+          !toolResults[0].result.startsWith('Error')
+        ) {
           // Add tool result to conversation and let LLM respond naturally
           const preamble = isDelegation
             ? `I delegated the task to a sub-agent. Status:\n${toolResults[0].result}\n\nTell the user the sub-agent is now working on it in the background and they can keep chatting.`
             : `I used ${toolCall.name} and got this result:\n${toolResults[0].result}`;
-          messages.push({ 
-            role: 'assistant', 
-            content: preamble, 
+          messages.push({
+            role: 'assistant',
+            content: preamble,
           });
-          messages.push({ 
-            role: 'user', 
+          messages.push({
+            role: 'user',
             content: isDelegation
               ? 'Acknowledge the delegation briefly. Let me know the sub-agent is working on it and I can keep chatting.'
-              : 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.'
+              : 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.',
           });
-          
+
           // Continue the loop to get LLM's natural response
           continue;
         }
@@ -966,14 +1000,15 @@ export async function agentLoop(
         // can craft a natural, conversational response instead of the
         // generic "Done!" that was causing a feedback loop in the history.
         const writeResult = toolResults[0]?.result || 'completed';
-        const writeSummary = summarizeToolResults([toolCall], toolResults);
+        const _writeSummary = summarizeToolResults([toolCall], toolResults);
         messages.push({
           role: 'assistant',
           content: `I used ${toolCall.name} and the result was: ${writeResult}`,
         });
         messages.push({
           role: 'user',
-          content: 'Now respond naturally to my original message. Briefly confirm the action you took and be conversational.',
+          content:
+            'Now respond naturally to my original message. Briefly confirm the action you took and be conversational.',
         });
 
         // Continue the loop to get LLM's natural response
@@ -999,11 +1034,11 @@ export async function agentLoop(
 
       return cleanContent;
     }
-    
+
     if (response.type === 'tool_calls' && response.toolCalls) {
       // Execute tools
-      const toolResults: Array<{id: string, result: string}> = [];
-      
+      const toolResults: Array<{ id: string; result: string }> = [];
+
       for (const toolCall of response.toolCalls) {
         // Notify about tool execution
         if (onStream) {
@@ -1019,8 +1054,8 @@ export async function agentLoop(
             sentToolProgress = true;
           }
         }
-        
-        const tool = tools.find(t => t.name === toolCall.name);
+
+        const tool = tools.find((t) => t.name === toolCall.name);
         if (!tool) {
           const errorMsg = `Error: Tool ${toolCall.name} not found`;
           toolResults.push({ id: toolCall.id, result: errorMsg });
@@ -1080,12 +1115,15 @@ export async function agentLoop(
               continue;
             }
             // Self-gated: log and fall through to tool execution
-            logger.info('Shield: skipping approval for self-gated tool', { tool: toolCall.name, reason: decision.reason });
+            logger.info('Shield: skipping approval for self-gated tool', {
+              tool: toolCall.name,
+              reason: decision.reason,
+            });
           }
 
           // action === 'log' — proceed normally
         }
-        
+
         try {
           // Inject user_id so delegation tools always receive the correct userId
           const toolArgs = { ...toolCall.arguments, user_id: userId };
@@ -1114,15 +1152,20 @@ export async function agentLoop(
         const approvalMsg =
           `Before I run **${pa.toolCall.name}**, I need your approval.\n\n` +
           `**Reason:** ${pa.decision.reason}\n\n` +
-          (remainingCount > 1 ? `_(${remainingCount - 1} more tool(s) also pending approval)_\n\n` : '') +
+          (remainingCount > 1
+            ? `_(${remainingCount - 1} more tool(s) also pending approval)_\n\n`
+            : '') +
           `Do you want me to go ahead? (yes / no)`;
         // Still return results for tools that did execute
-        const executedResults = toolResults.filter(r =>
-          !r.result.startsWith('Requires approval:') && !r.result.startsWith('Blocked by security')
+        const executedResults = toolResults.filter(
+          (r) =>
+            !r.result.startsWith('Requires approval:') &&
+            !r.result.startsWith('Blocked by security'),
         );
-        const combined = executedResults.length > 0
-          ? `${executedResults.map(r => r.result).join('\n\n')}\n\n---\n\n${approvalMsg}`
-          : approvalMsg;
+        const combined =
+          executedResults.length > 0
+            ? `${executedResults.map((r) => r.result).join('\n\n')}\n\n---\n\n${approvalMsg}`
+            : approvalMsg;
         if (onStream) {
           onStream({ type: 'text', content: combined });
           onStream({ type: 'done' });
@@ -1131,37 +1174,41 @@ export async function agentLoop(
         db.saveMessage(userId, 'assistant', combined);
         return combined;
       }
-      
+
       // Check if any tool was a read or delegation operation
-      const hasReadOperation = response.toolCalls.some(tc => 
-        tc.name.includes('read') || 
-        tc.name.includes('search') || 
-        tc.name.includes('recall') ||
-        tc.name.includes('list')
+      const hasReadOperation = response.toolCalls.some(
+        (tc) =>
+          tc.name.includes('read') ||
+          tc.name.includes('search') ||
+          tc.name.includes('recall') ||
+          tc.name.includes('list'),
       );
-      const hasDelegation = response.toolCalls.some(tc => isDelegationTool(tc.name));
-      
-      if ((hasReadOperation || hasDelegation) && toolResults.some(r => !r.result.startsWith('Error'))) {
+      const hasDelegation = response.toolCalls.some((tc) => isDelegationTool(tc.name));
+
+      if (
+        (hasReadOperation || hasDelegation) &&
+        toolResults.some((r) => !r.result.startsWith('Error'))
+      ) {
         // Add tool results to conversation and let LLM respond naturally
-        const resultsText = toolResults.map(r => r.result).join('\n\n');
+        const resultsText = toolResults.map((r) => r.result).join('\n\n');
         const preamble = hasDelegation
           ? `I delegated the task(s) to sub-agent(s). Status:\n${resultsText}\n\nTell the user the sub-agent(s) are working in the background and they can keep chatting.`
           : `I retrieved this information:\n${resultsText}`;
-        messages.push({ 
-          role: 'assistant', 
+        messages.push({
+          role: 'assistant',
           content: preamble,
         });
-        messages.push({ 
-          role: 'user', 
+        messages.push({
+          role: 'user',
           content: hasDelegation
             ? 'Acknowledge the delegation briefly. Let me know the sub-agent is working on it and I can keep chatting.'
-            : 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.'
+            : 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.',
         });
-        
+
         // Continue the loop to get LLM's natural response
         continue;
       }
-      
+
       const responseText = summarizeToolResults(response.toolCalls, toolResults);
 
       if (onStream) {
@@ -1180,10 +1227,10 @@ export async function agentLoop(
       return responseText;
     }
   }
-  
+
   if (onStream) {
     onStream({ type: 'error', error: 'Maximum tool iterations reached' });
   }
-  
-  return "I got stuck thinking. Can you try again?";
+
+  return 'I got stuck thinking. Can you try again?';
 }

@@ -21,12 +21,7 @@
  * Operators: OR
  */
 
-import type {
-  ThreatEntry,
-  ShieldEvent,
-  ShieldAction,
-  ShieldScope,
-} from '@tinyclaw/types';
+import type { ShieldAction, ShieldEvent, ShieldScope, ThreatEntry } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -94,13 +89,13 @@ export function parseDirectives(recommendationAgent: string): Directive[] {
 
 /** Maps shield scopes to compatible threat categories. */
 const SCOPE_CATEGORY_MAP: Record<ShieldScope, ReadonlySet<string>> = {
-  'prompt': new Set(['prompt']),
+  prompt: new Set(['prompt']),
   'skill.install': new Set(['skill', 'supply_chain']),
   'skill.execute': new Set(['skill', 'tool']),
   'tool.call': new Set(['tool', 'prompt', 'memory', 'vulnerability', 'policy_bypass', 'anomaly']),
   'network.egress': new Set(['supply_chain']),
   'secrets.read': new Set(['tool', 'vulnerability']),
-  'mcp': new Set(['mcp']),
+  mcp: new Set(['mcp']),
 };
 
 /**
@@ -138,8 +133,10 @@ function evaluateCondition(
     // Match if the tool name appears in the condition
     const afterToolCall = condition.slice('tool.call'.length).trim();
 
-    if (afterToolCall.toLowerCase().startsWith(toolNameLower) ||
-        afterToolCall.toLowerCase().includes(toolNameLower)) {
+    if (
+      afterToolCall.toLowerCase().startsWith(toolNameLower) ||
+      afterToolCall.toLowerCase().includes(toolNameLower)
+    ) {
       return { matchedOn: 'tool.call', matchValue: event.toolName };
     }
 
@@ -147,9 +144,13 @@ function evaluateCondition(
     if (lc.includes('arguments containing')) {
       const argsStr = JSON.stringify(event.toolArgs ?? {}).toLowerCase();
       // Extract keywords from parenthetical list
-      const parenMatch = condition.match(/\(([^)]+)\)/);
-      if (parenMatch) {
-        const keywords = parenMatch[1].split(',').map(k => k.trim().toLowerCase());
+      const openIdx = condition.indexOf('(');
+      const closeIdx = openIdx >= 0 ? condition.indexOf(')', openIdx + 1) : -1;
+      if (openIdx >= 0 && closeIdx > openIdx) {
+        const keywords = condition
+          .slice(openIdx + 1, closeIdx)
+          .split(',')
+          .map((k) => k.trim().toLowerCase());
         for (const keyword of keywords) {
           if (keyword && argsStr.includes(keyword)) {
             return { matchedOn: 'tool.args', matchValue: keyword };
@@ -202,22 +203,22 @@ function evaluateCondition(
     if (!event.domain) return null;
     const domainMatch = condition.match(/outbound request to\s+(.+)/i);
     if (domainMatch) {
-      let expected = domainMatch[1].trim().toLowerCase();
+      const expected = domainMatch[1].trim().toLowerCase();
       const eventDomain = event.domain.toLowerCase();
 
       // Handle OR operator
       if (expected.includes(' or ')) {
-        const alternatives = expected.split(/\s+or\s+/i);
+        const alternatives = expected.split(' or ');
         for (const alt of alternatives) {
           const trimmed = alt.trim();
-          if (eventDomain === trimmed || eventDomain.endsWith('.' + trimmed)) {
+          if (eventDomain === trimmed || eventDomain.endsWith(`.${trimmed}`)) {
             return { matchedOn: 'domain', matchValue: event.domain };
           }
         }
         return null;
       }
 
-      if (eventDomain === expected || eventDomain.endsWith('.' + expected)) {
+      if (eventDomain === expected || eventDomain.endsWith(`.${expected}`)) {
         return { matchedOn: 'domain', matchValue: event.domain };
       }
     }
@@ -232,9 +233,8 @@ function evaluateCondition(
       const expected = pathMatch[1].trim();
       // Support wildcard: provider.*.apiKey
       if (expected.includes('*')) {
-        const regex = new RegExp(
-          '^' + expected.replace(/\./g, '\\.').replace(/\*/g, '[^.]+') + '$',
-        );
+        const escaped = expected.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&').replace(/\\\*/g, '[^.]+');
+        const regex = new RegExp(`^${escaped}$`);
         if (regex.test(event.secretPath)) {
           return { matchedOn: 'secrets.path', matchValue: event.secretPath };
         }
@@ -288,8 +288,10 @@ function evaluateCondition(
 
   // --- Memory conditions ---
   if (lc.includes('memory_add') || lc.includes('importance')) {
-    if (event.toolName?.toLowerCase() === 'memory_add' ||
-        event.toolName?.toLowerCase() === 'heartware_write') {
+    if (
+      event.toolName?.toLowerCase() === 'memory_add' ||
+      event.toolName?.toLowerCase() === 'heartware_write'
+    ) {
       const importance = Number(event.toolArgs?.importance ?? 0);
 
       if (lc.includes('importance >=')) {
@@ -307,8 +309,12 @@ function evaluateCondition(
       if (lc.includes('content containing instruction-like patterns')) {
         const content = String(event.toolArgs?.content ?? event.toolArgs?.value ?? '');
         const instructionPatterns = [
-          /you must/i, /ignore previous/i, /from now on/i,
-          /your new instructions/i, /override/i, /disregard/i,
+          /you must/i,
+          /ignore previous/i,
+          /from now on/i,
+          /your new instructions/i,
+          /override/i,
+          /disregard/i,
         ];
         for (const pattern of instructionPatterns) {
           if (pattern.test(content)) {
@@ -316,7 +322,7 @@ function evaluateCondition(
           }
         }
       }
-      return { matchedOn: 'tool.call', matchValue: event.toolName! };
+      return { matchedOn: 'tool.call', matchValue: event.toolName ?? '' };
     }
     return null;
   }
@@ -348,8 +354,10 @@ function evaluateCondition(
   }
 
   if (lc.includes('modify ratelimit config at runtime')) {
-    if (event.toolName?.toLowerCase().includes('config') &&
-        event.toolArgs?.key === 'security.rateLimit') {
+    if (
+      event.toolName?.toLowerCase().includes('config') &&
+      event.toolArgs?.key === 'security.rateLimit'
+    ) {
       return { matchedOn: 'tool.call', matchValue: 'rateLimit modification' };
     }
     return null;
@@ -382,10 +390,7 @@ function evaluateCondition(
  * @param threats - Active threat entries to match against
  * @returns Array of match results, may be empty
  */
-export function matchEvent(
-  event: ShieldEvent,
-  threats: ThreatEntry[],
-): MatchResult[] {
+export function matchEvent(event: ShieldEvent, threats: ThreatEntry[]): MatchResult[] {
   const results: MatchResult[] = [];
 
   for (const threat of threats) {

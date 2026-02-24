@@ -1,6 +1,12 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
+import type {
+  ChannelSender,
+  NudgeEngine,
+  OutboundDeliveryResult,
+  OutboundGateway,
+  OutboundMessage,
+} from '@tinyclaw/types';
 import { createNudgeEngine, wireNudgeToIntercom } from '../src/index';
-import type { OutboundGateway, OutboundMessage, OutboundDeliveryResult, ChannelSender, NudgeEngine } from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
 // Mock Gateway
@@ -15,8 +21,12 @@ function createMockGateway() {
       sends.push({ userId, message });
       return { success: true, channel: 'web', userId };
     },
-    async broadcast(_message: OutboundMessage) { return []; },
-    getRegisteredChannels() { return ['web']; },
+    async broadcast(_message: OutboundMessage) {
+      return [];
+    },
+    getRegisteredChannels() {
+      return ['web'];
+    },
   };
   return { gateway, sends };
 }
@@ -48,7 +58,7 @@ describe('NudgeEngine', () => {
       const id2 = engine.schedule({
         userId: 'web:owner',
         category: 'reminder',
-        content: 'Don\'t forget!',
+        content: "Don't forget!",
         priority: 'normal',
         deliverAfter: 0,
       });
@@ -230,8 +240,12 @@ describe('NudgeEngine', () => {
         async send(userId): Promise<OutboundDeliveryResult> {
           return { success: false, channel: 'web', userId, error: 'offline' };
         },
-        async broadcast() { return []; },
-        getRegisteredChannels() { return []; },
+        async broadcast() {
+          return [];
+        },
+        getRegisteredChannels() {
+          return [];
+        },
       };
       const failEngine = createNudgeEngine({ gateway: failGw });
 
@@ -258,7 +272,7 @@ describe('NudgeEngine', () => {
         { category: 'system' as const, expectedSource: 'system' },
       ];
 
-      for (const { category, expectedSource } of categories) {
+      for (const { category } of categories) {
         engine.schedule({
           userId: 'web:owner',
           category,
@@ -353,11 +367,11 @@ describe('wireNudgeToIntercom', () => {
     const engine = createNudgeEngine({ gateway: mockGw.gateway });
 
     // Create a minimal intercom mock
-    const handlers = new Map<string, Array<(event: any) => void>>();
+    const handlers = new Map<string, Array<(event: unknown) => void>>();
     const intercom = {
-      on(topic: string, handler: (event: any) => void) {
+      on(topic: string, handler: (event: unknown) => void) {
         if (!handlers.has(topic)) handlers.set(topic, []);
-        handlers.get(topic)!.push(handler);
+        handlers.get(topic)?.push(handler);
         return () => {
           const list = handlers.get(topic);
           if (list) {
@@ -390,11 +404,11 @@ describe('wireNudgeToIntercom', () => {
     const mockGw = createMockGateway();
     const engine = createNudgeEngine({ gateway: mockGw.gateway });
 
-    const handlers = new Map<string, Array<(event: any) => void>>();
+    const handlers = new Map<string, Array<(event: unknown) => void>>();
     const intercom = {
-      on(topic: string, handler: (event: any) => void) {
+      on(topic: string, handler: (event: unknown) => void) {
         if (!handlers.has(topic)) handlers.set(topic, []);
-        handlers.get(topic)!.push(handler);
+        handlers.get(topic)?.push(handler);
         return () => {};
       },
     };
@@ -422,9 +436,11 @@ describe('wireNudgeToIntercom', () => {
 
     let subCount = 0;
     const intercom = {
-      on(_topic: string, _handler: any) {
+      on(_topic: string, _handler: unknown) {
         subCount++;
-        return () => { subCount--; };
+        return () => {
+          subCount--;
+        };
       },
     };
 

@@ -7,7 +7,6 @@
  */
 
 import type { RoleTemplate } from '@tinyclaw/types';
-import type { QueryTier } from '@tinyclaw/router';
 import type { DelegationStore } from './store.js';
 import type { TemplateManager } from './types.js';
 
@@ -26,13 +25,70 @@ const MATCH_THRESHOLD = 0.3;
 // ---------------------------------------------------------------------------
 
 const STOP_WORDS = new Set([
-  'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'shall', 'can', 'to', 'of', 'in', 'for',
-  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'about', 'like',
-  'through', 'after', 'over', 'between', 'out', 'up', 'that', 'this',
-  'it', 'and', 'or', 'but', 'not', 'no', 'so', 'if', 'then', 'than',
-  'too', 'very', 'just', 'also', 'more', 'some', 'any', 'each', 'all',
+  'a',
+  'an',
+  'the',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'shall',
+  'can',
+  'to',
+  'of',
+  'in',
+  'for',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'into',
+  'about',
+  'like',
+  'through',
+  'after',
+  'over',
+  'between',
+  'out',
+  'up',
+  'that',
+  'this',
+  'it',
+  'and',
+  'or',
+  'but',
+  'not',
+  'no',
+  'so',
+  'if',
+  'then',
+  'than',
+  'too',
+  'very',
+  'just',
+  'also',
+  'more',
+  'some',
+  'any',
+  'each',
+  'all',
 ]);
 
 function tokenize(text: string): Set<string> {
@@ -61,14 +117,7 @@ function keywordScore(queryTokens: Set<string>, templateTokens: Set<string>): nu
 export function createTemplateManager(db: DelegationStore): TemplateManager {
   return {
     create(config) {
-      const {
-        userId,
-        name,
-        roleDescription,
-        defaultTools = [],
-        defaultTier,
-        tags = [],
-      } = config;
+      const { userId, name, roleDescription, defaultTools = [], defaultTier, tags = [] } = config;
 
       // Enforce max limit
       const existing = db.getRoleTemplates(userId);
@@ -111,11 +160,7 @@ export function createTemplateManager(db: DelegationStore): TemplateManager {
 
       for (const template of templates) {
         // Build combined token set from tags + role description + name
-        const templateText = [
-          template.name,
-          template.roleDescription,
-          ...template.tags,
-        ].join(' ');
+        const templateText = [template.name, template.roleDescription, ...template.tags].join(' ');
         const templateTokens = tokenize(templateText);
 
         const score = keywordScore(queryTokens, templateTokens);
@@ -135,7 +180,8 @@ export function createTemplateManager(db: DelegationStore): TemplateManager {
       const dbUpdates: Record<string, unknown> = { updatedAt: Date.now() };
 
       if (updates.name !== undefined) dbUpdates.name = updates.name;
-      if (updates.roleDescription !== undefined) dbUpdates.roleDescription = updates.roleDescription;
+      if (updates.roleDescription !== undefined)
+        dbUpdates.roleDescription = updates.roleDescription;
       if (updates.defaultTools !== undefined) dbUpdates.defaultTools = updates.defaultTools;
       if (updates.defaultTier !== undefined) dbUpdates.defaultTier = updates.defaultTier;
       if (updates.tags !== undefined) dbUpdates.tags = updates.tags;

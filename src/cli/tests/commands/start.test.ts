@@ -6,7 +6,7 @@
  * to test control-flow logic in isolation.
  */
 
-import { afterEach, beforeAll, beforeEach, describe, expect, test, mock, jest } from 'bun:test';
+import { afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 // ── Mock @tinyclaw/secrets ───────────────────────────────────────────
 
@@ -118,10 +118,18 @@ mock.module('@tinyclaw/queue', () => ({
 
 mock.module('@tinyclaw/logger', () => ({
   logger: {
-    log: mock((...args: any[]) => { console.log(...args); }),
-    info: mock((...args: any[]) => { console.log(...args); }),
-    warn: mock((...args: any[]) => { console.log(...args); }),
-    error: mock((...args: any[]) => { console.log(...args); }),
+    log: mock((...args: unknown[]) => {
+      console.log(...args);
+    }),
+    info: mock((...args: unknown[]) => {
+      console.log(...args);
+    }),
+    warn: mock((...args: unknown[]) => {
+      console.log(...args);
+    }),
+    error: mock((...args: unknown[]) => {
+      console.log(...args);
+    }),
     debug: mock(() => {}),
   },
   setLogMode: mock(() => {}),
@@ -154,7 +162,7 @@ mock.module('@tinyclaw/heartware', () => ({
   loadShieldContent: mock(() => Promise.resolve('')),
   parseSeed: mock((input: unknown) => {
     const n = Number(input);
-    return isNaN(n) ? undefined : n;
+    return Number.isNaN(n) ? undefined : n;
   }),
 }));
 
@@ -308,7 +316,7 @@ beforeEach(() => {
   consoleOutput = [];
   exitCode = undefined;
 
-  console.log = (...args: any[]) => {
+  console.log = (...args: unknown[]) => {
     consoleOutput.push(args.map(String).join(' '));
   };
 
@@ -353,6 +361,7 @@ describe('startCommand', () => {
   test('initializes provider orchestrator', async () => {
     await startCommand();
     // The orchestrator's registry is queried during boot to log available providers
+    // biome-ignore lint/suspicious/noExplicitAny: accessing mock constructor for assertion
     const orchestratorMock = (await import('@tinyclaw/router')).ProviderOrchestrator as any;
     expect(orchestratorMock).toHaveBeenCalled();
   });
@@ -361,7 +370,6 @@ describe('startCommand', () => {
     await startCommand();
     expect(mockGetStats).toHaveBeenCalled();
   });
-
 });
 
 describe('startCommand — missing API key', () => {

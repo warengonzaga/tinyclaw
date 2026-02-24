@@ -27,18 +27,20 @@ export function createSessionQueue(): SessionQueue {
       const count = (counts.get(sessionKey) ?? 0) + 1;
       counts.set(sessionKey, count);
 
-      const next = current.then(
-        () => task(),
-        () => task(),
-      ).finally(() => {
-        const remaining = (counts.get(sessionKey) ?? 1) - 1;
-        if (remaining <= 0) {
-          counts.delete(sessionKey);
-          chains.delete(sessionKey);
-        } else {
-          counts.set(sessionKey, remaining);
-        }
-      });
+      const next = current
+        .then(
+          () => task(),
+          () => task(),
+        )
+        .finally(() => {
+          const remaining = (counts.get(sessionKey) ?? 1) - 1;
+          if (remaining <= 0) {
+            counts.delete(sessionKey);
+            chains.delete(sessionKey);
+          } else {
+            counts.set(sessionKey, remaining);
+          }
+        });
 
       chains.set(sessionKey, next);
       return next as Promise<T>;

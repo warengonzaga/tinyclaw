@@ -62,11 +62,12 @@ function lockdown(config: { allowNet: boolean; allowFs: boolean }): void {
 
   // Block network unless explicitly allowed
   if (!config.allowNet) {
-    (globalThis as any).fetch = () => {
+    const globals = globalThis as unknown as Record<string, unknown>;
+    globals.fetch = () => {
       throw new Error('Network access blocked in sandbox');
     };
-    (globalThis as any).WebSocket = undefined;
-    (globalThis as any).XMLHttpRequest = undefined;
+    globals.WebSocket = undefined;
+    globals.XMLHttpRequest = undefined;
   }
 }
 
@@ -93,11 +94,11 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
     lockdown(config);
 
     // Make input available to user code
-    (globalThis as any).input = input;
+    (globalThis as unknown as Record<string, unknown>).input = input;
 
     // Execute user code
     // We use AsyncFunction to support await in user code
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
     const fn = new AsyncFunction('input', code);
     const result = await fn(input);
 

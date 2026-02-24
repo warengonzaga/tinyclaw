@@ -176,7 +176,25 @@ const SAFE_GIT_SUBCOMMANDS: ReadonlySet<string> = new Set([
 const SAFE_RUNTIME_SUBCOMMANDS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ['node', new Set(['--version', '-v', '-e', '--eval'])],
   ['bun', new Set(['--version', '-v', '--revision', 'pm', 'x'])],
-  ['npm', new Set(['--version', '-v', 'ls', 'list', 'view', 'info', 'show', 'outdated', 'audit', 'doctor', 'explain', 'why', 'search', 'help'])],
+  [
+    'npm',
+    new Set([
+      '--version',
+      '-v',
+      'ls',
+      'list',
+      'view',
+      'info',
+      'show',
+      'outdated',
+      'audit',
+      'doctor',
+      'explain',
+      'why',
+      'search',
+      'help',
+    ]),
+  ],
   ['yarn', new Set(['--version', '-v', 'info', 'list', 'why', 'audit'])],
   ['pnpm', new Set(['--version', '-v', 'ls', 'list', 'why', 'audit', 'outdated'])],
   ['pip', new Set(['--version', 'list', 'show', 'freeze', 'check'])],
@@ -196,7 +214,10 @@ const SAFE_RUNTIME_SUBCOMMANDS: ReadonlyMap<string, ReadonlySet<string>> = new M
  */
 const DANGEROUS_PATTERNS: ReadonlyArray<{ pattern: RegExp; reason: string }> = [
   // Destructive filesystem operations
-  { pattern: /\brm\s+(-[a-z]*r[a-z]*\s+)?(-[a-z]*f[a-z]*\s+)?\/\s*$/i, reason: 'Recursive delete of root filesystem' },
+  {
+    pattern: /\brm\s+(-[a-z]*r[a-z]*\s+)?(-[a-z]*f[a-z]*\s+)?\/\s*$/i,
+    reason: 'Recursive delete of root filesystem',
+  },
   { pattern: /\brm\s+.*-[a-z]*r[a-z]*f[a-z]*\s+\//i, reason: 'Forced recursive delete from root' },
   { pattern: /\bmkfs\b/i, reason: 'Filesystem formatting' },
   { pattern: /\bdd\b.*\bof=\/dev\//i, reason: 'Raw device write' },
@@ -273,13 +294,13 @@ function matchesPattern(command: string, pattern: string): boolean {
   // Glob-style: pattern "git *" matches "git status", "git log", etc.
   if (pattern.endsWith(' *')) {
     const prefix = pattern.slice(0, -2);
-    if (command.startsWith(prefix + ' ') || command === prefix) return true;
+    if (command.startsWith(`${prefix} `) || command === prefix) return true;
   }
 
   // Prefix pattern: "npm run *" matches "npm run build"
   if (pattern.includes('*')) {
     const regex = new RegExp(
-      '^' + pattern.replace(/[.*+?^${}()|[\]\\]/g, (m) => (m === '*' ? '.*' : '\\' + m)) + '$',
+      `^${pattern.replace(/[.*+?^${}()|[\]\\]/g, (m) => (m === '*' ? '.*' : `\\${m}`))}$`,
     );
     if (regex.test(command)) return true;
   }

@@ -1,25 +1,36 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { existsSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createDatabase } from '@tinyclaw/core';
 import { createIntercom, type Intercom, type IntercomMessage } from '@tinyclaw/intercom';
-import { createBlackboard, type Blackboard } from '../src/index.js';
 import type { Database } from '@tinyclaw/types';
-import { unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { type Blackboard, createBlackboard } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function createTestDb(): { db: Database; path: string } {
-  const path = join(tmpdir(), `tinyclaw-test-blackboard-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+  const path = join(
+    tmpdir(),
+    `tinyclaw-test-blackboard-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
+  );
   const db = createDatabase(path);
   return { db, path };
 }
 
 function cleanupDb(db: Database, path: string): void {
-  try { db.close(); } catch { /* ignore */ }
-  try { if (existsSync(path)) unlinkSync(path); } catch { /* ignore */ }
+  try {
+    db.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (existsSync(path)) unlinkSync(path);
+  } catch {
+    /* ignore */
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -58,13 +69,16 @@ describe('Blackboard', () => {
     });
 
     it('stored problem can be retrieved', () => {
-      const problemId = blackboard.postProblem('user1', 'Which database is best for this use case?');
+      const problemId = blackboard.postProblem(
+        'user1',
+        'Which database is best for this use case?',
+      );
 
       const problem = blackboard.getProblem(problemId);
       expect(problem).not.toBeNull();
-      expect(problem!.problemText).toBe('Which database is best for this use case?');
-      expect(problem!.userId).toBe('user1');
-      expect(problem!.status).toBe('open');
+      expect(problem?.problemText).toBe('Which database is best for this use case?');
+      expect(problem?.userId).toBe('user1');
+      expect(problem?.status).toBe('open');
     });
 
     it('shows up in active problems', () => {
@@ -246,7 +260,7 @@ describe('Blackboard', () => {
       const problem = blackboard.getProblem(problemId);
 
       expect(problem).not.toBeNull();
-      expect(problem!.problemText).toBe('My problem');
+      expect(problem?.problemText).toBe('My problem');
     });
   });
 
@@ -324,16 +338,25 @@ describe('Blackboard', () => {
 
       // 2. Multiple sub-agents propose solutions
       blackboard.addProposal(
-        problemId, 'agent-devops', 'DevOps Engineer',
-        'Use blue-green deployment with automatic rollback', 0.85,
+        problemId,
+        'agent-devops',
+        'DevOps Engineer',
+        'Use blue-green deployment with automatic rollback',
+        0.85,
       );
       blackboard.addProposal(
-        problemId, 'agent-sre', 'SRE',
-        'Use canary deployment with gradual rollout', 0.90,
+        problemId,
+        'agent-sre',
+        'SRE',
+        'Use canary deployment with gradual rollout',
+        0.9,
       );
       blackboard.addProposal(
-        problemId, 'agent-dev', 'Developer',
-        'Use feature flags with percentage rollout', 0.70,
+        problemId,
+        'agent-dev',
+        'Developer',
+        'Use feature flags with percentage rollout',
+        0.7,
       );
 
       // 3. Get proposals sorted by confidence

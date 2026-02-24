@@ -14,43 +14,43 @@
  * Uses @clack/prompts for a beautiful, lightweight terminal experience.
  */
 
-import { execSync } from 'child_process';
-import { join } from 'path';
-import { homedir } from 'os';
+import { execSync } from 'node:child_process';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import * as p from '@clack/prompts';
-import QRCode from 'qrcode';
-import { createOllamaProvider } from '@tinyclaw/core';
-import { SecretsManager, buildProviderKeyName } from '@tinyclaw/secrets';
 import { ConfigManager } from '@tinyclaw/config';
-import { parseSeed, generateRandomSeed, generateSoul } from '@tinyclaw/heartware';
 import {
-  DEFAULT_PROVIDER,
-  DEFAULT_MODEL,
-  DEFAULT_BASE_URL,
-  SECURITY_WARNING_TITLE,
-  SECURITY_WARNING_BODY,
-  SECURITY_LICENSE,
-  SECURITY_WARRANTY,
-  SECURITY_SAFETY_TITLE,
-  SECURITY_SAFETY_PRACTICES,
-  SECURITY_CONFIRM,
-  defaultModelNote,
-  TOTP_SETUP_TITLE,
-  TOTP_SETUP_BODY,
-  BACKUP_CODES_INTRO,
+  BACKUP_CODES_COUNT,
   BACKUP_CODES_HINT,
-  RECOVERY_TOKEN_HINT,
-  generateTotpSecret,
+  BACKUP_CODES_INTRO,
+  createOllamaProvider,
   createTotpUri,
-  verifyTotpCode,
+  DEFAULT_BASE_URL,
+  DEFAULT_MODEL,
+  DEFAULT_PROVIDER,
+  defaultModelNote,
   generateBackupCodes,
   generateRecoveryToken,
+  generateTotpSecret,
+  RECOVERY_TOKEN_HINT,
+  SECURITY_CONFIRM,
+  SECURITY_LICENSE,
+  SECURITY_SAFETY_PRACTICES,
+  SECURITY_SAFETY_TITLE,
+  SECURITY_WARNING_BODY,
+  SECURITY_WARNING_TITLE,
+  SECURITY_WARRANTY,
   sha256,
-  BACKUP_CODES_COUNT,
+  TOTP_SETUP_BODY,
+  TOTP_SETUP_TITLE,
+  verifyTotpCode,
 } from '@tinyclaw/core';
+import { generateRandomSeed, generateSoul, parseSeed } from '@tinyclaw/heartware';
 import { logger, setLogMode } from '@tinyclaw/logger';
-import { createWebUI } from '@tinyclaw/web';
+import { buildProviderKeyName, SecretsManager } from '@tinyclaw/secrets';
 import type { StreamCallback } from '@tinyclaw/types';
+import { createWebUI } from '@tinyclaw/web';
+import QRCode from 'qrcode';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
 
@@ -68,7 +68,10 @@ function copyToClipboard(text: string): boolean {
     } else {
       // Linux — try xclip first, fall back to xsel
       try {
-        execSync('xclip -selection clipboard', { input: text, stdio: ['pipe', 'ignore', 'ignore'] });
+        execSync('xclip -selection clipboard', {
+          input: text,
+          stdio: ['pipe', 'ignore', 'ignore'],
+        });
       } catch {
         execSync('xsel --clipboard --input', { input: text, stdio: ['pipe', 'ignore', 'ignore'] });
       }
@@ -82,9 +85,7 @@ function copyToClipboard(text: string): boolean {
 /**
  * Check if the user has already completed setup
  */
-async function isAlreadyConfigured(
-  secrets: SecretsManager
-): Promise<boolean> {
+async function isAlreadyConfigured(secrets: SecretsManager): Promise<boolean> {
   return await secrets.check(buildProviderKeyName('ollama'));
 }
 
@@ -103,19 +104,24 @@ export async function setupWebCommand(): Promise<void> {
   logger.info('Data directory:', { dataDir }, { emoji: '\ud83d\udcc2' });
 
   const secretsManager = await SecretsManager.create();
-  logger.info('Secrets engine initialized', {
-    storagePath: secretsManager.storagePath,
-  }, { emoji: '\u2705' });
+  logger.info(
+    'Secrets engine initialized',
+    {
+      storagePath: secretsManager.storagePath,
+    },
+    { emoji: '\u2705' },
+  );
 
   const configManager = await ConfigManager.create();
   logger.info('Config engine initialized', { configPath: configManager.path }, { emoji: '\u2705' });
 
   const parsedPort = parseInt(process.env.PORT || '3000', 10);
-  const port = Number.isInteger(parsedPort) && parsedPort >= 1 && parsedPort <= 65535
-    ? parsedPort
-    : 3000;
+  const port =
+    Number.isInteger(parsedPort) && parsedPort >= 1 && parsedPort <= 65535 ? parsedPort : 3000;
   if (process.env.PORT && port !== parsedPort) {
-    logger.warn(`Invalid PORT "${process.env.PORT}" — falling back to ${port}`, undefined, { emoji: '\u26a0\ufe0f' });
+    logger.warn(`Invalid PORT "${process.env.PORT}" — falling back to ${port}`, undefined, {
+      emoji: '\u26a0\ufe0f',
+    });
   }
   const setupOnlyMessage =
     'Tiny Claw setup is not complete yet. Open /setup to finish onboarding, or run tinyclaw setup in the CLI.';
@@ -123,8 +129,12 @@ export async function setupWebCommand(): Promise<void> {
   logger.info('\u2500'.repeat(52), undefined, { emoji: '' });
   logger.warn('Web setup mode enabled (--web).', undefined, { emoji: '\u26a0\ufe0f' });
   logger.info('Choose your onboarding path:', undefined, { emoji: '\ud83d\udccb' });
-  logger.info(`1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`, undefined, { emoji: '\ud83d\udccb' });
-  logger.info(`2. ${theme.cmd('tinyclaw setup --web')} ${theme.dim('(Web setup)')}`, undefined, { emoji: '\ud83d\udccb' });
+  logger.info(`1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`, undefined, {
+    emoji: '\ud83d\udccb',
+  });
+  logger.info(`2. ${theme.cmd('tinyclaw setup --web')} ${theme.dim('(Web setup)')}`, undefined, {
+    emoji: '\ud83d\udccb',
+  });
   logger.info('\u2500'.repeat(52), undefined, { emoji: '' });
 
   let setupWebUI: ReturnType<typeof createWebUI> | null = null;
@@ -151,12 +161,18 @@ export async function setupWebCommand(): Promise<void> {
     await setupWebUI.start();
 
     logger.info('Setup-only web server is running', 'web', { emoji: '\ud83d\udee0\ufe0f' });
-    logger.info(`Open: ${theme.brand(`http://localhost:${port}/setup`)}`, 'web', { emoji: '\ud83d\udd17' });
+    logger.info(`Open: ${theme.brand(`http://localhost:${port}/setup`)}`, 'web', {
+      emoji: '\ud83d\udd17',
+    });
   } catch (err) {
     logger.error('Failed to start web setup server', { err }, { emoji: '\u274c' });
     // Graceful cleanup on error
     if (setupWebUI) {
-      try { await setupWebUI.stop(); } catch { /* ignore */ }
+      try {
+        await setupWebUI.stop();
+      } catch {
+        /* ignore */
+      }
     }
     await cleanup(secretsManager, configManager);
     throw err;
@@ -166,7 +182,11 @@ export async function setupWebCommand(): Promise<void> {
   const gracefulShutdown = async () => {
     logger.info('Shutting down web setup server...', undefined, { emoji: '\ud83d\udeab' });
     if (setupWebUI) {
-      try { await setupWebUI.stop(); } catch { /* ignore */ }
+      try {
+        await setupWebUI.stop();
+      } catch {
+        /* ignore */
+      }
     }
     await cleanup(secretsManager, configManager);
     process.exit(0);
@@ -188,17 +208,22 @@ export async function setupCommand(): Promise<void> {
   const secretsManager = await SecretsManager.create();
   const configManager = await ConfigManager.create();
 
-  p.intro(theme.brand('Let\'s set up Tiny Claw'));
+  p.intro(theme.brand("Let's set up Tiny Claw"));
 
   // --- Security warning -----------------------------------------------
 
   p.note(
-    theme.warn(SECURITY_WARNING_TITLE) + '\n\n' +
-    SECURITY_WARNING_BODY + '\n\n' +
-    theme.label(SECURITY_LICENSE) + '\n\n' +
-    theme.label(SECURITY_WARRANTY) + '\n\n' +
-    theme.label(SECURITY_SAFETY_TITLE) + '\n' +
-    SECURITY_SAFETY_PRACTICES.map(item => `  • ${item}`).join('\n'),
+    theme.warn(SECURITY_WARNING_TITLE) +
+      '\n\n' +
+      SECURITY_WARNING_BODY +
+      '\n\n' +
+      theme.label(SECURITY_LICENSE) +
+      '\n\n' +
+      theme.label(SECURITY_WARRANTY) +
+      '\n\n' +
+      theme.label(SECURITY_SAFETY_TITLE) +
+      '\n' +
+      SECURITY_SAFETY_PRACTICES.map((item) => `  • ${item}`).join('\n'),
     'Security',
   );
 
@@ -223,19 +248,19 @@ export async function setupCommand(): Promise<void> {
 
   if (fullyConfigured) {
     // Build existing config summary with soul info
-    const soul = generateSoul(savedSeed!);
+    const soul = generateSoul(savedSeed ?? 0);
     const st = soul.traits;
 
     p.log.info(
       `Existing configuration found:\n` +
-      `  Provider : ${theme.label('Ollama Cloud')}\n` +
-      `  Model    : ${theme.label(DEFAULT_MODEL)}\n` +
-      `  Base URL : ${theme.label(DEFAULT_BASE_URL)}\n` +
-      `  API Key  : ${theme.dim('••••••••  (stored in secrets-engine)')}\n\n` +
-      `  Soul seed:\n` +
-      `  Seed     : ${theme.label(String(savedSeed))}\n` +
-      `  Name     : ${theme.label(st.character.suggestedName)}\n` +
-      `  Values   : ${theme.label(st.values.join(', '))}`
+        `  Provider : ${theme.label('Ollama Cloud')}\n` +
+        `  Model    : ${theme.label(DEFAULT_MODEL)}\n` +
+        `  Base URL : ${theme.label(DEFAULT_BASE_URL)}\n` +
+        `  API Key  : ${theme.dim('••••••••  (stored in secrets-engine)')}\n\n` +
+        `  Soul seed:\n` +
+        `  Seed     : ${theme.label(String(savedSeed))}\n` +
+        `  Name     : ${theme.label(st.character.suggestedName)}\n` +
+        `  Values   : ${theme.label(st.values.join(', '))}`,
     );
 
     const reconfigure = await p.confirm({
@@ -253,111 +278,113 @@ export async function setupCommand(): Promise<void> {
   if (partiallyConfigured) {
     p.log.warn(
       `Incomplete setup detected — API key is stored but no soul seed was set.\n` +
-      `Resuming setup from the soul seed step.`
+        `Resuming setup from the soul seed step.`,
     );
   }
 
   // --- Steps 1-3: API key, validation, model (skip if partially configured) ---
 
   if (!partiallyConfigured) {
+    // --- Step 1: API key ------------------------------------------------
 
-  // --- Step 1: API key ------------------------------------------------
+    p.note(
+      `${theme.label('Ollama Cloud')} is the default provider that powers Tiny Claw.\n` +
+        "It's free to sign up and comes with a generous free tier,\n" +
+        'so you can take your time exploring what Tiny Claw can do.\n\n' +
+        theme.label('How to get your API key:') +
+        '\n' +
+        `  1. Go to ${theme.label('https://ollama.com')} and create a free account.\n` +
+        '  2. Navigate to your account settings \u2192 API keys.\n' +
+        '  3. Generate a new key and paste it below.\n\n' +
+        theme.dim(
+          'Shout-out to the Ollama team for their generosity, making it\n' +
+            'possible for anyone to try Tiny Claw at zero cost. Thank you! \ud83d\ude4f',
+        ),
+      'Default Provider',
+    );
 
-  p.note(
-    `${theme.label('Ollama Cloud')} is the default provider that powers Tiny Claw.\n` +
-    'It\'s free to sign up and comes with a generous free tier,\n' +
-    'so you can take your time exploring what Tiny Claw can do.\n\n' +
-    theme.label('How to get your API key:') + '\n' +
-    `  1. Go to ${theme.label('https://ollama.com')} and create a free account.\n` +
-    '  2. Navigate to your account settings \u2192 API keys.\n' +
-    '  3. Generate a new key and paste it below.\n\n' +
-    theme.dim('Shout-out to the Ollama team for their generosity, making it\n' +
-    'possible for anyone to try Tiny Claw at zero cost. Thank you! \ud83d\ude4f'),
-    'Default Provider',
-  );
-
-  const apiKey = await p.password({
-    message: 'Enter your Ollama Cloud API key',
-    validate: (value) => {
-      if (!value || value.trim().length === 0) {
-        return 'API key is required';
-      }
-    },
-  });
-
-  if (p.isCancel(apiKey)) {
-    p.outro(theme.dim('Setup cancelled.'));
-    await cleanup(secretsManager, configManager);
-    return;
-  }
-
-  // --- Step 2: Validate API key ---------------------------------------
-
-  const verifySpinner = p.spinner();
-  verifySpinner.start('Validating your API key');
-
-  let keyValid = false;
-
-  try {
-    // Temporarily store the key so the provider can resolve it
-    await secretsManager.store(buildProviderKeyName(DEFAULT_PROVIDER), apiKey.trim());
-
-    const ollamaProvider = createOllamaProvider({
-      secrets: secretsManager,
-      model: DEFAULT_MODEL,
-      baseUrl: DEFAULT_BASE_URL,
+    const apiKey = await p.password({
+      message: 'Enter your Ollama Cloud API key',
+      validate: (value) => {
+        if (!value || value.trim().length === 0) {
+          return 'API key is required';
+        }
+      },
     });
 
-    keyValid = await ollamaProvider.isAvailable();
-
-    if (keyValid) {
-      verifySpinner.stop(theme.success('API key is valid'));
-    } else {
-      verifySpinner.stop(theme.warn('Could not verify API key'));
-      p.log.warn(
-        'The provider is not reachable. Your key has been saved anyway.\n' +
-        'You can re-run ' + theme.cmd('tinyclaw setup') + ' to reconfigure.'
-      );
+    if (p.isCancel(apiKey)) {
+      p.outro(theme.dim('Setup cancelled.'));
+      await cleanup(secretsManager, configManager);
+      return;
     }
-  } catch (err) {
-    verifySpinner.stop(theme.warn('Verification failed'));
-    p.log.warn(
-      'Could not validate the key, but it has been saved.\n' +
-      'Error: ' + String(err)
-    );
-  }
 
-  // --- Step 3: Default model confirmation -----------------------------
+    // --- Step 2: Validate API key ---------------------------------------
 
-  p.note(
-    defaultModelNote(theme.label(DEFAULT_MODEL)),
-    'Default Model',
-  );
+    const verifySpinner = p.spinner();
+    verifySpinner.start('Validating your API key');
 
-  const understood = await p.confirm({
-    message: 'Got it, let\'s continue',
-    initialValue: true,
-  });
+    let keyValid = false;
 
-  if (p.isCancel(understood) || !understood) {
-    p.outro(theme.dim('Setup cancelled.'));
-    await cleanup(secretsManager, configManager);
-    return;
-  }
+    try {
+      // Temporarily store the key so the provider can resolve it
+      await secretsManager.store(buildProviderKeyName(DEFAULT_PROVIDER), apiKey.trim());
 
+      const ollamaProvider = createOllamaProvider({
+        secrets: secretsManager,
+        model: DEFAULT_MODEL,
+        baseUrl: DEFAULT_BASE_URL,
+      });
+
+      keyValid = await ollamaProvider.isAvailable();
+
+      if (keyValid) {
+        verifySpinner.stop(theme.success('API key is valid'));
+      } else {
+        verifySpinner.stop(theme.warn('Could not verify API key'));
+        p.log.warn(
+          'The provider is not reachable. Your key has been saved anyway.\n' +
+            'You can re-run ' +
+            theme.cmd('tinyclaw setup') +
+            ' to reconfigure.',
+        );
+      }
+    } catch (err) {
+      verifySpinner.stop(theme.warn('Verification failed'));
+      p.log.warn(`Could not validate the key, but it has been saved.\nError: ${String(err)}`);
+    }
+
+    // --- Step 3: Default model confirmation -----------------------------
+
+    p.note(defaultModelNote(theme.label(DEFAULT_MODEL)), 'Default Model');
+
+    const understood = await p.confirm({
+      message: "Got it, let's continue",
+      initialValue: true,
+    });
+
+    if (p.isCancel(understood) || !understood) {
+      p.outro(theme.dim('Setup cancelled.'));
+      await cleanup(secretsManager, configManager);
+      return;
+    }
   } // end skip for partial setup
 
   // --- Step 4: Soul seed ------------------------------------------------
 
   p.note(
-    'Your Tiny Claw\'s personality is generated from a ' + theme.label('soul seed') + ',\n' +
-    'just like Minecraft\'s world generation. The same seed always\n' +
-    'produces the same personality \u2014 unique traits, quirks, and values.\n\n' +
-    theme.label('Options:') + '\n' +
-    '  \u2022 Enter a specific number to get a personality you can reproduce.\n' +
-    '  \u2022 Leave blank to let Tiny Claw pick a random seed.\n\n' +
-    theme.dim('Once set, the soul seed is permanent and cannot be changed.\n' +
-    'Share your seed with others so they can create a companion just like yours!'),
+    "Your Tiny Claw's personality is generated from a " +
+      theme.label('soul seed') +
+      ',\n' +
+      "just like Minecraft's world generation. The same seed always\n" +
+      'produces the same personality \u2014 unique traits, quirks, and values.\n\n' +
+      theme.label('Options:') +
+      '\n' +
+      '  \u2022 Enter a specific number to get a personality you can reproduce.\n' +
+      '  \u2022 Leave blank to let Tiny Claw pick a random seed.\n\n' +
+      theme.dim(
+        'Once set, the soul seed is permanent and cannot be changed.\n' +
+          'Share your seed with others so they can create a companion just like yours!',
+      ),
     'Soul Seed',
   );
 
@@ -395,8 +422,8 @@ export async function setupCommand(): Promise<void> {
 
     p.log.info(
       `${theme.label('Seed')}     : ${soulSeed}\n` +
-      `${theme.label('Name')}     : ${t.character.suggestedName}\n` +
-      `${theme.label('Values')}   : ${t.values.join(', ')}`
+        `${theme.label('Name')}     : ${t.character.suggestedName}\n` +
+        `${theme.label('Values')}   : ${t.values.join(', ')}`,
     );
 
     const soulAction = await p.select({
@@ -445,10 +472,12 @@ export async function setupCommand(): Promise<void> {
   // --- Step 5: TOTP setup ---------------------------------------------
 
   p.note(
-    theme.label(TOTP_SETUP_TITLE) + '\n\n' +
-    TOTP_SETUP_BODY + '\n\n' +
-    'Two-factor authentication protects your Tiny Claw instance.\n' +
-    'You\'ll need this to log in via the web dashboard.',
+    theme.label(TOTP_SETUP_TITLE) +
+      '\n\n' +
+      TOTP_SETUP_BODY +
+      '\n\n' +
+      'Two-factor authentication protects your Tiny Claw instance.\n' +
+      "You'll need this to log in via the web dashboard.",
     'Two-Factor Authentication',
   );
 
@@ -459,10 +488,13 @@ export async function setupCommand(): Promise<void> {
   const qrText = await QRCode.toString(totpUri, { type: 'terminal', small: true });
 
   p.log.info(
-    theme.label('Scan this QR code with your authenticator app:') + '\n\n' +
-    qrText + '\n' +
-    theme.label('Or enter the secret manually:') + '\n' +
-    `  ${theme.cmd(totpSecret)}`
+    theme.label('Scan this QR code with your authenticator app:') +
+      '\n\n' +
+      qrText +
+      '\n' +
+      theme.label('Or enter the secret manually:') +
+      '\n' +
+      `  ${theme.cmd(totpSecret)}`,
   );
 
   let totpVerified = false;
@@ -514,29 +546,38 @@ export async function setupCommand(): Promise<void> {
   // Break the long recovery token into readable chunks (40 chars per line)
   const tokenChunks = recoveryToken.match(/.{1,40}/g) || [recoveryToken];
 
-  p.note(
-    theme.warn(BACKUP_CODES_INTRO),
-    'Recovery Information',
+  p.note(theme.warn(BACKUP_CODES_INTRO), 'Recovery Information');
+
+  p.log.info(
+    theme.label('Recovery Token:') +
+      '\n' +
+      tokenChunks.map((chunk) => `  ${theme.cmd(chunk)}`).join('\n') +
+      '\n\n' +
+      theme.dim(RECOVERY_TOKEN_HINT),
   );
 
   p.log.info(
-    theme.label('Recovery Token:') + '\n' +
-    tokenChunks.map(chunk => `  ${theme.cmd(chunk)}`).join('\n') + '\n\n' +
-    theme.dim(RECOVERY_TOKEN_HINT)
-  );
-
-  p.log.info(
-    theme.label('Backup Codes:') + '\n' +
-    backupCodes.map((code, i) => `  ${String(i + 1).padStart(2, ' ')}. ${code}`).join('\n') + '\n\n' +
-    theme.dim(BACKUP_CODES_HINT)
+    theme.label('Backup Codes:') +
+      '\n' +
+      backupCodes.map((code, i) => `  ${String(i + 1).padStart(2, ' ')}. ${code}`).join('\n') +
+      '\n\n' +
+      theme.dim(BACKUP_CODES_HINT),
   );
 
   // Offer to copy recovery credentials to clipboard
   const copyMode = await p.select({
     message: 'How would you like to save your credentials?',
     options: [
-      { value: 'all', label: 'Copy all at once', hint: 'recovery token + backup codes → clipboard' },
-      { value: 'step', label: 'Copy one at a time', hint: 'recovery token first, then backup codes' },
+      {
+        value: 'all',
+        label: 'Copy all at once',
+        hint: 'recovery token + backup codes → clipboard',
+      },
+      {
+        value: 'step',
+        label: 'Copy one at a time',
+        hint: 'recovery token first, then backup codes',
+      },
     ],
   });
 
@@ -565,7 +606,7 @@ export async function setupCommand(): Promise<void> {
     }
 
     const copyCodesConfirm = await p.confirm({
-      message: 'I\'ve saved the recovery token — copy backup codes next',
+      message: "I've saved the recovery token — copy backup codes next",
       initialValue: true,
     });
 
@@ -646,20 +687,20 @@ export async function setupCommand(): Promise<void> {
 
   p.log.success(
     `${theme.label('Provider')}  : Ollama Cloud\n` +
-    `${theme.label('Model')}     : ${DEFAULT_MODEL}\n` +
-    `${theme.label('Base URL')}  : ${DEFAULT_BASE_URL}\n` +
-    `${theme.label('API Key')}   : ${theme.dim('••••••••  (encrypted)')}\n` +
-    `${theme.label('Soul Seed')} : ${soulSeed}`
+      `${theme.label('Model')}     : ${DEFAULT_MODEL}\n` +
+      `${theme.label('Base URL')}  : ${DEFAULT_BASE_URL}\n` +
+      `${theme.label('API Key')}   : ${theme.dim('••••••••  (encrypted)')}\n` +
+      `${theme.label('Soul Seed')} : ${soulSeed}`,
   );
 
   p.log.info(
-    theme.dim('Your recovery token, backup codes, and TOTP secret have been\n' +
-    'cleared from the terminal for security. Make sure you saved them!')
+    theme.dim(
+      'Your recovery token, backup codes, and TOTP secret have been\n' +
+        'cleared from the terminal for security. Make sure you saved them!',
+    ),
   );
 
-  p.outro(
-    theme.success('You\'re all set!') + ' Run ' + theme.cmd('tinyclaw start') + ' to begin.'
-  );
+  p.outro(`${theme.success("You're all set!")} Run ${theme.cmd('tinyclaw start')} to begin.`);
 
   await cleanup(secretsManager, configManager);
 }
@@ -668,6 +709,14 @@ export async function setupCommand(): Promise<void> {
  * Gracefully close manager connections
  */
 async function cleanup(secrets: SecretsManager, config: ConfigManager): Promise<void> {
-  try { config.close(); } catch { /* ignore */ }
-  try { await secrets.close(); } catch { /* ignore */ }
+  try {
+    config.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    await secrets.close();
+  } catch {
+    /* ignore */
+  }
 }

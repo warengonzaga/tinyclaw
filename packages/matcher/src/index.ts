@@ -55,13 +55,70 @@ const DEFAULT_MIN_SCORE = 0.3;
 const DEFAULT_WEIGHTS = { keyword: 0.5, fuzzy: 0.2, synonym: 0.3 };
 
 const STOP_WORDS = new Set([
-  'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'shall', 'can', 'to', 'of', 'in', 'for',
-  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'about', 'like',
-  'through', 'after', 'over', 'between', 'out', 'up', 'that', 'this',
-  'it', 'and', 'or', 'but', 'not', 'no', 'so', 'if', 'then', 'than',
-  'too', 'very', 'just', 'also', 'more', 'some', 'any', 'each', 'all',
+  'a',
+  'an',
+  'the',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'shall',
+  'can',
+  'to',
+  'of',
+  'in',
+  'for',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'into',
+  'about',
+  'like',
+  'through',
+  'after',
+  'over',
+  'between',
+  'out',
+  'up',
+  'that',
+  'this',
+  'it',
+  'and',
+  'or',
+  'but',
+  'not',
+  'no',
+  'so',
+  'if',
+  'then',
+  'than',
+  'too',
+  'very',
+  'just',
+  'also',
+  'more',
+  'some',
+  'any',
+  'each',
+  'all',
 ]);
 
 /**
@@ -120,8 +177,8 @@ function levenshteinDistance(s1: string, s2: string): number {
     for (let j = 1; j <= n; j++) {
       const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
       curr[j] = Math.min(
-        prev[j] + 1,       // deletion
-        curr[j - 1] + 1,   // insertion
+        prev[j] + 1, // deletion
+        curr[j - 1] + 1, // insertion
         prev[j - 1] + cost, // substitution
       );
     }

@@ -6,9 +6,6 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { createWebUI } from '../src/server.ts';
 
 // ---------------------------------------------------------------------------
@@ -60,7 +57,7 @@ async function generateTotp(secret: string): Promise<string> {
     keyData,
     { name: 'HMAC', hash: 'SHA-1' },
     false,
-    ['sign']
+    ['sign'],
   );
 
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, counterBuf));
@@ -75,7 +72,8 @@ async function generateTotp(secret: string): Promise<string> {
 }
 
 function extractBootstrapSecret(logs: string[]): string {
-  const full = logs.join('\n').replace(/\x1b\[[0-9;]*m/g, '');
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape code for terminal color stripping
+  const full = logs.join('\n').replace(/\u001b\[[0-9;]*m/g, '');
   const match = full.match(/secret:\s+([A-Z2-9]{30})/i);
   if (!match) throw new Error('bootstrap secret not found in logs');
   return match[1];
@@ -118,7 +116,7 @@ describe('GET /api/health', () => {
 describe('setup and MFA flow', () => {
   let ui: ReturnType<typeof createWebUI>;
   let port: number;
-  const configStore = new Map<string, any>();
+  const configStore = new Map<string, unknown>();
   const storedSecrets: Array<{ key: string; value: string }> = [];
 
   const configManager = {
@@ -135,7 +133,7 @@ describe('setup and MFA flow', () => {
       storedSecrets.push({ key, value });
     },
     async retrieve(key: string): Promise<string | undefined> {
-      const entry = [...storedSecrets].reverse().find(s => s.key === key);
+      const entry = [...storedSecrets].reverse().find((s) => s.key === key);
       return entry?.value;
     },
   };
@@ -150,7 +148,7 @@ describe('setup and MFA flow', () => {
     port = randomPort();
     const logs: string[] = [];
     const originalLog = console.log;
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       logs.push(args.map(String).join(' '));
     };
 
@@ -206,15 +204,19 @@ describe('setup and MFA flow', () => {
     expect(configStore.get('heartware.seed')).toBe(8675309);
     expect(configStore.get('owner.backupCodesRemaining')).toBe(10);
     expect(typeof configStore.get('owner.recoveryTokenHash')).toBe('string');
-    expect(storedSecrets.some(s => s.key === 'provider.ollama.apiKey' && s.value === 'ollama-test-key')).toBe(true);
-    expect(storedSecrets.some(s => s.key === 'owner.totpSecret')).toBe(true);
+    expect(
+      storedSecrets.some(
+        (s) => s.key === 'provider.ollama.apiKey' && s.value === 'ollama-test-key',
+      ),
+    ).toBe(true);
+    expect(storedSecrets.some((s) => s.key === 'owner.totpSecret')).toBe(true);
   });
 
   test('login only accepts TOTP — rejects backup code via login endpoint', async () => {
     port = randomPort();
     const logs: string[] = [];
     const originalLog = console.log;
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       logs.push(args.map(String).join(' '));
     };
 
@@ -266,7 +268,7 @@ describe('setup and MFA flow', () => {
     port = randomPort();
     const logs: string[] = [];
     const originalLog = console.log;
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       logs.push(args.map(String).join(' '));
     };
 
@@ -370,7 +372,7 @@ describe('setup and MFA flow', () => {
     port = randomPort();
     const logs: string[] = [];
     const originalLog = console.log;
-    console.log = (...args: any[]) => {
+    console.log = (...args: unknown[]) => {
       logs.push(args.map(String).join(' '));
     };
 
@@ -430,7 +432,8 @@ describe('setup and MFA flow', () => {
     const setCookie = recoverRes.headers.get('set-cookie') || '';
     const cookieMatch = setCookie.match(/tinyclaw_session=([^;]+)/);
     expect(cookieMatch).not.toBeNull();
-    const sessionCookie = `tinyclaw_session=${cookieMatch![1]}`;
+    if (!cookieMatch) throw new Error('session cookie not found');
+    const sessionCookie = `tinyclaw_session=${cookieMatch[1]}`;
 
     const recoverBody = await recoverRes.json();
     expect(recoverBody.ok).toBe(true);
@@ -439,7 +442,7 @@ describe('setup and MFA flow', () => {
     // Step 1: Start TOTP re-enrollment (requires owner auth via cookie)
     const setupRes = await fetchJSON(port, '/api/owner/totp-setup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Cookie': sessionCookie },
+      headers: { 'Content-Type': 'application/json', Cookie: sessionCookie },
     });
     expect(setupRes.status).toBe(200);
     expect(typeof setupRes.body.reenrollToken).toBe('string');
@@ -450,7 +453,7 @@ describe('setup and MFA flow', () => {
     const newTotpCode = await generateTotp(setupRes.body.totpSecret);
     const confirmRes = await fetchJSON(port, '/api/owner/totp-confirm', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Cookie': sessionCookie },
+      headers: { 'Content-Type': 'application/json', Cookie: sessionCookie },
       body: JSON.stringify({
         reenrollToken: setupRes.body.reenrollToken,
         totpCode: newTotpCode,
@@ -466,7 +469,7 @@ describe('setup and MFA flow', () => {
 
     // Old TOTP should no longer work for login
     const oldTotpCode2 = await generateTotp(bootstrap.body.totpSecret);
-    const oldLogin = await fetchJSON(port, '/api/auth/login', {
+    const _oldLogin = await fetchJSON(port, '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ totpCode: oldTotpCode2 }),

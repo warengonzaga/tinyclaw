@@ -1,8 +1,8 @@
 /**
  * Shield Parser Tests
  */
-import { describe, it, expect } from 'bun:test';
-import { parseShieldContent, parseThreatBlock, parseAllThreats } from '../src/parser.js';
+import { describe, expect, it } from 'bun:test';
+import { parseAllThreats, parseShieldContent, parseThreatBlock } from '../src/parser.js';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -92,13 +92,13 @@ describe('parseThreatBlock', () => {
   it('should parse a valid threat block', () => {
     const result = parseThreatBlock(MINIMAL_THREAT);
     expect(result).not.toBeNull();
-    expect(result!.id).toBe('THREAT-001');
-    expect(result!.fingerprint).toBe('abc123');
-    expect(result!.category).toBe('tool');
-    expect(result!.severity).toBe('high');
-    expect(result!.confidence).toBe(0.90);
-    expect(result!.action).toBe('block');
-    expect(result!.title).toBe('SQL Injection via Tool');
+    expect(result?.id).toBe('THREAT-001');
+    expect(result?.fingerprint).toBe('abc123');
+    expect(result?.category).toBe('tool');
+    expect(result?.severity).toBe('high');
+    expect(result?.confidence).toBe(0.9);
+    expect(result?.action).toBe('block');
+    expect(result?.title).toBe('SQL Injection via Tool');
   });
 
   it('should return null for missing id', () => {
@@ -200,14 +200,14 @@ expires_at: 2099-12-31T23:59:59Z
 `;
     const result = parseThreatBlock(block);
     expect(result).not.toBeNull();
-    expect(result!.expiresAt).toBe('2099-12-31T23:59:59Z');
+    expect(result?.expiresAt).toBe('2099-12-31T23:59:59Z');
   });
 
   it('should parse recommendation_agent multiline content', () => {
     const result = parseThreatBlock(MINIMAL_THREAT);
     expect(result).not.toBeNull();
-    expect(result!.recommendationAgent).toContain('BLOCK:');
-    expect(result!.recommendationAgent).toContain('tool.call');
+    expect(result?.recommendationAgent).toContain('BLOCK:');
+    expect(result?.recommendationAgent).toContain('tool.call');
   });
 });
 
@@ -226,7 +226,7 @@ describe('parseShieldContent', () => {
 
   it('should filter out revoked threats', () => {
     const threats = parseShieldContent(FULL_SHIELD_MD);
-    const ids = threats.map(t => t.id);
+    const ids = threats.map((t) => t.id);
     expect(ids).not.toContain('THREAT-003');
   });
 
@@ -239,7 +239,9 @@ describe('parseShieldContent', () => {
   });
 
   it('should handle null/undefined gracefully', () => {
+    // biome-ignore lint/suspicious/noExplicitAny: intentionally testing invalid input types
     expect(parseShieldContent(null as any)).toEqual([]);
+    // biome-ignore lint/suspicious/noExplicitAny: intentionally testing invalid input types
     expect(parseShieldContent(undefined as any)).toEqual([]);
   });
 });
@@ -252,9 +254,9 @@ describe('parseAllThreats', () => {
   it('should include revoked threats', () => {
     const all = parseAllThreats(FULL_SHIELD_MD);
     expect(all.length).toBe(3);
-    const revoked = all.find(t => t.id === 'THREAT-003');
+    const revoked = all.find((t) => t.id === 'THREAT-003');
     expect(revoked).toBeDefined();
-    expect(revoked!.revoked).toBe(true);
+    expect(revoked?.revoked).toBe(true);
   });
 
   it('should return empty array for empty content', () => {

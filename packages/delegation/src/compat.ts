@@ -6,8 +6,8 @@
  */
 
 import { logger } from '@tinyclaw/logger';
-import type { Tool } from '@tinyclaw/types';
-import type { ProviderOrchestrator, QueryTier } from '@tinyclaw/router';
+import type { QueryTier } from '@tinyclaw/router';
+import type { Provider, Tool } from '@tinyclaw/types';
 import { runSubAgent } from './runner.js';
 import type { DelegationToolConfig } from './types.js';
 
@@ -44,8 +44,7 @@ export function createDelegationTool(config: DelegationToolConfig): Tool {
       properties: {
         task: {
           type: 'string',
-          description:
-            'Clear, detailed description of what the sub-agent should accomplish',
+          description: 'Clear, detailed description of what the sub-agent should accomplish',
         },
         role: {
           type: 'string',
@@ -85,12 +84,10 @@ export function createDelegationTool(config: DelegationToolConfig): Tool {
       }
 
       // 1. Resolve provider
-      let provider;
+      let provider: Provider;
       try {
         if (tierOverride) {
-          provider = orchestrator
-            .getRegistry()
-            .getForTier(tierOverride as QueryTier);
+          provider = orchestrator.getRegistry().getForTier(tierOverride as QueryTier);
         } else {
           const routeResult = await orchestrator.routeWithHealth(task);
           provider = routeResult.provider;
@@ -107,15 +104,10 @@ export function createDelegationTool(config: DelegationToolConfig): Tool {
       });
 
       // 2. Assemble tool set
-      const allowedToolNames = new Set([
-        ...safeToolNames,
-        ...additionalToolNames,
-      ]);
+      const allowedToolNames = new Set([...safeToolNames, ...additionalToolNames]);
       allowedToolNames.delete('delegate_task');
 
-      const subAgentTools = allTools.filter((t) =>
-        allowedToolNames.has(t.name),
-      );
+      const subAgentTools = allTools.filter((t) => allowedToolNames.has(t.name));
 
       // 3. Run sub-agent
       const result = await runSubAgent({

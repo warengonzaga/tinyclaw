@@ -26,6 +26,7 @@ import type {
   NudgePreferences,
   OutboundGateway,
   OutboundPriority,
+  OutboundSource,
   Tool,
 } from '@tinyclaw/types';
 
@@ -75,7 +76,7 @@ function isQuietHours(start?: string, end?: string): boolean {
 /**
  * Map nudge category to outbound message source.
  */
-function categoryToSource(category: NudgeCategory): string {
+function categoryToSource(category: NudgeCategory): OutboundSource {
   switch (category) {
     case 'task_complete':
     case 'task_failed':
@@ -88,7 +89,7 @@ function categoryToSource(category: NudgeCategory): string {
     case 'agent_initiated':
       return 'agent';
     case 'companion':
-      return 'companion';
+      return 'agent';
     case 'system':
     case 'software_update':
       return 'system';
@@ -240,7 +241,7 @@ export function createNudgeEngine(options: CreateNudgeEngineOptions): NudgeEngin
         const result = await gateway.send(nudge.userId, {
           content: nudge.content,
           priority: nudge.priority,
-          source: categoryToSource(nudge.category) as any,
+          source: categoryToSource(nudge.category),
           metadata: {
             nudgeId: nudge.id,
             category: nudge.category,
@@ -352,6 +353,12 @@ export function createNudgeEngine(options: CreateNudgeEngineOptions): NudgeEngin
 // Intercom Wiring Helpers
 // ---------------------------------------------------------------------------
 
+/** Shape of intercom events consumed by the nudge wiring. */
+interface IntercomEvent {
+  userId: string;
+  data: { summary?: string; error?: string; reason?: string; taskId?: string; agentId?: string };
+}
+
 /**
  * Wire the nudge engine to intercom events so that relevant system events
  * automatically generate nudges. Call this during boot after both the
@@ -361,13 +368,14 @@ export function createNudgeEngine(options: CreateNudgeEngineOptions): NudgeEngin
  */
 export function wireNudgeToIntercom(
   nudgeEngine: NudgeEngine,
-  intercom: { on(topic: string, handler: (event: any) => void): () => void },
+  intercom: { on(topic: string, handler: (event: unknown) => void): () => void },
 ): () => void {
   const unsubs: Array<() => void> = [];
 
   // Background task completed → nudge owner
   unsubs.push(
-    intercom.on('task:completed', (event) => {
+    intercom.on('task:completed', (raw) => {
+      const event = raw as IntercomEvent;
       nudgeEngine.schedule({
         userId: event.userId,
         category: 'task_complete',
@@ -386,7 +394,8 @@ export function wireNudgeToIntercom(
 
   // Background task failed → nudge owner (higher priority)
   unsubs.push(
-    intercom.on('task:failed', (event) => {
+    intercom.on('task:failed', (raw) => {
+      const event = raw as IntercomEvent;
       nudgeEngine.schedule({
         userId: event.userId,
         category: 'task_failed',
@@ -405,7 +414,8 @@ export function wireNudgeToIntercom(
 
   // Sub-agent dismissed → low-priority info nudge
   unsubs.push(
-    intercom.on('agent:dismissed', (event) => {
+    intercom.on('agent:dismissed', (raw) => {
+      const event = raw as IntercomEvent;
       nudgeEngine.schedule({
         userId: event.userId,
         category: 'system',
@@ -503,8 +513,7 @@ export function createNudgeTools(nudgeEngine: NudgeEngine): Tool[] {
         : 'normal';
 
       const delayMinutes = Number(args.delayMinutes) || 0;
-      const deliverAfter =
-        delayMinutes > 0 ? Date.now() + delayMinutes * 60_000 : 0;
+      const deliverAfter = delayMinutes > 0 ? Date.now() + delayMinutes * 60_000 : 0;
 
       const id = nudgeEngine.schedule({
         userId,
@@ -537,9 +546,10 @@ export function createNudgeTools(nudgeEngine: NudgeEngine): Tool[] {
       }
 
       const summary = pending.map((n) => {
-        const delay = n.deliverAfter > Date.now()
-          ? ` (delayed until ${new Date(n.deliverAfter).toISOString()})`
-          : '';
+        const delay =
+          n.deliverAfter > Date.now()
+            ? ` (delayed until ${new Date(n.deliverAfter).toISOString()})`
+            : '';
         return `- [${n.priority}] ${n.category} → ${n.userId}: "${n.content.slice(0, 60)}"${delay}`;
       });
 
@@ -579,8 +589,8 @@ export function createNudgeTools(nudgeEngine: NudgeEngine): Tool[] {
 // Companion Nudge System (re-exports)
 // ---------------------------------------------------------------------------
 
+export type { CompanionMood, CompanionNudgeOptions } from './companion.js';
 export {
   createCompanionJobs,
   getCompanionTouchActivity,
 } from './companion.js';
-export type { CompanionMood, CompanionNudgeOptions } from './companion.js';

@@ -16,25 +16,29 @@
  */
 
 import { logger } from '@tinyclaw/logger';
-import { showBanner, getVersion } from './ui/banner.js';
+import { getVersion, showBanner } from './ui/banner.js';
 import { theme } from './ui/theme.js';
 
 // ── Help text ──────────────────────────────────────────────────────────
 
 function showHelp(): void {
   showBanner();
-  console.log('  ' + theme.label('Usage'));
+  console.log(`  ${theme.label('Usage')}`);
   console.log(`    ${theme.cmd('tinyclaw')} ${theme.dim('<command>')}`);
   console.log();
-  console.log('  ' + theme.label('Commands'));
-  console.log(`    ${theme.cmd('setup')}    Interactive setup wizard (use --web for browser onboarding)`);
+  console.log(`  ${theme.label('Commands')}`);
+  console.log(
+    `    ${theme.cmd('setup')}    Interactive setup wizard (use --web for browser onboarding)`,
+  );
   console.log(`    ${theme.cmd('start')}    Start the Tiny Claw agent`);
   console.log(`    ${theme.cmd('config')}   Manage models, providers, and settings`);
   console.log(`    ${theme.cmd('seed')}     Show your Tiny Claw's soul seed`);
   console.log(`    ${theme.cmd('backup')}   Export or import a .tinyclaw backup archive`);
-  console.log(`    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`);
+  console.log(
+    `    ${theme.cmd('purge')}    Wipe all data for a fresh install (--force to include secrets)`,
+  );
   console.log();
-  console.log('  ' + theme.label('Options'));
+  console.log(`  ${theme.label('Options')}`);
   console.log(`    ${theme.dim('--verbose')}       Show debug-level logs during start`);
   console.log(`    ${theme.dim('--version, -v')}   Show version number`);
   console.log(`    ${theme.dim('--help, -h')}      Show this help message`);
@@ -118,9 +122,7 @@ async function main(): Promise<void> {
     }
 
     default: {
-      console.log(
-        theme.error(`  Unknown command: ${command}`)
-      );
+      console.log(theme.error(`  Unknown command: ${command}`));
       console.log();
       showHelp();
       process.exit(1);

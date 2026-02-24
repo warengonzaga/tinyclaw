@@ -83,12 +83,12 @@ export interface CompanionNudgeOptions {
  * This shapes the overall "feel" of the companion's behavior.
  */
 const MOOD_POOL: WeightedMood[] = [
-  { mood: 'check_in',      weight: 25 },
-  { mood: 'motivational',  weight: 20 },
+  { mood: 'check_in', weight: 25 },
+  { mood: 'motivational', weight: 20 },
   { mood: 'random_thought', weight: 15 },
-  { mood: 'reflection',    weight: 10 },
-  { mood: 'playful',       weight: 15 },
-  { mood: 'philosophical', weight: 5  },
+  { mood: 'reflection', weight: 10 },
+  { mood: 'playful', weight: 15 },
+  { mood: 'philosophical', weight: 5 },
   { mood: 'encouragement', weight: 10 },
 ];
 
@@ -101,7 +101,7 @@ const MOOD_PROMPTS: Record<CompanionMood, string> = {
   check_in:
     '[COMPANION NUDGE — CHECK IN] ' +
     'Generate a brief, casual check-in message for your owner. ' +
-    'Be warm and genuine — like a friend who just wants to see how they\'re doing. ' +
+    "Be warm and genuine — like a friend who just wants to see how they're doing. " +
     'Use your personality. Keep it to 1-2 sentences. Do NOT use any tools. ' +
     'Respond ONLY with the message text — no prefixes, no explanations.',
 
@@ -143,7 +143,7 @@ const MOOD_PROMPTS: Record<CompanionMood, string> = {
   encouragement:
     '[COMPANION NUDGE — ENCOURAGEMENT] ' +
     'Generate a specific, encouraging message for your owner. ' +
-    'If you know what they\'ve been working on, reference it. ' +
+    "If you know what they've been working on, reference it. " +
     'Otherwise, give heartfelt general encouragement. ' +
     'Keep it to 1-2 sentences. Do NOT use any tools. Respond ONLY with the message text.',
 };
@@ -344,9 +344,9 @@ export function createCompanionJobs(options: CompanionNudgeOptions): PulseJob[] 
         try {
           const message = await agentLoop(
             '[COMPANION NUDGE — BOOT GREETING] ' +
-            'You just came online after being offline. Generate a short, warm "I\'m back" message ' +
-            'for your owner. Reference that you\'re up and running. Be yourself — use your personality. ' +
-            'Keep it to 1-2 sentences. Do NOT use any tools. Respond ONLY with the message text.',
+              'You just came online after being offline. Generate a short, warm "I\'m back" message ' +
+              "for your owner. Reference that you're up and running. Be yourself — use your personality. " +
+              'Keep it to 1-2 sentences. Do NOT use any tools. Respond ONLY with the message text.',
             'companion:nudge',
             context,
           );
@@ -377,7 +377,7 @@ export function createCompanionJobs(options: CompanionNudgeOptions): PulseJob[] 
   };
 
   // Expose touchActivity so start.ts can wire it to user message events
-  (quickCheckinJob as any).__touchActivity = touchActivity;
+  (quickCheckinJob as PulseJob & { __touchActivity?: () => void }).__touchActivity = touchActivity;
 
   return [quickCheckinJob, bootGreetingJob];
 }
@@ -390,9 +390,7 @@ export function createCompanionJobs(options: CompanionNudgeOptions): PulseJob[] 
  * @param jobs - The PulseJob array returned by createCompanionJobs
  * @returns The touchActivity function, or undefined if not found
  */
-export function getCompanionTouchActivity(
-  jobs: PulseJob[],
-): (() => void) | undefined {
+export function getCompanionTouchActivity(jobs: PulseJob[]): (() => void) | undefined {
   const checkin = jobs.find((j) => j.id === 'companion-quick-checkin');
-  return (checkin as any)?.__touchActivity;
+  return (checkin as PulseJob & { __touchActivity?: () => void })?.__touchActivity;
 }

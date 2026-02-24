@@ -7,8 +7,8 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ConfigManager } from '../src/manager.js';
 import { CONFIG_DEFAULTS } from '../src/types.js';
 
@@ -25,8 +25,16 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  try { manager.close(); } catch { /* ignore */ }
-  try { rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
+  try {
+    manager.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    rmSync(tmpDir, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
 });
 
 // -----------------------------------------------------------------------
@@ -39,7 +47,7 @@ describe('ConfigManager — factory', () => {
   });
 
   test('config path points to the cwd directory', () => {
-    expect(manager.path).toContain(tmpDir.replace(/\\/g, '/').split('/').pop()!);
+    expect(manager.path).toContain(tmpDir.replace(/\\/g, '/').split('/').pop() ?? '');
   });
 
   test('config path ends with config.db', () => {

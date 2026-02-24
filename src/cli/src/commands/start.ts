@@ -9,42 +9,58 @@
  * `tinyclaw setup`.
  */
 
-import { join, resolve } from 'path';
-import { existsSync, statSync, readdirSync } from 'fs';
-import { homedir } from 'os';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { createCompactor } from '@tinyclaw/compactor';
+import { ConfigManager, createConfigTools } from '@tinyclaw/config';
 import {
-  createDatabase,
   agentLoop,
-  createOllamaProvider,
-  DEFAULT_MODEL,
-  DEFAULT_BASE_URL,
   BUILTIN_MODEL_TAGS,
-  checkForUpdate,
   buildUpdateContext,
+  checkForUpdate,
+  createDatabase,
+  createOllamaProvider,
+  DEFAULT_BASE_URL,
+  DEFAULT_MODEL,
 } from '@tinyclaw/core';
+import {
+  createBlackboard,
+  createDelegationTools,
+  createTimeoutEstimator,
+} from '@tinyclaw/delegation';
+import { createGateway } from '@tinyclaw/gateway';
+import {
+  createHeartwareTools,
+  type HeartwareConfig,
+  HeartwareManager,
+  loadHeartwareContext,
+  loadShieldContent,
+  parseSeed,
+} from '@tinyclaw/heartware';
+import { createIntercom } from '@tinyclaw/intercom';
+import { createLearningEngine } from '@tinyclaw/learning';
+import { type LogModeName, logger, setLogMode } from '@tinyclaw/logger';
+import { createMemoryEngine } from '@tinyclaw/memory';
+import {
+  createCompanionJobs,
+  createNudgeEngine,
+  createNudgeTools,
+  getCompanionTouchActivity,
+  wireNudgeToIntercom,
+} from '@tinyclaw/nudge';
 import { loadPlugins } from '@tinyclaw/plugins';
 import { createPulseScheduler } from '@tinyclaw/pulse';
-import { createIntercom } from '@tinyclaw/intercom';
-import { createHybridMatcher } from '@tinyclaw/matcher';
 import { createSessionQueue } from '@tinyclaw/queue';
-import { logger, setLogMode, type LogModeName } from '@tinyclaw/logger';
 import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';
-import { HeartwareManager, createHeartwareTools, loadHeartwareContext, loadShieldContent, parseSeed, type HeartwareConfig } from '@tinyclaw/heartware';
-import { createLearningEngine } from '@tinyclaw/learning';
-import { SecretsManager, createSecretsTools, buildProviderKeyName } from '@tinyclaw/secrets';
-import { ConfigManager, createConfigTools } from '@tinyclaw/config';
-import { createDelegationTools, createBlackboard, createTimeoutEstimator } from '@tinyclaw/delegation';
-import { createMemoryEngine } from '@tinyclaw/memory';
 import { createSandbox } from '@tinyclaw/sandbox';
-import { createShieldEngine } from '@tinyclaw/shield';
-import { createCompactor } from '@tinyclaw/compactor';
+import { buildProviderKeyName, createSecretsTools, SecretsManager } from '@tinyclaw/secrets';
 import { createShellEngine, createShellTools } from '@tinyclaw/shell';
-import type { ChannelPlugin, Provider, StreamCallback, Tool } from '@tinyclaw/types';
+import { createShieldEngine } from '@tinyclaw/shield';
+import type { Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
-import { createGateway } from '@tinyclaw/gateway';
-import { createNudgeEngine, wireNudgeToIntercom, createNudgeTools, createCompanionJobs, getCompanionTouchActivity } from '@tinyclaw/nudge';
-import { theme } from '../ui/theme.js';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Run the agent start flow
@@ -115,9 +131,13 @@ export async function startCommand(): Promise<void> {
     throw err;
   }
 
-  logger.info('Secrets engine initialized', {
-    storagePath: secretsManager.storagePath,
-  }, { emoji: '✅' });
+  logger.info(
+    'Secrets engine initialized',
+    {
+      storagePath: secretsManager.storagePath,
+    },
+    { emoji: '✅' },
+  );
 
   // --- Initialize config engine -----------------------------------------
 
@@ -137,9 +157,7 @@ export async function startCommand(): Promise<void> {
   // must be present for the agent to run. After a purge, the config DB
   // (soul seed + owner auth) is wiped even if secrets are preserved.
 
-  const hasOllamaKey = await secretsManager.check(
-    buildProviderKeyName('ollama')
-  );
+  const hasOllamaKey = await secretsManager.check(buildProviderKeyName('ollama'));
   const hasSoulSeed = configManager.get<number>('heartware.seed') !== undefined;
   const hasOwnerAuth = configManager.get<string>('owner.ownerId') !== undefined;
 
@@ -154,19 +172,26 @@ export async function startCommand(): Promise<void> {
     logger.info('─'.repeat(52), undefined, { emoji: '' });
     logger.warn(reason, undefined, { emoji: '⚠️' });
     logger.info('Choose your onboarding path:', undefined, { emoji: '📋' });
-    logger.info(`1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`, undefined, { emoji: '📋' });
-    logger.info(`2. ${theme.cmd('tinyclaw setup --web')} ${theme.dim('(Web setup)')}`, undefined, { emoji: '📋' });
+    logger.info(`1. ${theme.cmd('tinyclaw setup')} ${theme.dim('(CLI wizard)')}`, undefined, {
+      emoji: '📋',
+    });
+    logger.info(`2. ${theme.cmd('tinyclaw setup --web')} ${theme.dim('(Web setup)')}`, undefined, {
+      emoji: '📋',
+    });
     logger.info('─'.repeat(52), undefined, { emoji: '' });
 
     // Clean up managers before exiting
     configManager.close();
-    try { await secretsManager.close(); } catch { /* ignore */ }
+    try {
+      await secretsManager.close();
+    } catch {
+      /* ignore */
+    }
     process.exit(1);
   }
 
   // Read provider settings from config (fallback to defaults)
-  const providerModel =
-    configManager.get<string>('providers.starterBrain.model') ?? DEFAULT_MODEL;
+  const providerModel = configManager.get<string>('providers.starterBrain.model') ?? DEFAULT_MODEL;
   const providerBaseUrl =
     configManager.get<string>('providers.starterBrain.baseUrl') ?? DEFAULT_BASE_URL;
 
@@ -203,14 +228,16 @@ export async function startCommand(): Promise<void> {
   // --- Initialize SHIELD.md runtime enforcement -------------------------
 
   const shieldContent = await loadShieldContent(heartwareManager);
-  const shield = shieldContent
-    ? createShieldEngine(shieldContent)
-    : undefined;
+  const shield = shieldContent ? createShieldEngine(shieldContent) : undefined;
 
   if (shield) {
-    logger.info('Shield engine active', {
-      threats: shield.getThreats().length,
-    }, { emoji: '🛡️' });
+    logger.info(
+      'Shield engine active',
+      {
+        threats: shield.getThreats().length,
+      },
+      { emoji: '🛡️' },
+    );
   } else {
     logger.info('No SHIELD.md found — shield enforcement disabled', undefined, { emoji: '🛡️' });
   }
@@ -239,9 +266,7 @@ export async function startCommand(): Promise<void> {
       console.log('      • The base URL may be incorrect');
       console.log('      • A firewall or proxy may be blocking the connection');
       console.log();
-      console.log(
-        `    Run ${theme.cmd('tinyclaw setup')} to reconfigure your provider.`,
-      );
+      console.log(`    Run ${theme.cmd('tinyclaw setup')} to reconfigure your provider.`);
       console.log();
       await secretsManager.close();
       process.exit(1);
@@ -258,9 +283,7 @@ export async function startCommand(): Promise<void> {
       console.log(`    Base URL : ${theme.dim(providerBaseUrl)}`);
       console.log();
       console.log('    Your API key may be invalid, expired, or revoked.');
-      console.log(
-        `    Run ${theme.cmd('tinyclaw setup')} to enter a new API key.`,
-      );
+      console.log(`    Run ${theme.cmd('tinyclaw setup')} to enter a new API key.`);
     } else {
       console.log(theme.error('  ✖ Provider connectivity check failed.'));
       console.log();
@@ -268,9 +291,7 @@ export async function startCommand(): Promise<void> {
       console.log(`    Base URL : ${theme.dim(providerBaseUrl)}`);
       console.log(`    Error    : ${theme.dim(msg)}`);
       console.log();
-      console.log(
-        `    Run ${theme.cmd('tinyclaw setup')} to reconfigure your provider.`,
-      );
+      console.log(`    Run ${theme.cmd('tinyclaw setup')} to reconfigure your provider.`);
     }
     console.log();
     await secretsManager.close();
@@ -282,11 +303,15 @@ export async function startCommand(): Promise<void> {
   // --- Load plugins ------------------------------------------------------
 
   const plugins = await loadPlugins(configManager);
-  logger.info('Plugins loaded', {
-    channels: plugins.channels.length,
-    providers: plugins.providers.length,
-    tools: plugins.tools.length,
-  }, { emoji: '✅' });
+  logger.info(
+    'Plugins loaded',
+    {
+      channels: plugins.channels.length,
+      providers: plugins.providers.length,
+      tools: plugins.tools.length,
+    },
+    { emoji: '✅' },
+  );
 
   // --- Initialize plugin providers ---------------------------------------
 
@@ -296,7 +321,9 @@ export async function startCommand(): Promise<void> {
     try {
       const provider = await pp.createProvider(secretsManager);
       pluginProviders.push(provider);
-      logger.info(`Plugin provider initialized: ${pp.name} (${provider.id})`, undefined, { emoji: '✅' });
+      logger.info(`Plugin provider initialized: ${pp.name} (${provider.id})`, undefined, {
+        emoji: '✅',
+      });
     } catch (err) {
       logger.error(`Failed to initialize provider plugin "${pp.name}":`, err);
     }
@@ -317,8 +344,6 @@ export async function startCommand(): Promise<void> {
   if (primaryModel) {
     // Find a plugin provider whose id matches the primary config.
     // Convention: the provider ID from the plugin is used to look up matching.
-    const primaryBaseUrl = configManager.get<string>('providers.primary.baseUrl');
-    const primaryApiKeyRef = configManager.get<string>('providers.primary.apiKeyRef');
 
     // Try to find a matching plugin provider by checking if any plugin
     // provider's id is referenced in the tier mapping or matches a known pattern.
@@ -336,24 +361,26 @@ export async function startCommand(): Promise<void> {
           routerDefaultProvider = matchingProvider;
           activeProviderName = matchingProvider.name;
           activeModelName = primaryModel;
-          logger.info('Primary provider active, overriding built-in as default', {
-            primary: matchingProvider.id,
-            model: primaryModel,
-          }, { emoji: '✅' });
+          logger.info(
+            'Primary provider active, overriding built-in as default',
+            {
+              primary: matchingProvider.id,
+              model: primaryModel,
+            },
+            { emoji: '✅' },
+          );
         } else {
           logger.warn(
             `Primary provider "${matchingProvider.name}" unavailable, falling back to built-in`,
           );
         }
       } catch {
-        logger.warn(
-          `Primary provider health check failed, falling back to built-in`,
-        );
+        logger.warn(`Primary provider health check failed, falling back to built-in`);
       }
     } else {
       logger.warn(
         'Primary provider configured but no matching plugin provider found. ' +
-        'Ensure the provider plugin is installed and enabled.',
+          'Ensure the provider plugin is installed and enabled.',
       );
     }
   }
@@ -372,11 +399,15 @@ export async function startCommand(): Promise<void> {
     tierMapping: tierMapping ?? undefined,
   });
 
-  logger.info('Smart routing initialized', {
-    default: routerDefaultProvider.id,
-    providers: orchestrator.getRegistry().ids(),
-    tierMapping: tierMapping ?? 'all-default',
-  }, { emoji: '✅' });
+  logger.info(
+    'Smart routing initialized',
+    {
+      default: routerDefaultProvider.id,
+      providers: orchestrator.getRegistry().ids(),
+      tierMapping: tierMapping ?? 'all-default',
+    },
+    { emoji: '✅' },
+  );
 
   // --- Initialize tools -------------------------------------------------
 
@@ -388,12 +419,8 @@ export async function startCommand(): Promise<void> {
 
   // Merge plugin pairing tools (channels + providers)
   const pairingTools = [
-    ...plugins.channels.flatMap(
-      (ch) => ch.getPairingTools?.(secretsManager, configManager) ?? [],
-    ),
-    ...plugins.providers.flatMap(
-      (pp) => pp.getPairingTools?.(secretsManager, configManager) ?? [],
-    ),
+    ...plugins.channels.flatMap((ch) => ch.getPairingTools?.(secretsManager, configManager) ?? []),
+    ...plugins.providers.flatMap((pp) => pp.getPairingTools?.(secretsManager, configManager) ?? []),
   ];
 
   // Create a temporary context for plugin tools that need AgentContext
@@ -407,9 +434,7 @@ export async function startCommand(): Promise<void> {
     configManager,
   };
 
-  const pluginTools = plugins.tools.flatMap(
-    (tp) => tp.createTools(baseContext),
-  );
+  const pluginTools = plugins.tools.flatMap((tp) => tp.createTools(baseContext));
 
   const allTools = [...tools, ...pairingTools, ...pluginTools];
 
@@ -426,7 +451,9 @@ export async function startCommand(): Promise<void> {
 
   // Memory engine (after db — uses episodic_memory + memory_fts tables)
   const memoryEngine = createMemoryEngine(db);
-  logger.info('Memory engine initialized (episodic + FTS5 + temporal decay)', undefined, { emoji: '✅' });
+  logger.info('Memory engine initialized (episodic + FTS5 + temporal decay)', undefined, {
+    emoji: '✅',
+  });
 
   // Compactor (after db — uses compactions table, configurable via config engine)
   const compactorConfig = {
@@ -439,21 +466,21 @@ export async function startCommand(): Promise<void> {
     },
     dedup: {
       enabled: configManager.get<boolean>('compaction.dedup.enabled') ?? undefined,
-      similarityThreshold: configManager.get<number>('compaction.dedup.similarityThreshold') ?? undefined,
+      similarityThreshold:
+        configManager.get<number>('compaction.dedup.similarityThreshold') ?? undefined,
     },
     preCompression: {
       stripEmoji: configManager.get<boolean>('compaction.preCompression.stripEmoji') ?? undefined,
-      removeDuplicateLines: configManager.get<boolean>('compaction.preCompression.removeDuplicateLines') ?? undefined,
+      removeDuplicateLines:
+        configManager.get<boolean>('compaction.preCompression.removeDuplicateLines') ?? undefined,
     },
   };
   // Remove undefined values so defaults apply
   const cleanConfig = JSON.parse(JSON.stringify(compactorConfig));
   const compactor = createCompactor(db, cleanConfig);
-  logger.info('Compactor initialized (tiered compression + dedup + pre-compression)', undefined, { emoji: '✅' });
-
-  // Hybrid semantic matcher (standalone, no deps)
-  const matcher = createHybridMatcher();
-  logger.info('Hybrid matcher initialized', undefined, { emoji: '✅' });
+  logger.info('Compactor initialized (tiered compression + dedup + pre-compression)', undefined, {
+    emoji: '✅',
+  });
 
   // Timeout estimator (after db — uses task_metrics table)
   const timeoutEstimator = createTimeoutEstimator(db);
@@ -475,7 +502,11 @@ export async function startCommand(): Promise<void> {
   });
   const shellTools = createShellTools(shell);
   allTools.push(...shellTools);
-  logger.info('Shell engine initialized', { allowPatterns: shellAllowPatterns.length }, { emoji: '✅' });
+  logger.info(
+    'Shell engine initialized',
+    { allowPatterns: shellAllowPatterns.length },
+    { emoji: '✅' },
+  );
 
   // execute_code tool — sandboxed code execution for agents
   const executeCodeTool: Tool = {
@@ -488,7 +519,11 @@ export async function startCommand(): Promise<void> {
       type: 'object',
       properties: {
         code: { type: 'string', description: 'The JavaScript/TypeScript code to execute' },
-        input: { type: 'string', description: 'Optional data to pass as the `input` variable in the sandbox (use JSON string for complex data)' },
+        input: {
+          type: 'string',
+          description:
+            'Optional data to pass as the `input` variable in the sandbox (use JSON string for complex data)',
+        },
         timeout: { type: 'number', description: 'Override timeout in ms (max 30s)' },
       },
       required: ['code'],
@@ -500,9 +535,10 @@ export async function startCommand(): Promise<void> {
       const timeout = args.timeout ? Math.min(Number(args.timeout), 30_000) : undefined;
       const input = args.input;
 
-      const result = input !== undefined
-        ? await sandbox.executeWithInput(code, input, { timeoutMs: timeout })
-        : await sandbox.execute(code, { timeoutMs: timeout });
+      const result =
+        input !== undefined
+          ? await sandbox.executeWithInput(code, input, { timeoutMs: timeout })
+          : await sandbox.execute(code, { timeoutMs: timeout });
 
       if (result.success) {
         return result.output || '(no output)';
@@ -555,7 +591,8 @@ export async function startCommand(): Promise<void> {
     name: 'builtin_model_switch',
     description:
       'Switch the built-in Ollama Cloud model. Available models: ' +
-      BUILTIN_MODEL_TAGS.join(', ') + '. ' +
+      BUILTIN_MODEL_TAGS.join(', ') +
+      '. ' +
       'This updates the configuration and triggers a restart so the new model ' +
       'takes effect. Always warn the user before calling this — they will ' +
       'briefly lose connectivity during the restart.',
@@ -573,10 +610,8 @@ export async function startCommand(): Promise<void> {
     async execute(args) {
       const model = (args.model as string)?.trim();
 
-      if (!BUILTIN_MODEL_TAGS.includes(model as typeof BUILTIN_MODEL_TAGS[number])) {
-        return (
-          `Invalid model "${model}". Available built-in models: ${BUILTIN_MODEL_TAGS.join(', ')}`
-        );
+      if (!BUILTIN_MODEL_TAGS.includes(model as (typeof BUILTIN_MODEL_TAGS)[number])) {
+        return `Invalid model "${model}". Available built-in models: ${BUILTIN_MODEL_TAGS.join(', ')}`;
       }
 
       if (model === providerModel) {
@@ -606,7 +641,7 @@ export async function startCommand(): Promise<void> {
     name: 'primary_model_list',
     description:
       'List all installed provider plugins and show which one is the primary provider. ' +
-      'Shows each provider\'s ID, name, and availability status. ' +
+      "Shows each provider's ID, name, and availability status. " +
       'The built-in Ollama Cloud provider is always available as the fallback.',
     parameters: {
       type: 'object',
@@ -621,13 +656,17 @@ export async function startCommand(): Promise<void> {
       lines.push('Built-in Provider (always available as fallback):');
       lines.push(`  • ${defaultProvider.name} (${defaultProvider.id})`);
       lines.push(`    Model: ${providerModel}`);
-      lines.push(`    Status: ${currentPrimary ? 'standby (primary is active)' : 'active (default)'}`);
+      lines.push(
+        `    Status: ${currentPrimary ? 'standby (primary is active)' : 'active (default)'}`,
+      );
       lines.push('');
 
       if (pluginProviders.length === 0) {
         lines.push('No provider plugins installed.');
         lines.push('');
-        lines.push('To install a provider plugin, add it to plugins.enabled in the config and restart.');
+        lines.push(
+          'To install a provider plugin, add it to plugins.enabled in the config and restart.',
+        );
       } else {
         lines.push(`Installed Provider Plugins (${pluginProviders.length}):`);
 
@@ -674,7 +713,8 @@ export async function startCommand(): Promise<void> {
       properties: {
         provider_id: {
           type: 'string',
-          description: 'The ID of the installed provider plugin to set as primary (from primary_model_list)',
+          description:
+            'The ID of the installed provider plugin to set as primary (from primary_model_list)',
         },
       },
       required: ['provider_id'],
@@ -701,9 +741,7 @@ export async function startCommand(): Promise<void> {
         const available = pluginProviders.map((pp) => pp.id).join(', ');
         return (
           `Provider "${providerId}" is not installed. ` +
-          (available
-            ? `Available providers: ${available}`
-            : 'No provider plugins are installed.')
+          (available ? `Available providers: ${available}` : 'No provider plugins are installed.')
         );
       }
 
@@ -730,7 +768,9 @@ export async function startCommand(): Promise<void> {
         apiKeyRef: undefined,
       });
 
-      logger.info(`Primary provider set: ${target.name} (${target.id})`, undefined, { emoji: '🔄' });
+      logger.info(`Primary provider set: ${target.name} (${target.id})`, undefined, {
+        emoji: '🔄',
+      });
 
       // Trigger restart
       setTimeout(() => {
@@ -810,9 +850,7 @@ export async function startCommand(): Promise<void> {
     const allTasks = db.getUserBackgroundTasks('default-user');
     let suspended = 0;
     for (const agent of activeAgents) {
-      const hasRunning = allTasks.some(
-        (t) => t.agentId === agent.id && t.status === 'running',
-      );
+      const hasRunning = allTasks.some((t) => t.agentId === agent.id && t.status === 'running');
       if (!hasRunning) {
         delegationResult.lifecycle.suspend(agent.id);
         suspended++;
@@ -934,9 +972,9 @@ export async function startCommand(): Promise<void> {
       await queue.enqueue('pulse:proactive', async () => {
         await agentLoop(
           '[SYSTEM: This is a proactive check-in. Review your memory, recent logs, and any pending tasks. ' +
-          'Prepare a brief, useful status update or helpful suggestion for your owner. ' +
-          'Think about: what tasks are pending, what you learned recently, and what might be helpful to share. ' +
-          'Save any insights to your daily log. Do NOT respond conversationally — just update your internal state.]',
+            'Prepare a brief, useful status update or helpful suggestion for your owner. ' +
+            'Think about: what tasks are pending, what you learned recently, and what might be helpful to share. ' +
+            'Save any insights to your daily log. Do NOT respond conversationally — just update your internal state.]',
           'pulse:proactive',
           context,
         );
@@ -995,25 +1033,29 @@ export async function startCommand(): Promise<void> {
 
   if (needsBuild) {
     if (!existsSync(webRoot)) {
-      logger.warn(`Web UI source not found at ${webRoot} — skipping build`, undefined, { emoji: '⚠️' });
-    } else {
-    logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
-    try {
-      const buildResult = Bun.spawnSync([process.execPath, 'run', 'build'], {
-        cwd: webRoot,
-        stdio: ['ignore', 'pipe', 'pipe'],
+      logger.warn(`Web UI source not found at ${webRoot} — skipping build`, undefined, {
+        emoji: '⚠️',
       });
+    } else {
+      logger.info('Web UI build needed — building now...', undefined, { emoji: '🔨' });
+      try {
+        const buildResult = Bun.spawnSync([process.execPath, 'run', 'build'], {
+          cwd: webRoot,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
 
-      if (buildResult.exitCode === 0) {
-        logger.info('Web UI built successfully', undefined, { emoji: '✅' });
-      } else {
-        const stderr = buildResult.stderr?.toString().trim();
-        logger.warn('Web UI build failed — dashboard will show setup instructions', undefined, { emoji: '⚠️' });
-        if (stderr) logger.warn(stderr);
+        if (buildResult.exitCode === 0) {
+          logger.info('Web UI built successfully', undefined, { emoji: '✅' });
+        } else {
+          const stderr = buildResult.stderr?.toString().trim();
+          logger.warn('Web UI build failed — dashboard will show setup instructions', undefined, {
+            emoji: '⚠️',
+          });
+          if (stderr) logger.warn(stderr);
+        }
+      } catch (err) {
+        logger.warn('Could not build Web UI:', err, { emoji: '⚠️' });
       }
-    } catch (err) {
-      logger.warn('Could not build Web UI:', err, { emoji: '⚠️' });
-    }
     }
   }
 
@@ -1035,8 +1077,7 @@ export async function startCommand(): Promise<void> {
     onMessage: async (message: string, userId: string) => {
       // Update companion activity tracker on every user message
       touchCompanionActivity?.();
-      const { provider, classification, failedOver } =
-        await orchestrator.routeWithHealth(message);
+      const { provider, classification, failedOver } = await orchestrator.routeWithHealth(message);
       logger.debug('Routed query', {
         tier: classification.tier,
         provider: provider.id,
@@ -1044,9 +1085,7 @@ export async function startCommand(): Promise<void> {
         failedOver,
       });
       const routedContext = { ...context, provider };
-      return await queue.enqueue(userId, () =>
-        agentLoop(message, userId, routedContext),
-      );
+      return await queue.enqueue(userId, () => agentLoop(message, userId, routedContext));
     },
     getBackgroundTasks: (userId: string) => {
       return delegationResult.background.getAll(userId);
@@ -1058,17 +1097,14 @@ export async function startCommand(): Promise<void> {
     onMessageStream: async (message: string, userId: string, callback: StreamCallback) => {
       // Update companion activity tracker on every user message
       touchCompanionActivity?.();
-      const { provider, classification, failedOver } =
-        await orchestrator.routeWithHealth(message);
+      const { provider, classification, failedOver } = await orchestrator.routeWithHealth(message);
       logger.debug('Routed query (stream)', {
         tier: classification.tier,
         provider: provider.id,
         failedOver,
       });
       const routedContext = { ...context, provider };
-      await queue.enqueue(userId, () =>
-        agentLoop(message, userId, routedContext, callback),
-      );
+      await queue.enqueue(userId, () => agentLoop(message, userId, routedContext, callback));
     },
   });
 
@@ -1088,7 +1124,8 @@ export async function startCommand(): Promise<void> {
     quietHoursStart: configManager.get<string>('nudge.quietHoursStart'),
     quietHoursEnd: configManager.get<string>('nudge.quietHoursEnd'),
     maxPerHour: configManager.get<number>('nudge.maxPerHour') ?? 5,
-    suppressedCategories: (configManager.get<string[]>('nudge.suppressedCategories') ?? []) as import('@tinyclaw/types').NudgeCategory[],
+    suppressedCategories: (configManager.get<string[]>('nudge.suppressedCategories') ??
+      []) as import('@tinyclaw/types').NudgeCategory[],
   };
 
   const nudgeEngine = createNudgeEngine({ gateway, preferences: nudgePrefs });
@@ -1106,7 +1143,8 @@ export async function startCommand(): Promise<void> {
       quietHoursStart: configManager.get<string>('nudge.quietHoursStart'),
       quietHoursEnd: configManager.get<string>('nudge.quietHoursEnd'),
       maxPerHour: configManager.get<number>('nudge.maxPerHour') ?? 5,
-      suppressedCategories: (configManager.get<string[]>('nudge.suppressedCategories') ?? []) as import('@tinyclaw/types').NudgeCategory[],
+      suppressedCategories: (configManager.get<string[]>('nudge.suppressedCategories') ??
+        []) as import('@tinyclaw/types').NudgeCategory[],
     });
   });
 
@@ -1153,7 +1191,8 @@ export async function startCommand(): Promise<void> {
         // Deduplicate: skip if a pending nudge already exists for this version
         const pending = nudgeEngine.pending();
         const alreadyQueued = pending.some(
-          (n) => n.category === 'software_update' && n.metadata?.latestVersion === updateInfo.latest,
+          (n) =>
+            n.category === 'software_update' && n.metadata?.latestVersion === updateInfo.latest,
         );
         if (alreadyQueued) return;
 
@@ -1188,9 +1227,7 @@ export async function startCommand(): Promise<void> {
     enqueue: async (userId: string, message: string) => {
       const { provider } = await orchestrator.routeWithHealth(message);
       const routedContext = { ...context, provider };
-      return queue.enqueue(userId, () =>
-        agentLoop(message, userId, routedContext),
-      );
+      return queue.enqueue(userId, () => agentLoop(message, userId, routedContext));
     },
     agentContext: context,
     secrets: secretsManager,
@@ -1208,7 +1245,7 @@ export async function startCommand(): Promise<void> {
         gateway.register(channel.channelPrefix, {
           name: channel.name,
           async send(userId, message) {
-            await channel.sendToUser!(userId, message);
+            await channel.sendToUser(userId, message);
           },
         });
       }
@@ -1222,7 +1259,9 @@ export async function startCommand(): Promise<void> {
   logger.log('');
   logger.log('Tiny Claw is ready!', undefined, { emoji: '🎉' });
   logger.info(`API server: http://localhost:${port}`, undefined, { emoji: '🌐' });
-  logger.debug('Web UI: Run "bun run dev:ui" then open http://localhost:5173', undefined, { emoji: '🔧' });
+  logger.debug('Web UI: Run "bun run dev:ui" then open http://localhost:5173', undefined, {
+    emoji: '🔧',
+  });
   logger.log('');
 
   // --- Graceful shutdown ------------------------------------------------
@@ -1299,10 +1338,11 @@ export async function startCommand(): Promise<void> {
 
     // 1. Web UI
     try {
-      if (typeof (webUI as any).stop === 'function') {
-        await (webUI as any).stop();
-      } else if (typeof (webUI as any).close === 'function') {
-        await (webUI as any).close();
+      const webClosable = webUI as unknown as Record<string, unknown>;
+      if (typeof webClosable.stop === 'function') {
+        await (webClosable.stop as () => Promise<void>)();
+      } else if (typeof webClosable.close === 'function') {
+        await (webClosable.close as () => Promise<void>)();
       }
       logger.info('Web UI stopped');
     } catch (err) {
@@ -1311,8 +1351,9 @@ export async function startCommand(): Promise<void> {
 
     // 2. Learning engine
     try {
-      if (typeof (learning as any).close === 'function') {
-        await (learning as any).close();
+      const learningClosable = learning as unknown as Record<string, unknown>;
+      if (typeof learningClosable.close === 'function') {
+        await (learningClosable.close as () => Promise<void>)();
       }
       logger.info('Learning engine closed');
     } catch (err) {
@@ -1321,8 +1362,9 @@ export async function startCommand(): Promise<void> {
 
     // 3. Heartware
     try {
-      if (typeof (heartwareManager as any).close === 'function') {
-        await (heartwareManager as any).close();
+      const heartwareClosable = heartwareManager as unknown as Record<string, unknown>;
+      if (typeof heartwareClosable.close === 'function') {
+        await (heartwareClosable.close as () => Promise<void>)();
       }
       logger.info('Heartware manager closed');
     } catch (err) {

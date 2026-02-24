@@ -8,8 +8,8 @@
  * All tools are owner-only (checked by the agent loop's authority system).
  */
 
-import type { Tool, ConfigManagerInterface } from '@tinyclaw/types';
-import { InviteStore } from './store.js';
+import type { ConfigManagerInterface, Tool } from '@tinyclaw/types';
+import type { InviteStore } from './store.js';
 
 /** Config key for the enabled flag. */
 export const FRIENDS_ENABLED_CONFIG_KEY = 'channels.friends.enabled';
@@ -51,7 +51,7 @@ export function createFriendsTools(
         required: ['username'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
-        const username = (args.username as string || '').trim();
+        const username = ((args.username as string) || '').trim();
         if (!username) {
           return 'Error: username is required.';
         }
@@ -65,7 +65,7 @@ export function createFriendsTools(
           return `Error: a friend with username "${sanitized}" already exists. Use friends_chat_reinvite to generate a new invite code for them.`;
         }
 
-        const nickname = (args.nickname as string || '').trim() || undefined;
+        const nickname = ((args.nickname as string) || '').trim() || undefined;
         const friend = store.createFriend(sanitized, nickname);
 
         const baseUrl = configManager.get<string>(FRIENDS_BASE_URL_CONFIG_KEY) || '';
@@ -102,7 +102,7 @@ export function createFriendsTools(
         required: ['username'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
-        const username = (args.username as string || '').trim();
+        const username = ((args.username as string) || '').trim();
         if (!username) {
           return 'Error: username is required.';
         }
@@ -132,7 +132,7 @@ export function createFriendsTools(
     {
       name: 'friends_chat_revoke',
       description:
-        'Revoke a friend\'s access to the Friends Web Chat. ' +
+        "Revoke a friend's access to the Friends Web Chat. " +
         'Their session and any pending invite code are invalidated immediately. ' +
         'To restore access later, use friends_chat_reinvite.',
       parameters: {
@@ -146,7 +146,7 @@ export function createFriendsTools(
         required: ['username'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
-        const username = (args.username as string || '').trim();
+        const username = ((args.username as string) || '').trim();
         if (!username) {
           return 'Error: username is required.';
         }
@@ -185,14 +185,13 @@ export function createFriendsTools(
         }
 
         const lines = friends.map((f) => {
-          const status = f.sessionToken
-            ? 'active'
-            : f.inviteCode
-              ? 'invite pending'
-              : 'revoked';
+          const status = f.sessionToken ? 'active' : f.inviteCode ? 'invite pending' : 'revoked';
 
           const lastSeenDate = new Date(f.lastSeen);
-          const lastSeen = f.lastSeen && !isNaN(lastSeenDate.getTime()) ? lastSeenDate.toLocaleString() : 'Unknown';
+          const lastSeen =
+            f.lastSeen && !Number.isNaN(lastSeenDate.getTime())
+              ? lastSeenDate.toLocaleString()
+              : 'Unknown';
           return `- **${f.nickname}** (@${f.username}) — ${status}, last seen: ${lastSeen}`;
         });
 

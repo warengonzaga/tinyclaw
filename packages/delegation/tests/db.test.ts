@@ -37,14 +37,14 @@ describe('sub_agents table', () => {
 
     const record = db.getSubAgent('sa-1');
     expect(record).not.toBeNull();
-    expect(record!.id).toBe('sa-1');
-    expect(record!.userId).toBe('user-1');
-    expect(record!.role).toBe('Research Analyst');
-    expect(record!.toolsGranted).toEqual(['heartware_read', 'memory_recall']);
-    expect(record!.tierPreference).toBe('complex');
-    expect(record!.status).toBe('active');
-    expect(record!.performanceScore).toBe(0.5);
-    expect(record!.templateId).toBeNull();
+    expect(record?.id).toBe('sa-1');
+    expect(record?.userId).toBe('user-1');
+    expect(record?.role).toBe('Research Analyst');
+    expect(record?.toolsGranted).toEqual(['heartware_read', 'memory_recall']);
+    expect(record?.tierPreference).toBe('complex');
+    expect(record?.status).toBe('active');
+    expect(record?.performanceScore).toBe(0.5);
+    expect(record?.templateId).toBeNull();
 
     db.close();
   });
@@ -73,14 +73,26 @@ describe('sub_agents table', () => {
     };
 
     db.saveSubAgent({ ...base, id: 'sa-1', userId: 'user-1', role: 'Agent A', status: 'active' });
-    db.saveSubAgent({ ...base, id: 'sa-2', userId: 'user-1', role: 'Agent B', status: 'soft_deleted' });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-2',
+      userId: 'user-1',
+      role: 'Agent B',
+      status: 'soft_deleted',
+    });
     db.saveSubAgent({ ...base, id: 'sa-3', userId: 'user-2', role: 'Agent C', status: 'active' });
-    db.saveSubAgent({ ...base, id: 'sa-4', userId: 'user-1', role: 'Agent D', status: 'suspended' });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-4',
+      userId: 'user-1',
+      role: 'Agent D',
+      status: 'suspended',
+    });
 
     const active = db.getActiveSubAgents('user-1');
     expect(active.length).toBe(2); // active + suspended (not soft_deleted)
-    expect(active.some(a => a.id === 'sa-1')).toBe(true);
-    expect(active.some(a => a.id === 'sa-4')).toBe(true);
+    expect(active.some((a) => a.id === 'sa-1')).toBe(true);
+    expect(active.some((a) => a.id === 'sa-4')).toBe(true);
 
     db.close();
   });
@@ -103,7 +115,14 @@ describe('sub_agents table', () => {
     };
 
     db.saveSubAgent({ ...base, id: 'sa-1', userId: 'user-1', role: 'A', status: 'active' });
-    db.saveSubAgent({ ...base, id: 'sa-2', userId: 'user-1', role: 'B', status: 'soft_deleted', deletedAt: now });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-2',
+      userId: 'user-1',
+      role: 'B',
+      status: 'soft_deleted',
+      deletedAt: now,
+    });
 
     const withoutDeleted = db.getAllSubAgents('user-1', false);
     expect(withoutDeleted.length).toBe(1);
@@ -144,10 +163,10 @@ describe('sub_agents table', () => {
     });
 
     const updated = db.getSubAgent('sa-1');
-    expect(updated!.status).toBe('soft_deleted');
-    expect(updated!.performanceScore).toBe(0.8);
-    expect(updated!.totalTasks).toBe(5);
-    expect(updated!.successfulTasks).toBe(4);
+    expect(updated?.status).toBe('soft_deleted');
+    expect(updated?.performanceScore).toBe(0.8);
+    expect(updated?.totalTasks).toBe(5);
+    expect(updated?.successfulTasks).toBe(4);
 
     db.close();
   });
@@ -168,9 +187,30 @@ describe('sub_agents table', () => {
       lastActiveAt: now,
     };
 
-    db.saveSubAgent({ ...base, id: 'sa-old', userId: 'u1', role: 'Old', status: 'soft_deleted', deletedAt: now - 100_000 });
-    db.saveSubAgent({ ...base, id: 'sa-new', userId: 'u1', role: 'New', status: 'soft_deleted', deletedAt: now });
-    db.saveSubAgent({ ...base, id: 'sa-active', userId: 'u1', role: 'Active', status: 'active', deletedAt: null });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-old',
+      userId: 'u1',
+      role: 'Old',
+      status: 'soft_deleted',
+      deletedAt: now - 100_000,
+    });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-new',
+      userId: 'u1',
+      role: 'New',
+      status: 'soft_deleted',
+      deletedAt: now,
+    });
+    db.saveSubAgent({
+      ...base,
+      id: 'sa-active',
+      userId: 'u1',
+      role: 'Active',
+      status: 'active',
+      deletedAt: null,
+    });
 
     const deleted = db.deleteExpiredSubAgents(now - 50_000);
     expect(deleted).toBe(1);
@@ -207,9 +247,9 @@ describe('role_templates table', () => {
 
     const template = db.getRoleTemplate('rt-1');
     expect(template).not.toBeNull();
-    expect(template!.name).toBe('Research Analyst');
-    expect(template!.defaultTools).toEqual(['heartware_read']);
-    expect(template!.tags).toEqual(['research', 'analysis']);
+    expect(template?.name).toBe('Research Analyst');
+    expect(template?.defaultTools).toEqual(['heartware_read']);
+    expect(template?.tags).toEqual(['research', 'analysis']);
 
     db.close();
   });
@@ -268,10 +308,10 @@ describe('role_templates table', () => {
     });
 
     const updated = db.getRoleTemplate('rt-1');
-    expect(updated!.name).toBe('Technical Writer');
-    expect(updated!.tags).toEqual(['writing', 'technical']);
-    expect(updated!.timesUsed).toBe(3);
-    expect(updated!.avgPerformance).toBe(0.85);
+    expect(updated?.name).toBe('Technical Writer');
+    expect(updated?.tags).toEqual(['writing', 'technical']);
+    expect(updated?.timesUsed).toBe(3);
+    expect(updated?.avgPerformance).toBe(0.85);
 
     db.close();
   });
@@ -324,9 +364,9 @@ describe('background_tasks table', () => {
 
     const task = db.getBackgroundTask('bt-1');
     expect(task).not.toBeNull();
-    expect(task!.id).toBe('bt-1');
-    expect(task!.status).toBe('running');
-    expect(task!.result).toBeNull();
+    expect(task?.id).toBe('bt-1');
+    expect(task?.status).toBe('running');
+    expect(task?.result).toBeNull();
 
     db.close();
   });
@@ -350,9 +390,9 @@ describe('background_tasks table', () => {
     db.updateBackgroundTask('bt-1', 'completed', 'Task result here', now + 5000);
 
     const updated = db.getBackgroundTask('bt-1');
-    expect(updated!.status).toBe('completed');
-    expect(updated!.result).toBe('Task result here');
-    expect(updated!.completedAt).toBe(now + 5000);
+    expect(updated?.status).toBe('completed');
+    expect(updated?.result).toBe('Task result here');
+    expect(updated?.completedAt).toBe(now + 5000);
 
     db.close();
   });
@@ -368,10 +408,39 @@ describe('background_tasks table', () => {
       deliveredAt: null,
     };
 
-    db.saveBackgroundTask({ ...base, id: 'bt-1', taskDescription: 'Running', status: 'running', result: null, completedAt: null });
-    db.saveBackgroundTask({ ...base, id: 'bt-2', taskDescription: 'Completed', status: 'completed', result: 'Done!', completedAt: now + 1000 });
-    db.saveBackgroundTask({ ...base, id: 'bt-3', taskDescription: 'Failed', status: 'failed', result: 'Error', completedAt: now + 2000 });
-    db.saveBackgroundTask({ ...base, id: 'bt-4', taskDescription: 'Delivered', status: 'delivered', result: 'Old', completedAt: now, deliveredAt: now + 3000 });
+    db.saveBackgroundTask({
+      ...base,
+      id: 'bt-1',
+      taskDescription: 'Running',
+      status: 'running',
+      result: null,
+      completedAt: null,
+    });
+    db.saveBackgroundTask({
+      ...base,
+      id: 'bt-2',
+      taskDescription: 'Completed',
+      status: 'completed',
+      result: 'Done!',
+      completedAt: now + 1000,
+    });
+    db.saveBackgroundTask({
+      ...base,
+      id: 'bt-3',
+      taskDescription: 'Failed',
+      status: 'failed',
+      result: 'Error',
+      completedAt: now + 2000,
+    });
+    db.saveBackgroundTask({
+      ...base,
+      id: 'bt-4',
+      taskDescription: 'Delivered',
+      status: 'delivered',
+      result: 'Old',
+      completedAt: now,
+      deliveredAt: now + 3000,
+    });
 
     const undelivered = db.getUndeliveredTasks('user-1');
     expect(undelivered.length).toBe(2);
@@ -400,8 +469,8 @@ describe('background_tasks table', () => {
     db.markTaskDelivered('bt-1');
 
     const task = db.getBackgroundTask('bt-1');
-    expect(task!.status).toBe('delivered');
-    expect(task!.deliveredAt).not.toBeNull();
+    expect(task?.status).toBe('delivered');
+    expect(task?.deliveredAt).not.toBeNull();
 
     db.close();
   });

@@ -5,8 +5,8 @@
 
 import { describe, expect, test } from 'bun:test';
 import { createDatabase } from '@tinyclaw/core';
-import { createLifecycleManager } from '../src/index.js';
 import type { OrientationContext } from '../src/index.js';
+import { createLifecycleManager } from '../src/index.js';
 
 function createTestDb() {
   return createDatabase(':memory:');
@@ -53,8 +53,8 @@ describe('Lifecycle Manager', () => {
 
     const fetched = lm.get(agent.id);
     expect(fetched).not.toBeNull();
-    expect(fetched!.id).toBe(agent.id);
-    expect(fetched!.role).toBe('Writer');
+    expect(fetched?.id).toBe(agent.id);
+    expect(fetched?.role).toBe('Writer');
 
     db.close();
   });
@@ -65,13 +65,18 @@ describe('Lifecycle Manager', () => {
 
     lm.create({ userId: 'u1', role: 'Agent A', toolsGranted: [], orientation: ORIENTATION });
     lm.create({ userId: 'u1', role: 'Agent B', toolsGranted: [], orientation: ORIENTATION });
-    const agentC = lm.create({ userId: 'u1', role: 'Agent C', toolsGranted: [], orientation: ORIENTATION });
+    const agentC = lm.create({
+      userId: 'u1',
+      role: 'Agent C',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
 
     lm.suspend(agentC.id);
 
     const active = lm.listActive('u1');
     expect(active.length).toBe(3); // All 3 still listed (suspended is visible)
-    expect(active.some(a => a.status === 'suspended')).toBe(true);
+    expect(active.some((a) => a.status === 'suspended')).toBe(true);
 
     db.close();
   });
@@ -80,13 +85,23 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    lm.create({ userId: 'u1', role: 'Technical Research Analyst', toolsGranted: [], orientation: ORIENTATION });
-    lm.create({ userId: 'u1', role: 'Creative Writer', toolsGranted: [], orientation: ORIENTATION });
+    lm.create({
+      userId: 'u1',
+      role: 'Technical Research Analyst',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
+    lm.create({
+      userId: 'u1',
+      role: 'Creative Writer',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
 
     // Should match the research analyst
     const match = lm.findReusable('u1', 'Research Analyst');
     expect(match).not.toBeNull();
-    expect(match!.role).toBe('Technical Research Analyst');
+    expect(match?.role).toBe('Technical Research Analyst');
 
     // No match for unrelated role
     const noMatch = lm.findReusable('u1', 'Database Administrator Expert');
@@ -99,16 +114,21 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    const agent = lm.create({ userId: 'u1', role: 'Test', toolsGranted: [], orientation: ORIENTATION });
+    const agent = lm.create({
+      userId: 'u1',
+      role: 'Test',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
 
     lm.recordTaskResult(agent.id, true);
     lm.recordTaskResult(agent.id, true);
     lm.recordTaskResult(agent.id, false);
 
     const updated = lm.get(agent.id);
-    expect(updated!.totalTasks).toBe(3);
-    expect(updated!.successfulTasks).toBe(2);
-    expect(updated!.performanceScore).toBeCloseTo(2 / 3);
+    expect(updated?.totalTasks).toBe(3);
+    expect(updated?.successfulTasks).toBe(2);
+    expect(updated?.performanceScore).toBeCloseTo(2 / 3);
 
     db.close();
   });
@@ -117,18 +137,23 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    const agent = lm.create({ userId: 'u1', role: 'Agent', toolsGranted: [], orientation: ORIENTATION });
+    const agent = lm.create({
+      userId: 'u1',
+      role: 'Agent',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
 
     // Suspend
     lm.suspend(agent.id);
     const suspended = lm.get(agent.id);
-    expect(suspended!.status).toBe('suspended');
+    expect(suspended?.status).toBe('suspended');
 
     // Revive
     const revived = lm.revive(agent.id);
     expect(revived).not.toBeNull();
-    expect(revived!.status).toBe('active');
-    expect(revived!.deletedAt).toBeNull();
+    expect(revived?.status).toBe('active');
+    expect(revived?.deletedAt).toBeNull();
 
     db.close();
   });
@@ -137,7 +162,12 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    const agent = lm.create({ userId: 'u1', role: 'Agent', toolsGranted: [], orientation: ORIENTATION });
+    const agent = lm.create({
+      userId: 'u1',
+      role: 'Agent',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
     const result = lm.revive(agent.id);
     expect(result).toBeNull();
 
@@ -148,13 +178,18 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    const agent = lm.create({ userId: 'u1', role: 'Technical Research Analyst', toolsGranted: [], orientation: ORIENTATION });
+    const agent = lm.create({
+      userId: 'u1',
+      role: 'Technical Research Analyst',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
     lm.suspend(agent.id);
 
     const match = lm.findReusable('u1', 'Research Analyst');
     expect(match).not.toBeNull();
-    expect(match!.id).toBe(agent.id);
-    expect(match!.status).toBe('suspended');
+    expect(match?.id).toBe(agent.id);
+    expect(match?.status).toBe('suspended');
 
     db.close();
   });
@@ -163,13 +198,18 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    const agent = lm.create({ userId: 'u1', role: 'Technical Research Analyst', toolsGranted: [], orientation: ORIENTATION });
+    const agent = lm.create({
+      userId: 'u1',
+      role: 'Technical Research Analyst',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
     lm.dismiss(agent.id);
 
     const match = lm.findReusable('u1', 'Research Analyst');
     expect(match).not.toBeNull();
-    expect(match!.id).toBe(agent.id);
-    expect(match!.status).toBe('soft_deleted');
+    expect(match?.id).toBe(agent.id);
+    expect(match?.status).toBe('soft_deleted');
 
     db.close();
   });
@@ -178,7 +218,12 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    const agent = lm.create({ userId: 'u1', role: 'Doomed', toolsGranted: [], orientation: ORIENTATION });
+    const agent = lm.create({
+      userId: 'u1',
+      role: 'Doomed',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
 
     // Save some messages
     lm.saveMessage(agent.id, 'user', 'Task 1');
@@ -196,7 +241,12 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    const agent = lm.create({ userId: 'u1', role: 'Messenger', toolsGranted: [], orientation: ORIENTATION });
+    const agent = lm.create({
+      userId: 'u1',
+      role: 'Messenger',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
 
     lm.saveMessage(agent.id, 'user', 'Hello sub-agent');
     lm.saveMessage(agent.id, 'assistant', 'Hello! How can I help?');
@@ -230,10 +280,18 @@ describe('Lifecycle Manager', () => {
     const db = createTestDb();
     const lm = createLifecycleManager(db);
 
-    const agent = lm.create({ userId: 'u1', role: 'Old Agent', toolsGranted: [], orientation: ORIENTATION });
+    const agent = lm.create({
+      userId: 'u1',
+      role: 'Old Agent',
+      toolsGranted: [],
+      orientation: ORIENTATION,
+    });
 
     // Manually set deletedAt far in the past via db
-    db.updateSubAgent(agent.id, { status: 'soft_deleted', deletedAt: Date.now() - 15 * 24 * 60 * 60 * 1000 });
+    db.updateSubAgent(agent.id, {
+      status: 'soft_deleted',
+      deletedAt: Date.now() - 15 * 24 * 60 * 60 * 1000,
+    });
 
     const cleaned = lm.cleanup(); // 14-day default retention
     expect(cleaned).toBe(1);

@@ -40,9 +40,7 @@ export function buildOrientationContext(config: {
   const { heartwareContext, learning, db, userId, getCompactedContext } = config;
 
   // 1. Identity — truncate heartware context to keep prompt lean
-  const identity = heartwareContext
-    ? truncate(heartwareContext, MAX_IDENTITY_CHARS)
-    : '';
+  const identity = heartwareContext ? truncate(heartwareContext, MAX_IDENTITY_CHARS) : '';
 
   // 2. Preferences — from learning engine
   const learnedContext = learning.getContext();
@@ -61,9 +59,7 @@ export function buildOrientationContext(config: {
   const memoryEntries = Object.entries(memoryMap);
   let memories = '';
   if (memoryEntries.length > 0) {
-    memories = memoryEntries
-      .map(([key, value]) => `- ${key}: ${value}`)
-      .join('\n');
+    memories = memoryEntries.map(([key, value]) => `- ${key}: ${value}`).join('\n');
     memories = truncate(memories, MAX_MEMORIES_CHARS);
   }
 
@@ -119,5 +115,5 @@ export function formatOrientation(ctx: OrientationContext): string {
 
 function truncate(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars) + '...';
+  return `${text.slice(0, maxChars)}...`;
 }

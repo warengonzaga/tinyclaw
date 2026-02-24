@@ -35,10 +35,10 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         properties: {
           filename: {
             type: 'string',
-            description: 'File to read (e.g., "SOUL.md" or "memory/2026-02-05.md")'
-          }
+            description: 'File to read (e.g., "SOUL.md" or "memory/2026-02-05.md")',
+          },
         },
-        required: ['filename']
+        required: ['filename'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const filename = args.filename as string;
@@ -48,7 +48,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error reading ${filename}: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -61,14 +61,14 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         properties: {
           filename: {
             type: 'string',
-            description: 'File to write (e.g., "SOUL.md")'
+            description: 'File to write (e.g., "SOUL.md")',
           },
           content: {
             type: 'string',
-            description: 'Content to write to the file'
-          }
+            description: 'Content to write to the file',
+          },
         },
-        required: ['filename', 'content']
+        required: ['filename', 'content'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const filename = args.filename as string;
@@ -80,7 +80,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error writing ${filename}: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -88,7 +88,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
       description: 'List all accessible heartware files including memory logs',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {},
       },
       async execute(): Promise<string> {
         try {
@@ -97,7 +97,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error listing files: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -110,10 +110,10 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         properties: {
           query: {
             type: 'string',
-            description: 'Search query (case-insensitive)'
-          }
+            description: 'Search query (case-insensitive)',
+          },
         },
-        required: ['query']
+        required: ['query'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const query = args.query as string;
@@ -142,7 +142,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error searching: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     // ========================================
@@ -159,15 +159,15 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         properties: {
           content: {
             type: 'string',
-            description: 'Memory content to add'
+            description: 'Memory content to add',
           },
           category: {
             type: 'string',
             description: 'Optional category: "facts", "preferences", or "decisions"',
-            enum: ['facts', 'preferences', 'decisions']
-          }
+            enum: ['facts', 'preferences', 'decisions'],
+          },
         },
-        required: ['content']
+        required: ['content'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const content = args.content as string;
@@ -178,14 +178,13 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
           let memory = '';
           try {
             memory = await manager.read('MEMORY.md');
-          } catch (err) {
+          } catch (_err) {
             // File might not exist yet
           }
 
           // Append new entry
           const timestamp = new Date().toISOString();
-          const categoryTitle =
-            category.charAt(0).toUpperCase() + category.slice(1);
+          const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1);
           const entry = `\n- [${timestamp}] ${content}`;
 
           // Find or create category section
@@ -197,17 +196,14 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
           }
 
           // Update last updated timestamp
-          memory = memory.replace(
-            /Last updated: .*/,
-            `Last updated: ${timestamp}`
-          );
+          memory = memory.replace(/Last updated: .*/, `Last updated: ${timestamp}`);
 
           await manager.write('MEMORY.md', memory);
           return `Added to MEMORY.md under ${categoryTitle}`;
         } catch (err) {
           return `Error adding memory: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -220,10 +216,10 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         properties: {
           content: {
             type: 'string',
-            description: 'Activity or event to log'
-          }
+            description: 'Activity or event to log',
+          },
         },
-        required: ['content']
+        required: ['content'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const content = args.content as string;
@@ -237,7 +233,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
           let log = '';
           try {
             log = await manager.read(filename);
-          } catch (err) {
+          } catch (_err) {
             // File doesn't exist, create header
             log = `# Daily Memory Log - ${today}\n\n`;
           }
@@ -251,7 +247,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error logging to daily memory: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -265,9 +261,9 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
           days: {
             type: 'number',
             description: 'Number of days to look back (default: 3)',
-            default: 3
-          }
-        }
+            default: 3,
+          },
+        },
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const days = (args.days as number) || 3;
@@ -285,10 +281,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
             try {
               const content = await manager.read(filename);
               output += `\n=== ${dateStr} ===\n${content}\n`;
-            } catch (err) {
-              // File might not exist, skip
-              continue;
-            }
+            } catch (_err) {}
           }
 
           if (!output) {
@@ -299,7 +292,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error recalling memories: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     // ========================================
@@ -315,14 +308,14 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
           field: {
             type: 'string',
             description: 'Field to update',
-            enum: ['name', 'emoji', 'vibe', 'creature']
+            enum: ['name', 'emoji', 'vibe', 'creature'],
           },
           value: {
             type: 'string',
-            description: 'New value for the field'
-          }
+            description: 'New value for the field',
+          },
         },
-        required: ['field', 'value']
+        required: ['field', 'value'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const field = args.field as string;
@@ -336,14 +329,11 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
             name: 'Name',
             emoji: 'Emoji',
             vibe: 'Vibe',
-            creature: 'Creature'
+            creature: 'Creature',
           };
 
           const fieldName = fieldMap[field];
-          const pattern = new RegExp(
-            `(\\*\\*${fieldName}:\\*\\*)(.*?)(?=\\n|$)`,
-            'i'
-          );
+          const pattern = new RegExp(`(\\*\\*${fieldName}:\\*\\*)(.*?)(?=\\n|$)`, 'i');
           identity = identity.replace(pattern, `$1 ${value}`);
 
           await manager.write('IDENTITY.md', identity);
@@ -351,7 +341,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error updating identity: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -361,7 +351,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         'Your soul is immutable — generated once from a seed and never changes.',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {},
       },
       async execute(): Promise<string> {
         try {
@@ -387,7 +377,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error reading soul info: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -402,12 +392,19 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
             type: 'string',
             description: 'Which aspect to explain',
             enum: [
-              'personality', 'communication', 'humor', 'favorites',
-              'values', 'quirks', 'interaction', 'character', 'origin'
-            ]
-          }
+              'personality',
+              'communication',
+              'humor',
+              'favorites',
+              'values',
+              'quirks',
+              'interaction',
+              'character',
+              'origin',
+            ],
+          },
         },
-        required: ['aspect']
+        required: ['aspect'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const aspect = args.aspect as string;
@@ -437,7 +434,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
               break;
             case 'humor':
               output += `**Type:** ${t.humor}\n`;
-              output += `This means I ${t.humor === 'none' ? "keep things professional and rarely joke" : t.humor === 'dry-wit' ? "slip in clever, subtle observations" : t.humor === 'playful' ? "enjoy lighthearted jokes and fun" : "can't resist a good (or bad) pun"}.\n`;
+              output += `This means I ${t.humor === 'none' ? 'keep things professional and rarely joke' : t.humor === 'dry-wit' ? 'slip in clever, subtle observations' : t.humor === 'playful' ? 'enjoy lighthearted jokes and fun' : "can't resist a good (or bad) pun"}.\n`;
               break;
             case 'favorites':
               output += `**Color:** ${t.preferences.favoriteColor}\n`;
@@ -482,7 +479,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error explaining soul: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -495,14 +492,14 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         properties: {
           key: {
             type: 'string',
-            description: 'Preference key (e.g., "timezone" or "communication.style")'
+            description: 'Preference key (e.g., "timezone" or "communication.style")',
           },
           value: {
             type: 'string',
-            description: 'Preference value'
-          }
+            description: 'Preference value',
+          },
         },
-        required: ['key', 'value']
+        required: ['key', 'value'],
       },
       async execute(args: Record<string, unknown>): Promise<string> {
         const key = args.key as string;
@@ -514,10 +511,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
           // Simple append to Notes section
           const notesSection = '## Notes';
           if (user.includes(notesSection)) {
-            user = user.replace(
-              notesSection,
-              `${notesSection}\n- **${key}:** ${value}`
-            );
+            user = user.replace(notesSection, `${notesSection}\n- **${key}:** ${value}`);
           } else {
             user += `\n\n## Notes\n- **${key}:** ${value}`;
           }
@@ -527,7 +521,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error setting preference: ${(err as Error).message}`;
         }
-      }
+      },
     },
 
     {
@@ -537,7 +531,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         'Only call this after configuring identity, soul, and user preferences.',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {},
       },
       async execute(): Promise<string> {
         try {
@@ -550,7 +544,7 @@ export function createHeartwareTools(manager: HeartwareManager): Tool[] {
         } catch (err) {
           return `Error completing bootstrap: ${(err as Error).message}`;
         }
-      }
-    }
+      },
+    },
   ];
 }

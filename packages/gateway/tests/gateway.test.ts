@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { createGateway } from '../src/index';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import type { ChannelSender, OutboundMessage } from '@tinyclaw/types';
+import { createGateway } from '../src/index';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,7 +15,10 @@ function createMessage(overrides: Partial<OutboundMessage> = {}): OutboundMessag
   };
 }
 
-function createMockSender(name: string, overrides: Partial<ChannelSender> = {}): ChannelSender & { calls: Array<{ userId: string; message: OutboundMessage }> } {
+function createMockSender(
+  name: string,
+  overrides: Partial<ChannelSender> = {},
+): ChannelSender & { calls: Array<{ userId: string; message: OutboundMessage }> } {
   const calls: Array<{ userId: string; message: OutboundMessage }> = [];
   return {
     name,
@@ -164,7 +167,14 @@ describe('OutboundGateway', () => {
       const sender = createMockSender('Web UI');
       gateway.register('web', sender);
 
-      const sources = ['background_task', 'sub_agent', 'reminder', 'pulse', 'system', 'agent'] as const;
+      const sources = [
+        'background_task',
+        'sub_agent',
+        'reminder',
+        'pulse',
+        'system',
+        'agent',
+      ] as const;
       for (const source of sources) {
         await gateway.send('web:owner', createMessage({ source }));
       }
@@ -181,12 +191,16 @@ describe('OutboundGateway', () => {
       const webSender: ChannelSender = {
         name: 'Web UI',
         async send() {},
-        async broadcast() { broadcastCalls.push('web'); },
+        async broadcast() {
+          broadcastCalls.push('web');
+        },
       };
       const discordSender: ChannelSender = {
         name: 'Discord',
         async send() {},
-        async broadcast() { broadcastCalls.push('discord'); },
+        async broadcast() {
+          broadcastCalls.push('discord');
+        },
       };
 
       gateway.register('web', webSender);
@@ -195,7 +209,7 @@ describe('OutboundGateway', () => {
       const results = await gateway.broadcast(createMessage());
 
       expect(results.length).toBe(2);
-      expect(results.every(r => r.success)).toBe(true);
+      expect(results.every((r) => r.success)).toBe(true);
       expect(broadcastCalls).toContain('web');
       expect(broadcastCalls).toContain('discord');
     });
@@ -218,7 +232,9 @@ describe('OutboundGateway', () => {
       const badSender: ChannelSender = {
         name: 'Bad Channel',
         async send() {},
-        async broadcast() { throw new Error('Broadcast failed'); },
+        async broadcast() {
+          throw new Error('Broadcast failed');
+        },
       };
 
       gateway.register('good', goodSender);
@@ -227,8 +243,8 @@ describe('OutboundGateway', () => {
       const results = await gateway.broadcast(createMessage());
 
       expect(results.length).toBe(2);
-      const goodResult = results.find(r => r.channel === 'good');
-      const badResult = results.find(r => r.channel === 'bad');
+      const goodResult = results.find((r) => r.channel === 'good');
+      const badResult = results.find((r) => r.channel === 'bad');
       expect(goodResult?.success).toBe(true);
       expect(badResult?.success).toBe(false);
       expect(badResult?.error).toBe('Broadcast failed');

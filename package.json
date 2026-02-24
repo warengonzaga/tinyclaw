@@ -23,12 +23,16 @@
     "build:all": "bun run build:packages && bun run build:plugins && bun run build:apps",
     "start": "bun run --cwd src/cli start",
     "test": "bun test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
     "cli": "bun run src/cli/src/index.ts",
     "dev:purge": "bun run cli purge --force",
     "dev:landing": "bun run --cwd src/landing dev",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
     "@types/bun": "latest",
     "@types/node": "^22.10.0",
     "husky": "^9.1.7",

@@ -31,11 +31,11 @@ interface RateLimitEntry {
  * - Searches are moderate (20/min) to prevent abuse
  */
 const DEFAULT_LIMITS: Record<string, RateLimitConfig> = {
-  read: { max: 100, window: 60_000 },      // 100 reads per minute
-  write: { max: 10, window: 60_000 },      // 10 writes per minute (strict!)
-  delete: { max: 5, window: 60_000 },      // 5 deletes per minute
-  list: { max: 50, window: 60_000 },       // 50 lists per minute
-  search: { max: 20, window: 60_000 }      // 20 searches per minute
+  read: { max: 100, window: 60_000 }, // 100 reads per minute
+  write: { max: 10, window: 60_000 }, // 10 writes per minute (strict!)
+  delete: { max: 5, window: 60_000 }, // 5 deletes per minute
+  list: { max: 50, window: 60_000 }, // 50 lists per minute
+  search: { max: 20, window: 60_000 }, // 20 searches per minute
 };
 
 /**
@@ -77,7 +77,7 @@ export class RateLimiter {
     if (!entry) {
       this.limits.set(key, {
         count: 1,
-        windowStart: now
+        windowStart: now,
       });
       return;
     }
@@ -88,7 +88,7 @@ export class RateLimiter {
       // Start new window
       this.limits.set(key, {
         count: 1,
-        windowStart: now
+        windowStart: now,
       });
       return;
     }
@@ -106,8 +106,8 @@ export class RateLimiter {
           limit: limit.max,
           window: limit.window,
           resetIn: resetInSec,
-          current: entry.count
-        }
+          current: entry.count,
+        },
       );
     }
 
@@ -119,9 +119,7 @@ export class RateLimiter {
    * Reset all limits for a user (useful for testing)
    */
   reset(userId: string): void {
-    const keys = Array.from(this.limits.keys()).filter(k =>
-      k.startsWith(`${userId}:`)
-    );
+    const keys = Array.from(this.limits.keys()).filter((k) => k.startsWith(`${userId}:`));
     for (const key of keys) {
       this.limits.delete(key);
     }
@@ -141,7 +139,7 @@ export class RateLimiter {
    */
   getUsage(
     userId: string,
-    operation: string
+    operation: string,
   ): { count: number; limit: number; resetIn: number } | null {
     const limit = this.config[operation];
     if (!limit) return null;
@@ -153,7 +151,7 @@ export class RateLimiter {
       return {
         count: 0,
         limit: limit.max,
-        resetIn: 0
+        resetIn: 0,
       };
     }
 
@@ -165,7 +163,7 @@ export class RateLimiter {
     return {
       count: entry.count,
       limit: limit.max,
-      resetIn: resetInSec
+      resetIn: resetInSec,
     };
   }
 

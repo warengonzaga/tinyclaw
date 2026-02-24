@@ -6,8 +6,7 @@
  * ~1.5 chars/token for CJK characters.
  */
 
-const CJK_RANGE =
-  /[\u2E80-\u9FFF\uA000-\uA4CF\uAC00-\uD7AF\uF900-\uFAFF\u{20000}-\u{2FA1F}]/u;
+const CJK_RANGE = /[\u2E80-\u9FFF\uA000-\uA4CF\uAC00-\uD7AF\uF900-\uFAFF\u{20000}-\u{2FA1F}]/u;
 
 /**
  * Estimate token count for a given text.
@@ -59,7 +58,7 @@ export function truncateToTokenBudget(text: string, maxTokens: number): string {
   const charsPerToken = cjkRatio > 0.3 ? 1.5 + (1 - cjkRatio) * 2.5 : 4;
 
   // Initial estimate: slice by code points
-  let charLimit = Math.floor(maxTokens * charsPerToken);
+  const charLimit = Math.floor(maxTokens * charsPerToken);
   let truncated = codePoints.slice(0, charLimit).join('');
 
   // Cut at last newline or space for clean boundary

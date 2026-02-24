@@ -21,55 +21,54 @@
  *   await compactor.compactIfNeeded(userId, provider);
  */
 
+export type { CcpLevel, CcpResult, CcpResultWithStats } from './ccp.js';
+// Compressed Context Protocol (standalone utility)
+export { compressContext, compressContextWithStats } from './ccp.js';
 // Core pipeline
 export { createCompactor } from './compactor.js';
-export { estimateTokens, truncateToTokenBudget } from './tokens.js';
-export {
-  preCompress,
-  stripEmoji,
-  deduplicateLines,
-  collapseWhitespace,
-  removeDecorativeLines,
-  normalizeCjkPunctuation,
-  removeEmptySections,
-  compressMarkdownTable,
-  mergeSimilarBullets,
-  mergeShortBullets,
-} from './rules.js';
-export { deduplicateMessages, computeShingles, jaccardSimilarity } from './dedup.js';
-export { generateTiers } from './tiers.js';
+export { computeShingles, deduplicateMessages, jaccardSimilarity } from './dedup.js';
+export type { BuildCodebookOptions, Codebook } from './dictionary.js';
 
 // Dictionary encoding (standalone utility)
 export {
   buildCodebook,
+  compressionStats,
   compressText,
   decompressText,
-  compressionStats,
 } from './dictionary.js';
-export type { Codebook, BuildCodebookOptions } from './dictionary.js';
+export type { OptimizerOptions } from './optimizer.js';
 
 // Tokenizer optimizer (standalone utility)
 export {
+  compactBullets,
+  compressTableToKv,
+  minimizeWhitespace,
   optimizeTokens,
   stripBoldItalic,
   stripTrivialBackticks,
-  minimizeWhitespace,
-  compactBullets,
-  compressTableToKv,
 } from './optimizer.js';
-export type { OptimizerOptions } from './optimizer.js';
-
-// Compressed Context Protocol (standalone utility)
-export { compressContext, compressContextWithStats } from './ccp.js';
-export type { CcpLevel, CcpResult, CcpResultWithStats } from './ccp.js';
+export {
+  collapseWhitespace,
+  compressMarkdownTable,
+  deduplicateLines,
+  mergeShortBullets,
+  mergeSimilarBullets,
+  normalizeCjkPunctuation,
+  preCompress,
+  removeDecorativeLines,
+  removeEmptySections,
+  stripEmoji,
+} from './rules.js';
+export { generateTiers } from './tiers.js';
+export { estimateTokens, truncateToTokenBudget } from './tokens.js';
 
 // Types
 export type {
-  CompactorStore,
+  CompactionMetrics,
+  CompactionResult,
   CompactorConfig,
   CompactorEngine,
-  CompactionResult,
-  CompactionMetrics,
+  CompactorStore,
   TieredSummary,
 } from './types.js';
 export { DEFAULT_COMPACTOR_CONFIG } from './types.js';

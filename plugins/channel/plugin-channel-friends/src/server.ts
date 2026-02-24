@@ -13,7 +13,7 @@
  */
 
 import { logger } from '@tinyclaw/logger';
-import type { InviteStore, FriendUser } from './store.js';
+import type { FriendUser, InviteStore } from './store.js';
 
 const COOKIE_NAME = 'tc_friend_session';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year in seconds
@@ -93,7 +93,7 @@ function authenticateFriend(request: Request, store: InviteStore): FriendUser | 
 
 export function createFriendsServer(config: FriendsServerConfig) {
   const { port, host, store, chatHtml, onMessage, onMessageStream } = config;
-  const secure = config.secure ?? (process.env.NODE_ENV === 'production');
+  const secure = config.secure ?? process.env.NODE_ENV === 'production';
   const textEncoder = new TextEncoder();
   const pushClients = new Map<string, Set<PushClient>>();
 
@@ -228,7 +228,8 @@ export function createFriendsServer(config: FriendsServerConfig) {
                 if (!pushClients.has(username)) {
                   pushClients.set(username, new Set());
                 }
-                pushClients.get(username)!.add(pushClient);
+                const clients = pushClients.get(username) as Set<PushClient>;
+                clients.add(pushClient);
 
                 // Heartbeat to keep connection alive
                 const heartbeat = setInterval(() => {
@@ -305,10 +306,7 @@ export function createFriendsServer(config: FriendsServerConfig) {
                   const send = (payload: unknown) => {
                     if (isClosed) return;
                     try {
-                      const data =
-                        typeof payload === 'string'
-                          ? payload
-                          : JSON.stringify(payload);
+                      const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
                       controller.enqueue(textEncoder.encode(`data: ${data}\n\n`));
                       if (
                         typeof payload === 'object' &&
@@ -365,7 +363,9 @@ export function createFriendsServer(config: FriendsServerConfig) {
               const responseText = await onMessage(message, userId);
               return jsonResponse({ content: responseText });
             } catch (error) {
-              logger.error(`Friends chat onMessage error for userId=${userId}: ${(error as Error)?.message}`);
+              logger.error(
+                `Friends chat onMessage error for userId=${userId}: ${(error as Error)?.message}`,
+              );
               return jsonResponse({ error: 'Internal server error' }, 500);
             }
           }
@@ -411,7 +411,7 @@ export function createFriendsServer(config: FriendsServerConfig) {
         clients.delete(dc);
       }
 
-      return clients.size > 0 || dead.length < (clients.size + dead.length);
+      return clients.size > 0 || dead.length < clients.size + dead.length;
     },
 
     getPort() {

@@ -26,74 +26,75 @@
  * ```
  */
 
-// Core exports
-export { HeartwareManager } from './manager.js';
-export { createHeartwareTools } from './tools.js';
-export { loadHeartwareContext, loadShieldContent, loadMemoryByDate, loadMemoryRange } from './loader.js';
-
-// Soul Generator
-export {
-  generateSoul,
-  generateSoulTraits,
-  renderSoulMarkdown,
-  generateRandomSeed,
-  parseSeed
-} from './soul-generator.js';
-
-// Creator Meta
-export {
-  fetchCreatorMeta,
-  loadCachedCreatorMeta,
-  DEFAULT_META_URL,
-  META_CACHE_FILE,
-} from './meta.js';
-export type { MetaFetchOptions } from './meta.js';
-
 // Security components (for advanced usage/testing)
 export { AuditLogger, computeContentHash, verifyContentHash } from './audit.js';
 export { BackupManager } from './backup.js';
-export { RateLimiter } from './rate-limiter.js';
-export {
-  validatePath,
-  validateContent,
-  validateFileSize,
-  isAllowedFile,
-  isImmutableFile,
-  getImmutableFiles,
-  getAllowedFiles,
-  getMemoryFilePattern
-} from './sandbox.js';
-
-// Templates
-export { getTemplate, hasTemplate, getAllTemplates } from './templates.js';
-
 // Errors
 export {
   HeartwareSecurityError,
   isHeartwareSecurityError,
-  isSecurityErrorCode
+  isSecurityErrorCode,
 } from './errors.js';
+export {
+  loadHeartwareContext,
+  loadMemoryByDate,
+  loadMemoryRange,
+  loadShieldContent,
+} from './loader.js';
+// Core exports
+export { HeartwareManager } from './manager.js';
+export type { MetaFetchOptions } from './meta.js';
+// Creator Meta
+export {
+  DEFAULT_META_URL,
+  fetchCreatorMeta,
+  loadCachedCreatorMeta,
+  META_CACHE_FILE,
+} from './meta.js';
+export { RateLimiter } from './rate-limiter.js';
+export {
+  getAllowedFiles,
+  getImmutableFiles,
+  getMemoryFilePattern,
+  isAllowedFile,
+  isImmutableFile,
+  validateContent,
+  validateFileSize,
+  validatePath,
+} from './sandbox.js';
+// Soul Generator
+export {
+  generateRandomSeed,
+  generateSoul,
+  generateSoulTraits,
+  parseSeed,
+  renderSoulMarkdown,
+} from './soul-generator.js';
+
+// Templates
+export { getAllTemplates, getTemplate, hasTemplate } from './templates.js';
+export { createHeartwareTools } from './tools.js';
 
 // Types
 export type {
-  HeartwareConfig,
-  PathValidationResult,
-  ContentValidationResult,
-  ContentValidationRule,
+  AllowedFile,
   AuditLogEntry,
   BackupMetadata,
-  RateLimitConfig,
-  AllowedFile,
-  SecurityErrorCode,
-  SearchResult,
   // Soul types
   BigFiveTraits,
-  CommunicationStyle,
-  HumorType,
-  SoulPreferences,
   CharacterFlavor,
+  CommunicationStyle,
+  ContentValidationResult,
+  ContentValidationRule,
+  HeartwareConfig,
+  HumorType,
   InteractionStyle,
   OriginStory,
+  PathValidationResult,
+  RateLimitConfig,
+  SearchResult,
+  SecurityErrorCode,
+  SoulGenerationResult,
+  SoulPreferences,
   SoulTraits,
-  SoulGenerationResult
 } from './types.js';

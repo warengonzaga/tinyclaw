@@ -32,7 +32,7 @@ function makeTarHeader(
   header.write('0000000\0', 116, 8, 'utf-8');
 
   // size (124-135) — octal, 11 digits + NUL
-  header.write(size.toString(8).padStart(11, '0') + '\0', 124, 12, 'utf-8');
+  header.write(`${size.toString(8).padStart(11, '0')}\0`, 124, 12, 'utf-8');
 
   // mtime (136-147)
   header.write('00000000000\0', 136, 12, 'utf-8');
@@ -58,7 +58,7 @@ function makeTarHeader(
   for (let i = 0; i < TAR_BLOCK; i++) {
     checksum += header[i];
   }
-  const checksumStr = checksum.toString(8).padStart(6, '0') + '\0 ';
+  const checksumStr = `${checksum.toString(8).padStart(6, '0')}\0 `;
   header.write(checksumStr, 148, 8, 'utf-8');
 
   return header;
@@ -127,7 +127,8 @@ describe('parseTar', () => {
     const hardlinkHeader = makeTarHeader('hard', '1', 0, 'file.txt');
 
     const tar = Buffer.concat([
-      fileHeader, fileData,
+      fileHeader,
+      fileData,
       dirHeader,
       symlinkHeader,
       hardlinkHeader,

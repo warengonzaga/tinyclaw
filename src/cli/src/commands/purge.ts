@@ -14,14 +14,14 @@
  * Uses @clack/prompts for interactive confirmation.
  */
 
-import { join } from 'path';
-import { homedir, platform } from 'os';
-import { rm, access, readFile } from 'fs/promises';
+import { access, readFile, rm } from 'node:fs/promises';
+import { homedir, platform } from 'node:os';
+import { join } from 'node:path';
 import * as p from '@clack/prompts';
+import { generateSoul, parseSeed } from '@tinyclaw/heartware';
+import { setLogMode } from '@tinyclaw/logger';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
-import { setLogMode } from '@tinyclaw/logger';
-import { parseSeed, generateSoul } from '@tinyclaw/heartware';
 
 // ---------------------------------------------------------------------------
 // Path resolution
@@ -103,10 +103,8 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
 
   if (!dataExists && (!flags.force || !secretsExist)) {
     p.intro(theme.brand('Purge'));
-    p.log.info('Nothing to purge — Tiny Claw hasn\'t been set up yet.');
-    p.outro(
-      'Run ' + theme.cmd('tinyclaw setup') + ' to get started.'
-    );
+    p.log.info("Nothing to purge — Tiny Claw hasn't been set up yet.");
+    p.outro(`Run ${theme.cmd('tinyclaw setup')} to get started.`);
     return;
   }
 
@@ -118,7 +116,9 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
 
   if (dataExists) {
     targets.push(`  ${theme.label('Data directory')}     ${theme.dim(dataDir)}`);
-    targets.push(`    • data/            ${theme.dim('(config.db, agent.db, security.db + WAL/SHM files)')}`);
+    targets.push(
+      `    • data/            ${theme.dim('(config.db, agent.db, security.db + WAL/SHM files)')}`,
+    );
     targets.push(`    • learning/        ${theme.dim('(learned patterns)')}`);
     targets.push(`    • heartware/       ${theme.dim('(identity files + backups)')}`);
     targets.push(`    • audit/           ${theme.dim('(audit logs)')}`);
@@ -135,12 +135,13 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
     }
   } else {
     targets.push('');
-    targets.push(`  ${theme.dim('Secrets store')}       ${theme.dim('preserved (use --force to include)')}`);
+    targets.push(
+      `  ${theme.dim('Secrets store')}       ${theme.dim('preserved (use --force to include)')}`,
+    );
   }
 
   p.log.warn(
-    theme.error('This will permanently delete the following data:\n\n') +
-    targets.join('\n')
+    theme.error('This will permanently delete the following data:\n\n') + targets.join('\n'),
   );
 
   // --- Type-to-confirm ------------------------------------------------
@@ -194,7 +195,9 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
       await rm(dataDir, rmOptions);
       // Verify deletion actually succeeded (locked files can cause silent partial removal)
       if (await dirExists(dataDir)) {
-        errors.push('Data directory: some files could not be removed (they may be locked by a running process)');
+        errors.push(
+          'Data directory: some files could not be removed (they may be locked by a running process)',
+        );
       } else {
         deleted.push('Data directory');
       }
@@ -208,7 +211,9 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
     try {
       await rm(secretsDir, rmOptions);
       if (await dirExists(secretsDir)) {
-        errors.push('Secrets store: some files could not be removed (they may be locked by a running process)');
+        errors.push(
+          'Secrets store: some files could not be removed (they may be locked by a running process)',
+        );
       } else {
         deleted.push('Secrets store');
       }
@@ -241,9 +246,7 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
 
   if (flags.force && deleted.includes('Secrets store')) {
     summary.push('');
-    summary.push(
-      theme.warn('  ⚠ Secrets were deleted — you\'ll need a new API key during setup.')
-    );
+    summary.push(theme.warn("  ⚠ Secrets were deleted — you'll need a new API key during setup."));
   }
 
   p.log.info(summary.join('\n'));
@@ -257,7 +260,5 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
     return;
   }
 
-  p.outro(
-    theme.success('Done!') + ' Run ' + theme.cmd('tinyclaw setup') + ' to reconfigure.'
-  );
+  p.outro(`${theme.success('Done!')} Run ${theme.cmd('tinyclaw setup')} to reconfigure.`);
 }

@@ -54,7 +54,9 @@ describe('createSessionQueue', () => {
     expect(q.pending('user-1')).toBe(0);
 
     let resolve1!: () => void;
-    const blocker = new Promise<void>((r) => { resolve1 = r; });
+    const blocker = new Promise<void>((r) => {
+      resolve1 = r;
+    });
 
     const t1 = q.enqueue('user-1', () => blocker);
     const t2 = q.enqueue('user-1', () => Promise.resolve());
@@ -71,16 +73,18 @@ describe('createSessionQueue', () => {
     const q = createSessionQueue();
     q.stop();
 
-    await expect(
-      q.enqueue('user-1', () => Promise.resolve('nope')),
-    ).rejects.toThrow('Queue has been stopped');
+    await expect(q.enqueue('user-1', () => Promise.resolve('nope'))).rejects.toThrow(
+      'Queue has been stopped',
+    );
   });
 
   test('stop() clears internal state', async () => {
     const q = createSessionQueue();
 
     let resolve1!: () => void;
-    const blocker = new Promise<void>((r) => { resolve1 = r; });
+    const blocker = new Promise<void>((r) => {
+      resolve1 = r;
+    });
 
     q.enqueue('user-1', () => blocker);
     expect(q.pending('user-1')).toBe(1);

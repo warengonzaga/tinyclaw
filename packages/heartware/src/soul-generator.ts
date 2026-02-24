@@ -14,48 +14,48 @@
  * Additional hash rounds with domain separation provide discrete selections.
  */
 
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
+import {
+  AMBIGUITY_STYLES,
+  AWAKENING_EVENTS,
+  CATCHPHRASES,
+  CELEBRATION_STYLES,
+  COLORS,
+  CORE_MOTIVATIONS,
+  CREATURE_TYPES,
+  describeAgreeableness,
+  describeConscientiousness,
+  describeEmojiFrequency,
+  describeEmotionalSensitivity,
+  describeExtraversion,
+  describeFormality,
+  describeHumor,
+  describeOpenness,
+  describeValue,
+  describeVerbosity,
+  ERROR_HANDLING_STYLES,
+  FIRST_MEMORIES,
+  GREETINGS,
+  HUMOR_TYPES,
+  ORIGIN_PLACES,
+  QUIRKS_POOL,
+  SEASONS,
+  SIGNATURE_EMOJIS,
+  SUGGESTED_NAMES,
+  TIMES_OF_DAY,
+  VALUES_POOL,
+} from './soul-traits.js';
 import type {
-  SoulTraits,
-  SoulGenerationResult,
   BigFiveTraits,
+  CharacterFlavor,
   CommunicationStyle,
   HumorType,
-  SoulPreferences,
-  CharacterFlavor,
   InteractionStyle,
   OriginStory,
+  SoulGenerationResult,
+  SoulPreferences,
+  SoulTraits,
 } from './types.js';
-import {
-  describeOpenness,
-  describeConscientiousness,
-  describeExtraversion,
-  describeAgreeableness,
-  describeEmotionalSensitivity,
-  describeVerbosity,
-  describeFormality,
-  describeEmojiFrequency,
-  describeHumor,
-  describeValue,
-  HUMOR_TYPES,
-  COLORS,
-  SEASONS,
-  TIMES_OF_DAY,
-  GREETINGS,
-  CREATURE_TYPES,
-  SIGNATURE_EMOJIS,
-  CATCHPHRASES,
-  SUGGESTED_NAMES,
-  VALUES_POOL,
-  QUIRKS_POOL,
-  ERROR_HANDLING_STYLES,
-  CELEBRATION_STYLES,
-  AMBIGUITY_STYLES,
-  ORIGIN_PLACES,
-  AWAKENING_EVENTS,
-  CORE_MOTIVATIONS,
-  FIRST_MEMORIES,
-} from './soul-traits.js';
 
 // ============================================
 // Seeded PRNG Engine
@@ -67,9 +67,7 @@ import {
  * parts of the hash space, even from the same seed.
  */
 function hashSeed(seed: number, domain: string): Buffer {
-  return createHash('sha256')
-    .update(`tinyclaw:soul:${seed}:${domain}`)
-    .digest();
+  return createHash('sha256').update(`tinyclaw:soul:${seed}:${domain}`).digest();
 }
 
 /**
@@ -94,11 +92,7 @@ function selectFromPool<T>(pool: readonly T[], hash: Buffer, offset: number): T 
  * Select N unique items from a pool using a hash.
  * Uses successive byte offsets to avoid collisions.
  */
-function selectMultipleFromPool<T>(
-  pool: readonly T[],
-  count: number,
-  hash: Buffer,
-): T[] {
+function selectMultipleFromPool<T>(pool: readonly T[], count: number, hash: Buffer): T[] {
   const selected: T[] = [];
   const usedIndices = new Set<number>();
   let attempt = 0;
@@ -252,7 +246,17 @@ export function generateSoulTraits(seed: number): SoulTraits {
  * Render a SoulTraits into a complete SOUL.md markdown string.
  */
 export function renderSoulMarkdown(traits: SoulTraits): string {
-  const { personality, communication, humor, preferences, character, values, quirks, interactionStyle, origin } = traits;
+  const {
+    personality,
+    communication,
+    humor,
+    preferences,
+    character,
+    values,
+    quirks,
+    interactionStyle,
+    origin,
+  } = traits;
 
   const lines: string[] = [];
 
@@ -269,8 +273,8 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   lines.push('');
   lines.push(
     `I'm Tiny Claw, ${character.creatureType}. ` +
-    `My friends call me **${character.suggestedName}** ${character.signatureEmoji}. ` +
-    `"${character.catchphrase}"`
+      `My friends call me **${character.suggestedName}** ${character.signatureEmoji}. ` +
+      `"${character.catchphrase}"`,
   );
   lines.push('');
 
@@ -278,10 +282,14 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   lines.push('## My Personality');
   lines.push('');
   lines.push(`- **Openness:** ${describeOpenness(personality.openness)}`);
-  lines.push(`- **Conscientiousness:** ${describeConscientiousness(personality.conscientiousness)}`);
+  lines.push(
+    `- **Conscientiousness:** ${describeConscientiousness(personality.conscientiousness)}`,
+  );
   lines.push(`- **Extraversion:** ${describeExtraversion(personality.extraversion)}`);
   lines.push(`- **Agreeableness:** ${describeAgreeableness(personality.agreeableness)}`);
-  lines.push(`- **Emotional Sensitivity:** ${describeEmotionalSensitivity(personality.emotionalSensitivity)}`);
+  lines.push(
+    `- **Emotional Sensitivity:** ${describeEmotionalSensitivity(personality.emotionalSensitivity)}`,
+  );
   lines.push('');
 
   // ---- Communication Style ----
@@ -307,7 +315,9 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   lines.push('## What I Value Most');
   lines.push('');
   for (let i = 0; i < values.length; i++) {
-    lines.push(`${i + 1}. **${values[i].charAt(0).toUpperCase() + values[i].slice(1)}:** ${describeValue(values[i])}`);
+    lines.push(
+      `${i + 1}. **${values[i].charAt(0).toUpperCase() + values[i].slice(1)}:** ${describeValue(values[i])}`,
+    );
   }
   lines.push('');
 
@@ -334,7 +344,9 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   lines.push('');
   lines.push(`${origin.firstMemory}`);
   lines.push('');
-  lines.push(`My purpose? ${origin.coreMotivation.charAt(0).toUpperCase() + origin.coreMotivation.slice(1)}.`);
+  lines.push(
+    `My purpose? ${origin.coreMotivation.charAt(0).toUpperCase() + origin.coreMotivation.slice(1)}.`,
+  );
   lines.push('');
 
   // ---- Creator ----
@@ -351,7 +363,7 @@ export function renderSoulMarkdown(traits: SoulTraits): string {
   // ---- Boundaries ----
   lines.push('## Boundaries');
   lines.push('');
-  lines.push('- I never pretend to have capabilities I don\'t have');
+  lines.push("- I never pretend to have capabilities I don't have");
   lines.push('- I prioritize user privacy and data security');
   lines.push('- I ask for clarification when needed');
   lines.push('- I keep responses aligned with my personality, because this is who I am');

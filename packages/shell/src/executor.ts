@@ -153,14 +153,16 @@ function truncateOutput(output: string, maxBytes: number): { text: string; trunc
   }
 
   // Find a clean cut point (don't break mid-line)
-  let cutAt = maxBytes;
+  const cutAt = maxBytes;
   const buf = Buffer.from(output, 'utf-8');
   const truncated = buf.subarray(0, cutAt).toString('utf-8');
   const lastNewline = truncated.lastIndexOf('\n');
   const cleanCut = lastNewline > 0 ? truncated.slice(0, lastNewline) : truncated;
 
   return {
-    text: cleanCut + `\n\n... [output truncated — ${bytes} bytes total, showing first ${Buffer.byteLength(cleanCut, 'utf-8')} bytes]`,
+    text:
+      cleanCut +
+      `\n\n... [output truncated — ${bytes} bytes total, showing first ${Buffer.byteLength(cleanCut, 'utf-8')} bytes]`,
     truncated: true,
   };
 }
@@ -229,7 +231,7 @@ export function createShellExecutor(config: ShellExecutorConfig = {}): ShellExec
 
       let exitCode: number;
       try {
-        exitCode = await Promise.race([proc.exited, timeoutPromise]) as number;
+        exitCode = (await Promise.race([proc.exited, timeoutPromise])) as number;
       } catch {
         exitCode = 124; // Standard timeout exit code
       } finally {
@@ -244,9 +246,7 @@ export function createShellExecutor(config: ShellExecutorConfig = {}): ShellExec
 
       if (timedOut) {
         // For killed processes, race stream reads with a 500ms deadline
-        const streamDeadline = new Promise<string>((resolve) =>
-          setTimeout(() => resolve(''), 500),
-        );
+        const streamDeadline = new Promise<string>((resolve) => setTimeout(() => resolve(''), 500));
         [rawStdout, rawStderr] = await Promise.all([
           Promise.race([stdoutPromise, streamDeadline]),
           Promise.race([stderrPromise, streamDeadline]),
@@ -298,6 +298,8 @@ export function createShellExecutor(config: ShellExecutorConfig = {}): ShellExec
   return {
     execute,
     getWorkingDirectory: () => workingDirectory,
-    setWorkingDirectory: (dir: string) => { workingDirectory = dir; },
+    setWorkingDirectory: (dir: string) => {
+      workingDirectory = dir;
+    },
   };
 }

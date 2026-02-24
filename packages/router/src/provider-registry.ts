@@ -46,20 +46,13 @@ export interface ProviderRegistryConfig {
 // Tier fallback order (most complex → simplest)
 // ---------------------------------------------------------------------------
 
-const TIER_FALLBACK_ORDER: QueryTier[] = [
-  'reasoning',
-  'complex',
-  'moderate',
-  'simple',
-];
+const TIER_FALLBACK_ORDER: QueryTier[] = ['reasoning', 'complex', 'moderate', 'simple'];
 
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
-export function createProviderRegistry(
-  config: ProviderRegistryConfig,
-): ProviderRegistry {
+export function createProviderRegistry(config: ProviderRegistryConfig): ProviderRegistry {
   const providers = new Map<string, Provider>();
   const { tierMapping, fallbackProviderId } = config;
 

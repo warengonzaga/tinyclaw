@@ -7,11 +7,11 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { Tool } from '@tinyclaw/types';
 import { ConfigManager } from '../src/manager.js';
 import { createConfigTools } from '../src/tools.js';
-import type { Tool } from '@tinyclaw/types';
 
 let tmpDir: string;
 let manager: ConfigManager;
@@ -35,8 +35,16 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  try { manager.close(); } catch { /* ignore */ }
-  try { rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
+  try {
+    manager.close();
+  } catch {
+    /* ignore */
+  }
+  try {
+    rmSync(tmpDir, { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
 });
 
 // -----------------------------------------------------------------------

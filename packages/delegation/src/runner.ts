@@ -9,16 +9,24 @@
  */
 
 import { logger } from '@tinyclaw/logger';
-import type { Provider, Tool, Message, ToolCall, ShieldEngine, ShieldEvent } from '@tinyclaw/types';
 import type {
+  LLMResponse,
+  Message,
+  Provider,
+  ShieldEngine,
+  ShieldEvent,
+  Tool,
+  ToolCall,
+} from '@tinyclaw/types';
+import { formatOrientation } from './orientation.js';
+import type { TimeoutEstimator } from './timeout-estimator.js';
+import type {
+  OrientationContext,
   SubAgentConfig,
   SubAgentResult,
   SubAgentRunConfig,
   SubAgentRunResult,
-  OrientationContext,
 } from './types.js';
-import type { TimeoutEstimator } from './timeout-estimator.js';
-import { formatOrientation } from './orientation.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -34,9 +42,7 @@ const TOOL_ACTION_KEYS = ['action', 'tool', 'name'];
 //  extraction into core/src/tool-utils.ts)
 // ---------------------------------------------------------------------------
 
-function normalizeToolArguments(
-  args: Record<string, unknown>,
-): Record<string, unknown> {
+function normalizeToolArguments(args: Record<string, unknown>): Record<string, unknown> {
   const normalized = { ...args };
 
   if (!('filename' in normalized) && 'file_path' in normalized) {
@@ -128,14 +134,11 @@ async function executeToolCall(
 // Build system prompt
 // ---------------------------------------------------------------------------
 
-function buildSubAgentPrompt(
-  role: string,
-  orientation?: OrientationContext,
-): string {
+function buildSubAgentPrompt(role: string, orientation?: OrientationContext): string {
   let prompt = '';
 
   if (orientation) {
-    prompt += formatOrientation(orientation) + '\n\n';
+    prompt += `${formatOrientation(orientation)}\n\n`;
   }
 
   prompt +=
@@ -171,7 +174,7 @@ interface AdaptiveLoopConfig {
   shield?: ShieldEngine;
 }
 
-async function runAgentLoop(
+async function _runAgentLoop(
   provider: Provider,
   tools: Tool[],
   messages: Message[],
@@ -232,8 +235,14 @@ async function runAdaptiveAgentLoop(
       const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
       signal.addEventListener('abort', onAbort, { once: true });
       promise.then(
-        (v) => { signal.removeEventListener('abort', onAbort); resolve(v); },
-        (e) => { signal.removeEventListener('abort', onAbort); reject(e); },
+        (v) => {
+          signal.removeEventListener('abort', onAbort);
+          resolve(v);
+        },
+        (e) => {
+          signal.removeEventListener('abort', onAbort);
+          reject(e);
+        },
       );
     });
   }
@@ -247,11 +256,11 @@ async function runAdaptiveAgentLoop(
 
       iterations = i + 1;
 
-      let response;
+      let response: LLMResponse;
       try {
         response = await raceAbort(provider.chat(messages, tools));
-      } catch (err: any) {
-        if (err?.name === 'AbortError') break;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') break;
         throw err;
       }
 
@@ -277,7 +286,7 @@ async function runAdaptiveAgentLoop(
         } else {
           // Agent is done — signal the timer to stop immediately
           clearTimer();
-          ac.abort();       // harmless if already aborted
+          ac.abort(); // harmless if already aborted
           return {
             success: true,
             response: response.content || '',
@@ -375,9 +384,7 @@ async function runAdaptiveAgentLoop(
  *
  * Returns a result object — never throws.
  */
-export async function runSubAgent(
-  config: SubAgentConfig,
-): Promise<SubAgentResult> {
+export async function runSubAgent(config: SubAgentConfig): Promise<SubAgentResult> {
   const { task, role, provider, tools } = config;
   const timeout = config.timeout ?? SUB_AGENT_TIMEOUT_MS;
 
@@ -429,27 +436,15 @@ export async function runSubAgent(
  *
  * Returns the full message array for persistence by the caller.
  */
-export async function runSubAgentV2(
-  config: SubAgentRunConfig,
-): Promise<SubAgentRunResult> {
-  const {
-    task,
-    role,
-    provider,
-    tools,
-    orientation,
-    existingMessages,
-    timeoutEstimator,
-  } = config;
+export async function runSubAgentV2(config: SubAgentRunConfig): Promise<SubAgentRunResult> {
+  const { task, role, provider, tools, orientation, existingMessages, timeoutEstimator } = config;
 
   const timeout = config.timeout ?? SUB_AGENT_TIMEOUT_MS;
   const maxIter = config.maxIterations ?? SUB_AGENT_MAX_ITERATIONS;
 
   const systemPrompt = buildSubAgentPrompt(role, orientation);
 
-  const messages: Message[] = [
-    { role: 'system', content: systemPrompt },
-  ];
+  const messages: Message[] = [{ role: 'system', content: systemPrompt }];
 
   // Include existing messages for continuity (reused sub-agents)
   if (existingMessages?.length) {

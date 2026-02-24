@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
 import { createSandbox, type Sandbox } from '../src/index.js';
 
 describe('Sandbox', () => {
@@ -84,10 +84,10 @@ describe('Sandbox', () => {
 
   describe('executeWithInput', () => {
     it('passes input data to sandbox', async () => {
-      const result = await sandbox.executeWithInput(
-        'return input.name + " is " + input.age',
-        { name: 'Tiny Claw', age: 1 },
-      );
+      const result = await sandbox.executeWithInput('return input.name + " is " + input.age', {
+        name: 'Tiny Claw',
+        age: 1,
+      });
 
       expect(result.success).toBe(true);
       expect(result.output).toBe('Tiny Claw is 1');
@@ -104,10 +104,7 @@ describe('Sandbox', () => {
     });
 
     it('handles string input', async () => {
-      const result = await sandbox.executeWithInput(
-        'return input.toUpperCase()',
-        'hello',
-      );
+      const result = await sandbox.executeWithInput('return input.toUpperCase()', 'hello');
 
       expect(result.success).toBe(true);
       expect(result.output).toBe('HELLO');
@@ -141,10 +138,7 @@ describe('Sandbox', () => {
 
     it('respects custom timeout', async () => {
       const start = Date.now();
-      const result = await sandbox.execute(
-        'while(true) {}',
-        { timeoutMs: 300 },
-      );
+      const result = await sandbox.execute('while(true) {}', { timeoutMs: 300 });
       const elapsed = Date.now() - start;
 
       expect(result.success).toBe(false);
@@ -154,10 +148,7 @@ describe('Sandbox', () => {
 
     it('caps timeout at MAX_TIMEOUT_MS (30s)', async () => {
       // Requesting 60s but should be capped
-      const result = await sandbox.execute(
-        'return "fast"',
-        { timeoutMs: 60_000 },
-      );
+      const result = await sandbox.execute('return "fast"', { timeoutMs: 60_000 });
 
       // Should complete quickly since code is fast
       expect(result.success).toBe(true);
@@ -214,9 +205,7 @@ describe('Sandbox', () => {
 
   describe('concurrent execution', () => {
     it('handles multiple concurrent workers', async () => {
-      const promises = Array.from({ length: 3 }, (_, i) =>
-        sandbox.execute(`return ${i} * ${i}`),
-      );
+      const promises = Array.from({ length: 3 }, (_, i) => sandbox.execute(`return ${i} * ${i}`));
 
       const results = await Promise.all(promises);
 

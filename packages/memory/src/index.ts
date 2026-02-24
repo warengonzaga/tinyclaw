@@ -20,7 +20,13 @@
  * + importance scoring — all running 100% local, offline-capable.
  */
 
-import type { Database, MemoryEngine, MemorySearchResult, EpisodicEventType, EpisodicRecord } from '@tinyclaw/types';
+import type {
+  Database,
+  EpisodicEventType,
+  EpisodicRecord,
+  MemoryEngine,
+  MemorySearchResult,
+} from '@tinyclaw/types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -91,12 +97,15 @@ function sanitizeFTSQuery(query: string): string {
 
 export function createMemoryEngine(db: Database): MemoryEngine {
   return {
-    recordEvent(userId: string, event: {
-      type: EpisodicEventType;
-      content: string;
-      outcome?: string;
-      importance?: number;
-    }): string {
+    recordEvent(
+      userId: string,
+      event: {
+        type: EpisodicEventType;
+        content: string;
+        outcome?: string;
+        importance?: number;
+      },
+    ): string {
       const id = crypto.randomUUID();
       const now = Date.now();
       const importance = event.importance ?? DEFAULT_IMPORTANCE[event.type] ?? 0.5;
@@ -128,23 +137,23 @@ export function createMemoryEngine(db: Database): MemoryEngine {
         const ftsResults = db.searchEpisodicFTS(ftsQuery, userId, FTS_MAX_RESULTS);
 
         // Find max abs rank for normalization
-        const maxAbsRank = ftsResults.length > 0
-          ? Math.max(...ftsResults.map((r) => Math.abs(r.rank)))
-          : 1;
+        const maxAbsRank =
+          ftsResults.length > 0 ? Math.max(...ftsResults.map((r) => Math.abs(r.rank))) : 1;
 
         for (const ftsRow of ftsResults) {
           const record = db.getEpisodicEvent(ftsRow.id);
           if (!record) continue;
 
           const ftsScore = normalizeFTSRank(ftsRow.rank, maxAbsRank);
-          const temporalScore = computeTemporalScore(record.lastAccessedAt, record.accessCount, now);
+          const temporalScore = computeTemporalScore(
+            record.lastAccessedAt,
+            record.accessCount,
+            now,
+          );
           const importanceScore = record.importance;
 
           // Combined score: FTS5 (0.4) + Temporal (0.3) + Importance (0.3)
-          const relevanceScore =
-            ftsScore * 0.4 +
-            temporalScore * 0.3 +
-            importanceScore * 0.3;
+          const relevanceScore = ftsScore * 0.4 + temporalScore * 0.3 + importanceScore * 0.3;
 
           results.push({
             id: record.id,
@@ -213,17 +222,17 @@ export function createMemoryEngine(db: Database): MemoryEngine {
           if (toDelete.includes(events[j].id)) continue;
 
           // Quick similarity check: if content is nearly identical
-          if (events[i].eventType === events[j].eventType &&
-              contentSimilarity(events[i].content, events[j].content) > 0.8) {
+          if (
+            events[i].eventType === events[j].eventType &&
+            contentSimilarity(events[i].content, events[j].content) > 0.8
+          ) {
             // Keep the newer one (events are sorted DESC by created_at)
             // The newer one (index i) is kept; older (index j) is merged
             const older = events[j];
             const newer = events[i];
 
             // Merge: bump importance of the newer entry
-            const mergedImportance = Math.min(1.0,
-              newer.importance + older.importance * 0.2
-            );
+            const mergedImportance = Math.min(1.0, newer.importance + older.importance * 0.2);
 
             db.updateEpisodicEvent(newer.id, {
               importance: mergedImportance,
@@ -265,9 +274,12 @@ export function createMemoryEngine(db: Database): MemoryEngine {
       if (highImportance.length > 0) {
         sections.push('\n## Important Context');
         for (const event of highImportance) {
-          const label = event.eventType === 'correction' ? '⚠️ Correction'
-            : event.eventType === 'preference_learned' ? '⭐ Preference'
-            : '📌 Note';
+          const label =
+            event.eventType === 'correction'
+              ? '⚠️ Correction'
+              : event.eventType === 'preference_learned'
+                ? '⭐ Preference'
+                : '📌 Note';
           sections.push(`${label}: ${event.content}`);
         }
       }
@@ -316,10 +328,18 @@ export function createMemoryEngine(db: Database): MemoryEngine {
  */
 function contentSimilarity(a: string, b: string): number {
   const tokensA = new Set(
-    a.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2),
+    a
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 2),
   );
   const tokensB = new Set(
-    b.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2),
+    b
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 2),
   );
 
   if (tokensA.size === 0 || tokensB.size === 0) return 0;
