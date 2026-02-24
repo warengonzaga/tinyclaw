@@ -353,6 +353,12 @@ export function createNudgeEngine(options: CreateNudgeEngineOptions): NudgeEngin
 // Intercom Wiring Helpers
 // ---------------------------------------------------------------------------
 
+/** Shape of intercom events consumed by the nudge wiring. */
+interface IntercomEvent {
+  userId: string;
+  data: { summary?: string; error?: string; reason?: string; taskId?: string; agentId?: string };
+}
+
 /**
  * Wire the nudge engine to intercom events so that relevant system events
  * automatically generate nudges. Call this during boot after both the
@@ -368,7 +374,8 @@ export function wireNudgeToIntercom(
 
   // Background task completed → nudge owner
   unsubs.push(
-    intercom.on('task:completed', (event) => {
+    intercom.on('task:completed', (raw) => {
+      const event = raw as IntercomEvent;
       nudgeEngine.schedule({
         userId: event.userId,
         category: 'task_complete',
@@ -387,7 +394,8 @@ export function wireNudgeToIntercom(
 
   // Background task failed → nudge owner (higher priority)
   unsubs.push(
-    intercom.on('task:failed', (event) => {
+    intercom.on('task:failed', (raw) => {
+      const event = raw as IntercomEvent;
       nudgeEngine.schedule({
         userId: event.userId,
         category: 'task_failed',
@@ -406,7 +414,8 @@ export function wireNudgeToIntercom(
 
   // Sub-agent dismissed → low-priority info nudge
   unsubs.push(
-    intercom.on('agent:dismissed', (event) => {
+    intercom.on('agent:dismissed', (raw) => {
+      const event = raw as IntercomEvent;
       nudgeEngine.schedule({
         userId: event.userId,
         category: 'system',
