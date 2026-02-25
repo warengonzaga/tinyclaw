@@ -7,6 +7,8 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "☕ chore"
     labels:
       - "security"
       - "infra"
@@ -24,6 +26,8 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    commit-message:
+      prefix: "☕ chore"
     labels:
       - "security"
       - "infra"
@@ -35,6 +39,8 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 3
+    commit-message:
+      prefix: "☕ chore"
     labels:
       - "security"
       - "infra"
