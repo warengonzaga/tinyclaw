@@ -54,6 +54,11 @@ jobs:
               echo "⚠ Skipping bot commit: $msg"
               continue
             fi
+            # Allow Dependabot auto-generated commit messages
+            if echo "$msg" | grep -qE "^(Bump|Update) .+ from .+ to "; then
+              echo "⚠ Skipping Dependabot commit: $msg"
+              continue
+            fi
             if ! echo "$msg" | grep -qP "$PATTERN"; then
               echo "✖ Invalid commit message: $msg"
               FAILED=1
