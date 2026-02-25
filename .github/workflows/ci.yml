@@ -33,6 +33,10 @@ jobs:
             if [ "$GITHUB_EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
               # Initial push has no valid "before" SHA, so capture all reachable commits
               COMMITS=$(git log --format="%s" "$GITHUB_EVENT_AFTER")
+            elif ! git cat-file -e "${GITHUB_EVENT_BEFORE}^{commit}" 2>/dev/null; then
+              # Force-push: before SHA no longer exists, validate only the latest commit
+              echo "⚠ Force-push detected — before SHA not found, validating HEAD commit only"
+              COMMITS=$(git log --format="%s" -1 "$GITHUB_EVENT_AFTER")
             else
               COMMITS=$(git log --format="%s" "${GITHUB_EVENT_BEFORE}..${GITHUB_EVENT_AFTER}")
             fi
