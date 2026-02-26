@@ -53,6 +53,28 @@ import { createWebUI } from '@tinyclaw/web';
 import QRCode from 'qrcode';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
+import { existsSync, readFileSync } from 'fs';
+
+/**
+ * Detect if running inside a Docker container or CI environment.
+ */
+function isRunningInContainer(): boolean {
+  if (process.env.CI || process.env.CONTAINER || process.env.DOCKER_CONTAINER) {
+    return true;
+  }
+  try {
+    if (existsSync('/.dockerenv')) {
+      return true;
+    }
+  } catch { /* ignore */ }
+  try {
+    const cgroup = readFileSync('/proc/1/cgroup', 'utf8');
+    if (/docker|containerd|kubepods|lxc|podman/i.test(cgroup)) {
+      return true;
+    }
+  } catch { /* ignore */ }
+  return false;
+}
 
 /**
  * Copy text to the system clipboard.
@@ -204,6 +226,29 @@ export async function setupCommand(): Promise<void> {
   setLogMode('error');
 
   showBanner();
+
+  // --- Container environment warning ----------------------------------
+
+  if (isRunningInContainer()) {
+    p.note(
+      theme.warn('Container Environment Detected') + '\n\n' +
+      'Interactive CLI setup may not work properly in Docker/containers.\n' +
+      'If prompts freeze or fail, cancel and run:\n\n' +
+      '  ' + theme.cmd('tinyclaw setup --docker') + '\n\n' +
+      'Or use ' + theme.cmd('--web') + ' for browser-based setup.',
+      'Docker/Container'
+    );
+
+    const continueAnyway = await p.confirm({
+      message: 'Continue with interactive setup anyway?',
+      initialValue: false,
+    });
+
+    if (p.isCancel(continueAnyway) || !continueAnyway) {
+      p.outro(theme.dim('Setup cancelled. Use --docker or --web flag for container environments.'));
+      process.exit(0);
+    }
+  }
 
   const secretsManager = await SecretsManager.create();
   const configManager = await ConfigManager.create();
