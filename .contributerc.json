@@ -1,0 +1,17 @@
+{
+  "workflow": "clean-flow",
+  "role": "maintainer",
+  "mainBranch": "main",
+  "devBranch": "dev",
+  "upstream": "upstream",
+  "origin": "origin",
+  "branchPrefixes": [
+    "feature",
+    "fix",
+    "docs",
+    "chore",
+    "test",
+    "refactor"
+  ],
+  "commitConvention": "clean-commit"
+}
