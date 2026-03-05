@@ -70,10 +70,19 @@ mock.module('@tinyclaw/core', () => ({
   DEFAULT_MODEL: 'kimi-k2.5:cloud',
   DEFAULT_BASE_URL: 'https://ollama.com',
   BUILTIN_MODEL_TAGS: ['kimi-k2.5:cloud', 'gpt-oss:120b-cloud'],
+  checkForUpdate: mock(() => Promise.resolve(null)),
+  buildUpdateContext: mock(() => undefined),
 }));
 
 mock.module('@tinyclaw/plugins', () => ({
   loadPlugins: mock(() => Promise.resolve({ channels: [], providers: [], tools: [] })),
+  discoverPairingTools: mock(() => Promise.resolve([])),
+  checkPluginUpdates: mock(() => Promise.resolve(null)),
+  buildPluginUpdateContext: mock(() => undefined),
+  getCommunityPlugins: mock(() => []),
+  installCommunityPlugin: mock(() => Promise.resolve({ success: false, message: 'mock' })),
+  removeCommunityPlugin: mock(() => Promise.resolve({ success: false, message: 'mock' })),
+  listCommunityPlugins: mock(() => Promise.resolve([])),
 }));
 
 mock.module('@tinyclaw/pulse', () => ({

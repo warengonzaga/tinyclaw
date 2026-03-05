@@ -49,7 +49,16 @@ import {
   getCompanionTouchActivity,
   wireNudgeToIntercom,
 } from '@tinyclaw/nudge';
-import { loadPlugins } from '@tinyclaw/plugins';
+import {
+  buildPluginUpdateContext,
+  checkPluginUpdates,
+  discoverPairingTools,
+  getCommunityPlugins,
+  installCommunityPlugin,
+  listCommunityPlugins,
+  loadPlugins,
+  removeCommunityPlugin,
+} from '@tinyclaw/plugins';
 import { createPulseScheduler } from '@tinyclaw/pulse';
 import { createSessionQueue } from '@tinyclaw/queue';
 import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';
@@ -417,11 +426,32 @@ export async function startCommand(): Promise<void> {
     ...createConfigTools(configManager),
   ];
 
-  // Merge plugin pairing tools (channels + providers)
-  const pairingTools = [
+  // Merge plugin pairing tools (channels + providers) from enabled plugins
+  const enabledPairingTools = [
     ...plugins.channels.flatMap((ch) => ch.getPairingTools?.(secretsManager, configManager) ?? []),
     ...plugins.providers.flatMap((pp) => pp.getPairingTools?.(secretsManager, configManager) ?? []),
   ];
+
+  // Discover pairing tools from installed-but-not-yet-enabled plugins.
+  // This solves the chicken-and-egg problem: the agent needs pairing tools
+  // (e.g. discord_pair) to activate plugins conversationally, but those tools
+  // were previously only loaded from already-enabled plugins.
+  const enabledIds = configManager.get<string[]>('plugins.enabled') ?? [];
+  const discoveredPairingTools = await discoverPairingTools(
+    enabledIds,
+    secretsManager,
+    configManager,
+  );
+
+  if (discoveredPairingTools.length > 0) {
+    logger.info(
+      'Discovered pairing tools from available plugins',
+      { count: discoveredPairingTools.length, tools: discoveredPairingTools.map((t) => t.name) },
+      { emoji: '🔌' },
+    );
+  }
+
+  const pairingTools = [...enabledPairingTools, ...discoveredPairingTools];
 
   // Create a temporary context for plugin tools that need AgentContext
   const baseContext = {
@@ -825,6 +855,152 @@ export async function startCommand(): Promise<void> {
 
   allTools.push(providerClearPrimaryTool);
 
+  // plugin_install tool — allows the agent to install community plugins conversationally
+  const pluginInstallTool: Tool = {
+    name: 'plugin_install',
+    description:
+      'Install a community plugin from npm by package name. The user can paste ' +
+      'an npm package name (e.g. "@acme/tinyclaw-plugin-telegram" or ' +
+      '"tinyclaw-plugin-notion") and this tool will install it, validate it is ' +
+      'a valid Tiny Claw plugin, and register it. After successful installation, ' +
+      'call tinyclaw_restart to activate the plugin. ' +
+      'IMPORTANT: Always confirm with the user before installing. Warn them that ' +
+      'community plugins are unverified third-party code that will execute on ' +
+      'their machine. ' +
+      'Official @tinyclaw/plugin-* packages are managed separately and cannot ' +
+      'be installed through this tool.',
+    parameters: {
+      type: 'object',
+      properties: {
+        package_name: {
+          type: 'string',
+          description: 'The npm package name to install (e.g. "@acme/tinyclaw-plugin-telegram")',
+        },
+      },
+      required: ['package_name'],
+    },
+    async execute(args) {
+      const packageName = (args.package_name as string)?.trim();
+      if (!packageName) {
+        return 'Error: package_name is required. Ask the user for the npm package name.';
+      }
+
+      const result = await installCommunityPlugin(packageName, configManager);
+
+      if (result.success && result.plugin) {
+        return (
+          `${result.message}\n\n` +
+          `Plugin details:\n` +
+          `  Name: ${result.plugin.name}\n` +
+          `  ID: ${result.plugin.id}\n` +
+          `  Type: ${result.plugin.type}\n` +
+          `  Version: ${result.plugin.version}\n` +
+          `  Source: community (unverified)\n\n` +
+          'Call tinyclaw_restart to activate the plugin.'
+        );
+      }
+
+      return result.message;
+    },
+  };
+
+  allTools.push(pluginInstallTool);
+
+  // plugin_remove tool — allows the agent to remove community plugins
+  const pluginRemoveTool: Tool = {
+    name: 'plugin_remove',
+    description:
+      'Remove a community plugin. This unregisters the plugin from config, ' +
+      'removes it from the enabled list, and uninstalls the npm package. ' +
+      'After removal, call tinyclaw_restart to apply changes. ' +
+      'Only works for community plugins — official @tinyclaw/plugin-* ' +
+      'packages cannot be removed through this tool.',
+    parameters: {
+      type: 'object',
+      properties: {
+        package_name: {
+          type: 'string',
+          description: 'The npm package name of the community plugin to remove',
+        },
+      },
+      required: ['package_name'],
+    },
+    async execute(args) {
+      const packageName = (args.package_name as string)?.trim();
+      if (!packageName) {
+        return 'Error: package_name is required.';
+      }
+
+      const result = await removeCommunityPlugin(packageName, configManager);
+      return result.message;
+    },
+  };
+
+  allTools.push(pluginRemoveTool);
+
+  // plugin_list tool — shows all plugins (official + community)
+  const pluginListTool: Tool = {
+    name: 'plugin_list',
+    description:
+      'List all installed plugins — both official (@tinyclaw/plugin-*) and ' +
+      "community plugins. Shows each plugin's name, type, version, enabled " +
+      'status, and source (official or community).',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    async execute() {
+      const enabledIds = configManager.get<string[]>('plugins.enabled') ?? [];
+      const lines: string[] = [];
+
+      // Official plugins — show enabled ones, plus note about discoverable ones
+      const officialEnabled = enabledIds.filter((id) => id.startsWith('@tinyclaw/plugin-'));
+      lines.push('Official Plugins (verified @tinyclaw/plugin-*):');
+      if (officialEnabled.length > 0) {
+        for (const id of officialEnabled) {
+          try {
+            const mod = await import(id);
+            const p = mod.default;
+            lines.push(
+              `  • ${p?.name ?? id} (${id}) v${p?.version ?? '?'} — ${p?.type ?? '?'} [enabled]`,
+            );
+          } catch {
+            lines.push(`  • ${id} [enabled, but failed to load]`);
+          }
+        }
+      } else {
+        lines.push('  (none enabled)');
+      }
+      lines.push(
+        '  Note: Official plugins not yet enabled are discovered automatically — ask me to pair one.',
+      );
+
+      lines.push('');
+
+      // Community plugins
+      const communityPlugins = await listCommunityPlugins(configManager);
+      lines.push('Community Plugins (unverified):');
+      if (communityPlugins.length > 0) {
+        for (const cp of communityPlugins) {
+          const status = cp.enabled ? 'enabled' : 'installed';
+          lines.push(`  • ${cp.name} (${cp.id}) v${cp.version} — ${cp.type} [${status}]`);
+        }
+      } else {
+        lines.push('  (none installed)');
+        lines.push('');
+        lines.push(
+          'To install a community plugin, the user can provide an npm package name ' +
+            'and you can use plugin_install to add it.',
+        );
+      }
+
+      return lines.join('\n');
+    },
+  };
+
+  allTools.push(pluginListTool);
+
   // --- Create delegation v2 subsystems -----------------------------------
 
   const delegationResult = createDelegationTools({
@@ -877,6 +1053,18 @@ export async function startCommand(): Promise<void> {
     if (ctx) updateContext = ctx;
   } catch (err) {
     logger.debug('Update check skipped', err);
+  }
+
+  // Check for plugin updates (non-blocking, same pattern as core)
+  try {
+    const communityIds = getCommunityPlugins(configManager);
+    const pluginUpdateInfo = await checkPluginUpdates(dataDir, communityIds);
+    const pluginCtx = buildPluginUpdateContext(pluginUpdateInfo);
+    if (pluginCtx) {
+      updateContext = (updateContext ?? '') + pluginCtx;
+    }
+  } catch (err) {
+    logger.debug('Plugin update check skipped', err);
   }
 
   const context = {
@@ -1217,6 +1405,55 @@ export async function startCommand(): Promise<void> {
         });
       } catch (err) {
         logger.debug('Nudge: update check skipped', err);
+      }
+    },
+  });
+
+  // Register plugin update check nudge (every 6 hours, same cadence as core)
+  pulse.register({
+    id: 'nudge-plugin-update-check',
+    schedule: '6h',
+    handler: async () => {
+      try {
+        const pluginUpdateInfo = await checkPluginUpdates(
+          dataDir,
+          getCommunityPlugins(configManager),
+        );
+        if (!pluginUpdateInfo || pluginUpdateInfo.updatableCount === 0) return;
+
+        const updatable = pluginUpdateInfo.plugins.filter((p) => p.updateAvailable);
+
+        // Deduplicate: skip if a pending nudge already covers these plugins
+        const pending = nudgeEngine.pending();
+        const alreadyQueued = pending.some((n) => n.category === 'plugin_update');
+        if (alreadyQueued) return;
+
+        const pluginList = updatable.map((p) => `${p.id} ${p.current} → ${p.latest}`).join(', ');
+
+        const ownerId = configManager.get<string>('owner.ownerId') || 'web:default';
+        nudgeEngine.schedule({
+          userId: ownerId,
+          category: 'plugin_update',
+          content: `Plugin updates available: ${pluginList}`,
+          priority: 'low',
+          deliverAfter: 0,
+          metadata: {
+            updatableCount: pluginUpdateInfo.updatableCount,
+            plugins: updatable.map((p) => ({
+              id: p.id,
+              current: p.current,
+              latest: p.latest,
+            })),
+            runtime: pluginUpdateInfo.runtime,
+          },
+        });
+
+        logger.info('Nudge: plugin update scheduled', {
+          count: pluginUpdateInfo.updatableCount,
+          plugins: pluginList,
+        });
+      } catch (err) {
+        logger.debug('Nudge: plugin update check skipped', err);
       }
     },
   });
