@@ -141,13 +141,19 @@ tinyclaw/
     web/             Web UI (Svelte 5, Discord-like experience)
 ```
 
+## 🎯 Contributing
+
+Contributions are welcome, create a pull request to this repo and I will review your code. Please consider to submit your pull request to the `dev` branch. Thank you!
+
+Read the project's [contributing guide](./CONTRIBUTING.md) for more info.
+
 ## 🐛 Issues
 
 Please report any issues and bugs by [creating a new issue here](https://github.com/warengonzaga/tinyclaw/issues/new/choose), also make sure you're reporting an issue that doesn't exist. Any help to improve the project would be appreciated. Thanks! 🙏✨
 
 ## 🙏 Sponsor
 
-Like this project? Leave a star! ⭐⭐⭐⭐⭐
+Like this project? **Leave a star**! ⭐⭐⭐⭐⭐
 
 Want to support my work and get some perks? [Become a sponsor](https://github.com/sponsors/warengonzaga)! 💖
 
@@ -157,11 +163,11 @@ Recognized my open-source contributions? [Nominate me](https://stars.github.com/
 
 ## 📋 Code of Conduct
 
-Read the project's [code of conduct](https://github.com/warengonzaga/tinyclaw/blob/main/CODE_OF_CONDUCT.md).
+Read the project's [code of conduct](./CODE_OF_CONDUCT.md).
 
 ## 📃 License
 
-This project is licensed under [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html).
+This project is licensed under [GNU General Public License v3.0](https://opensource.org/licenses/GPL-3.0).
 
 ## 🙏 Credits
 
@@ -175,10 +181,10 @@ This project is licensed under [GNU General Public License v3.0](https://www.gnu
 
 ## 📝 Author
 
-This project is created by [Waren Gonzaga](https://github.com/warengonzaga), with the help of awesome [contributors](https://github.com/warengonzaga/tinyclaw/graphs/contributors).
+This project is created by **[Waren Gonzaga](https://github.com/warengonzaga)**, with the help of awesome [contributors](https://github.com/warengonzaga/tinyclaw/graphs/contributors).
 
 [![contributors](https://contrib.rocks/image?repo=warengonzaga/tinyclaw)](https://github.com/warengonzaga/tinyclaw/graphs/contributors)
 
 ---
 
-💻💖☕ by [Waren Gonzaga](https://warengonzaga.com) | [YHWH](https://www.youtube.com/watch?v=VOZbswniA-g) 🙏 - Without _Him_, none of this exists, _even me_.
+💻💖☕ by [Waren Gonzaga](https://warengonzaga.com) & [YHWH](https://www.youtube.com/watch?v=VOZbswniA-g) 🙏 — Without *Him*, none of this exists, *even me*.
