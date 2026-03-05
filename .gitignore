@@ -43,3 +43,6 @@ coverage/
 *.bak
 *.tmp
 docs/**.*
+
+# Contribute Now
+.contributerc.json
