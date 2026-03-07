@@ -18,7 +18,6 @@ permissions:
 
 jobs:
   build:
-    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -27,7 +26,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Build and Push Container
-        uses: wgtechlabs/container-build-flow-action@v1.7.0 # v1.3.1
+        uses: wgtechlabs/container-build-flow-action@v1.7.0
         with:
           registry: both
           dockerhub-username: ${{ secrets.DOCKER_HUB_USERNAME }}
@@ -36,3 +35,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           trivy-severity: CRITICAL
           fail-on-vulnerability: true
+          commit-convention-enabled: true
