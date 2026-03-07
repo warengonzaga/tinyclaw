@@ -133,7 +133,7 @@ tinyclaw/
     secrets/         Encrypted secrets management (AES-256-GCM)
     plugins/         Plugin discovery and loading
   plugins/           Plugin packages (keep the core tiny)
-    channel/         Messaging integrations (Discord, Friends, etc.)
+    channel/         Messaging integrations (Discord, Telegram, Friends, etc.)
     provider/        LLM providers (OpenAI, etc.)
   src/
     cli/             CLI entry point

@@ -197,6 +197,14 @@
         "@tinyclaw/types": "workspace:*",
       },
     },
+    "plugins/channel/plugin-channel-telegram": {
+      "name": "@tinyclaw/plugin-channel-telegram",
+      "version": "2.0.0",
+      "dependencies": {
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
+      },
+    },
     "plugins/provider/plugin-provider-openai": {
       "name": "@tinyclaw/plugin-provider-openai",
       "version": "2.0.0",
@@ -499,6 +507,8 @@
     "@tinyclaw/plugin-channel-discord": ["@tinyclaw/plugin-channel-discord@workspace:plugins/channel/plugin-channel-discord"],
 
     "@tinyclaw/plugin-channel-friends": ["@tinyclaw/plugin-channel-friends@workspace:plugins/channel/plugin-channel-friends"],
+
+    "@tinyclaw/plugin-channel-telegram": ["@tinyclaw/plugin-channel-telegram@workspace:plugins/channel/plugin-channel-telegram"],
 
     "@tinyclaw/plugin-provider-openai": ["@tinyclaw/plugin-provider-openai@workspace:plugins/provider/plugin-provider-openai"],
 
