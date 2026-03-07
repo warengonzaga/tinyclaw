@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Ant Colony theme — dark, earthy tones */
+  /* Tiny Claw theme — dark with signature orange-red */
   --color-bg-primary: #0a0a0a;
   --color-bg-secondary: #111111;
   --color-bg-tertiary: #171717;
@@ -11,19 +11,19 @@
 
   --color-text-normal: #e0e0e0;
   --color-text-muted: #8a8a8a;
-  --color-text-link: #c98540;
+  --color-text-link: #f47a3e;
 
-  --color-brand: #8b5a2b;
-  --color-brand-hover: #a06830;
-  --color-brand-light: #c98540;
+  --color-brand: #e85216;
+  --color-brand-hover: #d44a12;
+  --color-brand-light: #f47a3e;
   --color-accent-green: #7ab648;
   --color-accent-yellow: #c49530;
 
   --color-border: #222222;
   --color-border-hover: #333333;
 
-  --color-gradient-start: #8b5a2b;
-  --color-gradient-end: #c98540;
+  --color-gradient-start: #e85216;
+  --color-gradient-end: #f47a3e;
 }
 
 * {
@@ -70,4 +70,26 @@ html, body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-hover);
+}
+
+/* Logo animations */
+@keyframes ant-twitch {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-6deg); }
+  40% { transform: rotate(4deg); }
+  60% { transform: rotate(-3deg); }
+  80% { transform: rotate(5deg); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(232, 82, 22, 0.3)); }
+  50% { filter: drop-shadow(0 0 18px rgba(232, 82, 22, 0.6)); }
+}
+
+.ant-twitch {
+  animation: ant-twitch 0.4s ease-in-out !important;
+}
+
+.logo-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
 }
