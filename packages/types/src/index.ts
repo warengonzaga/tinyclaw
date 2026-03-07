@@ -646,7 +646,10 @@ export interface ChannelPlugin extends PluginMeta {
 export interface ProviderPlugin extends PluginMeta {
   readonly type: 'provider';
   /** Create and return an initialized Provider instance. */
-  createProvider(secrets: SecretsManagerInterface): Promise<Provider>;
+  createProvider(
+    secrets: SecretsManagerInterface,
+    configManager: ConfigManagerInterface,
+  ): Promise<Provider>;
   /** Optional pairing tools for conversational setup (API key, model config). */
   getPairingTools?(secrets: SecretsManagerInterface, configManager: ConfigManagerInterface): Tool[];
 }

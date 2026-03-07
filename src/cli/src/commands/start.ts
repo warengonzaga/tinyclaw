@@ -328,7 +328,7 @@ export async function startCommand(): Promise<void> {
 
   for (const pp of plugins.providers) {
     try {
-      const provider = await pp.createProvider(secretsManager);
+      const provider = await pp.createProvider(secretsManager, configManager);
       pluginProviders.push(provider);
       logger.info(`Plugin provider initialized: ${pp.name} (${provider.id})`, undefined, {
         emoji: '✅',
@@ -348,20 +348,12 @@ export async function startCommand(): Promise<void> {
   let activeProviderName = defaultProvider.name;
   let activeModelName = providerModel;
 
-  const primaryModel = configManager.get<string>('providers.primary.model');
+  const primaryProviderId =
+    configManager.get<string>('providers.primary.providerId') ??
+    configManager.get<string>('providers.primary.model');
 
-  if (primaryModel) {
-    // Find a plugin provider whose id matches the primary config.
-    // Convention: the provider ID from the plugin is used to look up matching.
-
-    // Try to find a matching plugin provider by checking if any plugin
-    // provider's id is referenced in the tier mapping or matches a known pattern.
-    // For now, we look for a plugin provider whose model matches.
-    const matchingProvider = pluginProviders.find((pp) => {
-      // Check if this provider was configured with the primary model
-      // Plugin providers set their own id, so we check availability instead
-      return pp.id !== defaultProvider.id;
-    });
+  if (primaryProviderId) {
+    const matchingProvider = pluginProviders.find((pp) => pp.id === primaryProviderId);
 
     if (matchingProvider) {
       try {
@@ -369,12 +361,14 @@ export async function startCommand(): Promise<void> {
         if (available) {
           routerDefaultProvider = matchingProvider;
           activeProviderName = matchingProvider.name;
-          activeModelName = primaryModel;
+          activeModelName =
+            configManager.get<string>(`providers.${matchingProvider.id}.model`) ??
+            matchingProvider.name;
           logger.info(
             'Primary provider active, overriding built-in as default',
             {
               primary: matchingProvider.id,
-              model: primaryModel,
+              model: activeModelName,
             },
             { emoji: '✅' },
           );
@@ -679,7 +673,9 @@ export async function startCommand(): Promise<void> {
       required: [],
     },
     async execute() {
-      const currentPrimary = configManager.get<string>('providers.primary.model');
+      const currentPrimary =
+        configManager.get<string>('providers.primary.providerId') ??
+        configManager.get<string>('providers.primary.model');
       const lines: string[] = [];
 
       // Built-in provider
@@ -703,6 +699,8 @@ export async function startCommand(): Promise<void> {
         for (const pp of pluginProviders) {
           const isPrimary = routerDefaultProvider.id === pp.id;
           let status = 'available';
+          const configuredModel = configManager.get<string>(`providers.${pp.id}.model`);
+          const configuredMode = configManager.get<string>(`providers.${pp.id}.mode`);
           try {
             const avail = await pp.isAvailable();
             status = avail ? 'available' : 'unavailable';
@@ -712,6 +710,12 @@ export async function startCommand(): Promise<void> {
 
           const primaryTag = isPrimary ? ' [PRIMARY]' : '';
           lines.push(`  • ${pp.name} (${pp.id})${primaryTag}`);
+          if (configuredModel) {
+            lines.push(`    Model: ${configuredModel}`);
+          }
+          if (configuredMode) {
+            lines.push(`    Mode: ${configuredMode}`);
+          }
           lines.push(`    Status: ${status}`);
         }
 
@@ -793,9 +797,10 @@ export async function startCommand(): Promise<void> {
 
       // Persist primary config
       configManager.set('providers.primary', {
-        model: target.id,
-        baseUrl: undefined,
-        apiKeyRef: undefined,
+        providerId: target.id,
+        model: configManager.get<string>(`providers.${target.id}.model`) ?? target.id,
+        baseUrl: configManager.get<string>(`providers.${target.id}.baseUrl`) ?? undefined,
+        apiKeyRef: configManager.get<string>(`providers.${target.id}.apiKeyRef`) ?? undefined,
       });
 
       logger.info(`Primary provider set: ${target.name} (${target.id})`, undefined, {
@@ -832,7 +837,9 @@ export async function startCommand(): Promise<void> {
       required: [],
     },
     async execute() {
-      const currentPrimary = configManager.get<string>('providers.primary.model');
+      const currentPrimary =
+        configManager.get<string>('providers.primary.providerId') ??
+        configManager.get<string>('providers.primary.model');
 
       if (!currentPrimary) {
         return 'No primary provider is currently set. The built-in is already the default.';

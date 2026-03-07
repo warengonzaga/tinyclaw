@@ -28,8 +28,12 @@ const openaiPlugin: ProviderPlugin = {
   type: 'provider',
   version: '0.1.0',
 
-  async createProvider(secrets: SecretsManagerInterface) {
-    return createOpenAIProvider({ secrets });
+  async createProvider(secrets: SecretsManagerInterface, configManager: ConfigManagerInterface) {
+    return createOpenAIProvider({
+      secrets,
+      model: configManager.get<string>('providers.openai.model') ?? undefined,
+      baseUrl: configManager.get<string>('providers.openai.baseUrl') ?? undefined,
+    });
   },
 
   getPairingTools(secrets: SecretsManagerInterface, configManager: ConfigManagerInterface): Tool[] {

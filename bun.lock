@@ -205,6 +205,15 @@
         "@tinyclaw/types": "workspace:*",
       },
     },
+    "plugins/provider/plugin-provider-ollama": {
+      "name": "@tinyclaw/plugin-provider-ollama",
+      "version": "2.0.0",
+      "dependencies": {
+        "@tinyclaw/core": "workspace:*",
+        "@tinyclaw/logger": "workspace:*",
+        "@tinyclaw/types": "workspace:*",
+      },
+    },
     "plugins/provider/plugin-provider-openai": {
       "name": "@tinyclaw/plugin-provider-openai",
       "version": "2.0.0",
@@ -509,6 +518,8 @@
     "@tinyclaw/plugin-channel-friends": ["@tinyclaw/plugin-channel-friends@workspace:plugins/channel/plugin-channel-friends"],
 
     "@tinyclaw/plugin-channel-telegram": ["@tinyclaw/plugin-channel-telegram@workspace:plugins/channel/plugin-channel-telegram"],
+
+    "@tinyclaw/plugin-provider-ollama": ["@tinyclaw/plugin-provider-ollama@workspace:plugins/provider/plugin-provider-ollama"],
 
     "@tinyclaw/plugin-provider-openai": ["@tinyclaw/plugin-provider-openai@workspace:plugins/provider/plugin-provider-openai"],
 
