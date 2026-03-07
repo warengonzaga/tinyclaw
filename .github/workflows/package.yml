@@ -22,7 +22,6 @@ permissions:
 
 jobs:
   publish:
-    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -42,13 +41,15 @@ jobs:
         run: bun run build:packages
 
       - name: Build & Publish Packages
-        uses: wgtechlabs/package-build-flow-action@v2.0.1
+        uses: wgtechlabs/package-build-flow-action@v2.1.0
         with:
           monorepo: 'true'
           workspace-detection: 'true'
           package-manager: 'bun'
           dependency-order: 'true'
           changed-only: 'false'
+          commit-convention-enabled: 'true'
+          bot-detection: 'true'
           registry: 'both'
           access: 'public'
           npm-token: ${{ secrets.NPM_TOKEN }}
