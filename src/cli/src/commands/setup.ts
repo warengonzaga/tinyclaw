@@ -51,6 +51,7 @@ import { buildProviderKeyName, SecretsManager } from '@tinyclaw/secrets';
 import type { StreamCallback } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
 import QRCode from 'qrcode';
+import { isRunningInContainer } from '../detect-container.js';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
 
@@ -209,6 +210,34 @@ export async function setupCommand(): Promise<void> {
   const configManager = await ConfigManager.create();
 
   p.intro(theme.brand("Let's set up Tiny Claw"));
+
+  // --- Container environment warning ----------------------------------
+
+  if (isRunningInContainer()) {
+    p.note(
+      theme.warn('Container Environment Detected') +
+        '\n\n' +
+        'Interactive CLI setup may not work properly in Docker/containers.\n' +
+        'If prompts freeze or fail, cancel and run:\n\n' +
+        '  ' +
+        theme.cmd('tinyclaw setup --docker') +
+        '\n\n' +
+        'Or use ' +
+        theme.cmd('--web') +
+        ' for browser-based setup.',
+      'Docker/Container',
+    );
+
+    const continueAnyway = await p.confirm({
+      message: 'Continue with interactive setup anyway?',
+      initialValue: false,
+    });
+
+    if (p.isCancel(continueAnyway) || !continueAnyway) {
+      p.outro(theme.dim('Setup cancelled. Use --docker or --web flag for container environments.'));
+      process.exit(0);
+    }
+  }
 
   // --- Security warning -----------------------------------------------
 
