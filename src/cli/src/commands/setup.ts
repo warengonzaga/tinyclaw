@@ -235,6 +235,7 @@ export async function setupCommand(): Promise<void> {
 
     if (p.isCancel(continueAnyway) || !continueAnyway) {
       p.outro(theme.dim('Setup cancelled. Use --docker or --web flag for container environments.'));
+      await cleanup(secretsManager, configManager);
       process.exit(0);
     }
   }
