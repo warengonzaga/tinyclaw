@@ -34,7 +34,7 @@
     "@biomejs/biome": "^2.4.6",
     "@types/bun": "latest",
     "@types/node": "^25.3.3",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   },
   "dependencies": {
     "@wgtechlabs/log-engine": "^2.3.1"
