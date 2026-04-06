@@ -20,8 +20,10 @@ import { join } from 'node:path';
 import * as p from '@clack/prompts';
 import { generateSoul, parseSeed } from '@tinyclaw/heartware';
 import { setLogMode } from '@tinyclaw/logger';
+import { SecretsManager } from '@tinyclaw/secrets';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
+import { isSecretsIntegrityError } from '../utils/secrets.js';
 
 // ---------------------------------------------------------------------------
 // Path resolution
@@ -45,6 +47,16 @@ async function dirExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function isSecretsEngineStore(path: string): Promise<boolean> {
+  const [hasDb, hasMeta, hasKeyfile] = await Promise.all([
+    dirExists(join(path, 'store.db')),
+    dirExists(join(path, 'meta.json')),
+    dirExists(join(path, '.keyfile')),
+  ]);
+
+  return hasDb && hasMeta && hasKeyfile;
 }
 
 /**
@@ -73,12 +85,41 @@ interface PurgeFlags {
   yes: boolean;
 }
 
+type FsErrorWithCode = Error & { code?: string };
+
 function parseFlags(args: string[]): PurgeFlags {
   return {
     force: args.includes('--force'),
     fresh: args.includes('--fresh'),
     yes: args.includes('--yes') || args.includes('-y'),
   };
+}
+
+async function removeDirectoryWithRetry(
+  path: string,
+  options: { recursive: true; force: true; maxRetries: number; retryDelay: number },
+): Promise<void> {
+  let lastError: unknown;
+  const totalAttempts = Math.max(options.maxRetries, 0) + 1;
+
+  for (let attempt = 0; attempt < totalAttempts; attempt++) {
+    try {
+      await rm(path, options);
+      return;
+    } catch (err) {
+      lastError = err;
+      const code = (err as FsErrorWithCode).code;
+      const shouldRetry = platform() === 'win32' && (code === 'EBUSY' || code === 'EPERM');
+
+      if (!shouldRetry || attempt === totalAttempts - 1) {
+        throw err;
+      }
+
+      await Bun.sleep(options.retryDelay * (attempt + 1));
+    }
+  }
+
+  throw lastError;
 }
 
 // ---------------------------------------------------------------------------
@@ -192,7 +233,7 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
   // Delete data directory
   if (dataExists) {
     try {
-      await rm(dataDir, rmOptions);
+      await removeDirectoryWithRetry(dataDir, rmOptions);
       // Verify deletion actually succeeded (locked files can cause silent partial removal)
       if (await dirExists(dataDir)) {
         errors.push(
@@ -209,7 +250,24 @@ export async function purgeCommand(args: string[] = []): Promise<void> {
   // Delete secrets (only with --force)
   if (flags.force && secretsExist) {
     try {
-      await rm(secretsDir, rmOptions);
+      const engineManagedStore = await isSecretsEngineStore(secretsDir);
+
+      if (engineManagedStore) {
+        try {
+          const secretsManager = await SecretsManager.create({ path: secretsDir });
+          await secretsManager.destroy();
+        } catch (err) {
+          // If the store is already corrupt or half-initialized, fall back to
+          // raw directory removal so purge can still recover the installation.
+          if (!isSecretsIntegrityError(err)) {
+            // No-op: purge is explicitly destructive, so raw deletion remains valid.
+          }
+          await removeDirectoryWithRetry(secretsDir, rmOptions);
+        }
+      } else {
+        await removeDirectoryWithRetry(secretsDir, rmOptions);
+      }
+
       if (await dirExists(secretsDir)) {
         errors.push(
           'Secrets store: some files could not be removed (they may be locked by a running process)',
