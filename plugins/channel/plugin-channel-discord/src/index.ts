@@ -39,6 +39,24 @@ import {
 
 let client: Client | null = null;
 
+export interface DiscordRuntimeStatus {
+  enabled: boolean;
+  state: 'idle' | 'disabled' | 'starting' | 'connected' | 'error' | 'stopped';
+  readyTag: string | null;
+  lastError: string | null;
+}
+
+const runtimeStatus: DiscordRuntimeStatus = {
+  enabled: false,
+  state: 'idle',
+  readyTag: null,
+  lastError: null,
+};
+
+export function getDiscordRuntimeStatus(): DiscordRuntimeStatus {
+  return { ...runtimeStatus };
+}
+
 const discordPlugin: ChannelPlugin = {
   id: '@tinyclaw/plugin-channel-discord',
   name: 'Discord',
@@ -53,16 +71,28 @@ const discordPlugin: ChannelPlugin = {
 
   async start(context: PluginRuntimeContext): Promise<void> {
     const isEnabled = context.configManager.get<boolean>(DISCORD_ENABLED_CONFIG_KEY);
+    runtimeStatus.enabled = Boolean(isEnabled);
+
     if (!isEnabled) {
+      runtimeStatus.state = 'disabled';
+      runtimeStatus.readyTag = null;
+      runtimeStatus.lastError = null;
       logger.info('Discord plugin: not enabled — run pairing to enable');
       return;
     }
 
     const token = await context.secrets.retrieve(DISCORD_TOKEN_SECRET_KEY);
     if (!token) {
+      runtimeStatus.state = 'error';
+      runtimeStatus.readyTag = null;
+      runtimeStatus.lastError = 'Discord bot token not found in secrets';
       logger.warn('Discord plugin: enabled but no token found — re-pair to fix');
       return;
     }
+
+    runtimeStatus.state = 'starting';
+    runtimeStatus.readyTag = null;
+    runtimeStatus.lastError = null;
 
     client = new Client({
       intents: [
@@ -75,7 +105,16 @@ const discordPlugin: ChannelPlugin = {
     });
 
     client.once(Events.ClientReady, (readyClient) => {
+      runtimeStatus.state = 'connected';
+      runtimeStatus.readyTag = readyClient.user.tag;
+      runtimeStatus.lastError = null;
       logger.info(`Discord bot ready: ${readyClient.user.tag}`);
+    });
+
+    client.on(Events.Error, (error) => {
+      runtimeStatus.state = 'error';
+      runtimeStatus.lastError = error.message;
+      logger.error('Discord plugin: client error', error);
     });
 
     client.on(Events.MessageCreate, async (msg: DiscordMessage) => {
@@ -124,8 +163,19 @@ const discordPlugin: ChannelPlugin = {
       }
     });
 
-    await client.login(token);
-    logger.info('Discord bot connected');
+    try {
+      await client.login(token);
+      logger.info('Discord bot connected');
+    } catch (error) {
+      runtimeStatus.state = 'error';
+      runtimeStatus.readyTag = null;
+      runtimeStatus.lastError = error instanceof Error ? error.message : String(error);
+      if (client) {
+        client.destroy();
+        client = null;
+      }
+      throw error;
+    }
   },
 
   async sendToUser(userId: string, message: OutboundMessage): Promise<void> {
@@ -165,6 +215,9 @@ const discordPlugin: ChannelPlugin = {
       client = null;
       logger.info('Discord bot disconnected');
     }
+
+    runtimeStatus.state = runtimeStatus.enabled ? 'stopped' : 'disabled';
+    runtimeStatus.readyTag = null;
   },
 };
 
