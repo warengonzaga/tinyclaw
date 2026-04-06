@@ -16,6 +16,7 @@ import type { StreamCallback } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 import { theme } from '../ui/theme.js';
+import { isSecretsIntegrityError, printSecretsIntegrityRecovery } from '../utils/secrets.js';
 
 /**
  * Run the web-based setup flow.
@@ -35,7 +36,20 @@ export async function webSetupCommand(): Promise<void> {
 
   // --- Initialize engines -----------------------------------------------
 
-  const secretsManager = await SecretsManager.create();
+  let secretsManager: SecretsManager;
+
+  try {
+    secretsManager = await SecretsManager.create();
+  } catch (err: unknown) {
+    if (isSecretsIntegrityError(err)) {
+      printSecretsIntegrityRecovery('tinyclaw setup --web');
+      process.exit(1);
+      return;
+    }
+
+    throw err;
+  }
+
   logger.info(
     'Secrets engine initialized',
     {
