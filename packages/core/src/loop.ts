@@ -1210,7 +1210,16 @@ export async function agentLoop(
         }
       }
 
+      // Determine whether the model already scheduled a tinyclaw_restart in this
+      // batch so we don't trigger a second (duplicate) restart via auto-restart.
+      const batchHasRestartCall = response.toolCalls.some(
+        (tc) => tc.name === 'tinyclaw_restart',
+      );
+
       for (const toolCall of response.toolCalls) {
+        if (batchHasRestartCall) {
+          continue;
+        }
         const matchingResults = toolResults.filter((result) => result.id === toolCall.id);
         await maybeRunAutoRestart(toolCall.name, matchingResults, tools, onStream);
         const autoRestartResults = matchingResults.filter(

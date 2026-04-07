@@ -113,6 +113,7 @@ const discordPlugin: ChannelPlugin = {
 
     client.on(Events.Error, (error) => {
       runtimeStatus.state = 'error';
+      runtimeStatus.readyTag = null;
       runtimeStatus.lastError = error.message;
       logger.error('Discord plugin: client error', error);
     });

@@ -12,12 +12,20 @@ export function isSecretsIntegrityError(err: unknown): err is ErrorWithCode {
   return err instanceof Error && 'code' in err && (err as ErrorWithCode).code === 'INTEGRITY_ERROR';
 }
 
+function quoteForPosixShell(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function quoteForPowerShell(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
 function getManualRemovalCommand(storePath: string): string {
   if (platform() === 'win32') {
-    return `Remove-Item -Recurse -Force '${storePath}'`;
+    return `Remove-Item -Recurse -Force ${quoteForPowerShell(storePath)}`;
   }
 
-  return `rm -rf ${storePath}`;
+  return `rm -rf ${quoteForPosixShell(storePath)}`;
 }
 
 export function printSecretsIntegrityRecovery(nextCommand: string): void {

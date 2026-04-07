@@ -104,7 +104,9 @@ async function removeDirectoryWithRetry(
 
   for (let attempt = 0; attempt < totalAttempts; attempt++) {
     try {
-      await rm(path, options);
+      // Pass only recursive/force to rm() — it does not retry internally when
+      // maxRetries/retryDelay are omitted, so retries happen exactly once here.
+      await rm(path, { recursive: options.recursive, force: options.force });
       return;
     } catch (err) {
       lastError = err;
