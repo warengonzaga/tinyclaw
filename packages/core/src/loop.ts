@@ -20,6 +20,9 @@ import { BUILTIN_MODEL_TAGS } from './models.js';
  */
 const SELF_GATED_TOOLS: ReadonlySet<string> = new Set([...SHELL_TOOL_NAMES]);
 
+/** Name of the built-in restart tool — used in several places below. */
+const RESTART_TOOL_NAME = 'tinyclaw_restart';
+
 // ---------------------------------------------------------------------------
 // Text Sanitization — strip em-dashes from LLM output
 // ---------------------------------------------------------------------------
@@ -218,7 +221,7 @@ function shouldAutoRestartAfterTool(toolName: string, result: string): boolean {
     return false;
   }
 
-  return result.includes('tinyclaw_restart');
+  return result.includes(RESTART_TOOL_NAME);
 }
 
 async function maybeRunAutoRestart(
@@ -235,7 +238,7 @@ async function maybeRunAutoRestart(
     return;
   }
 
-  const restartTool = tools.find((tool) => tool.name === 'tinyclaw_restart');
+  const restartTool = tools.find((tool) => tool.name === RESTART_TOOL_NAME);
   if (!restartTool) {
     return;
   }
@@ -1213,20 +1216,19 @@ export async function agentLoop(
       // Determine whether the model already scheduled a tinyclaw_restart in this
       // batch so we don't trigger a second (duplicate) restart via auto-restart.
       const batchHasRestartCall = response.toolCalls.some(
-        (tc) => tc.name === 'tinyclaw_restart',
+        (tc) => tc.name === RESTART_TOOL_NAME,
       );
 
-      for (const toolCall of response.toolCalls) {
-        if (batchHasRestartCall) {
-          continue;
-        }
-        const matchingResults = toolResults.filter((result) => result.id === toolCall.id);
-        await maybeRunAutoRestart(toolCall.name, matchingResults, tools, onStream);
-        const autoRestartResults = matchingResults.filter(
-          (result) => result.id === `${toolCall.name}:auto-restart`,
-        );
-        if (autoRestartResults.length > 0) {
-          toolResults.push(...autoRestartResults);
+      if (!batchHasRestartCall) {
+        for (const toolCall of response.toolCalls) {
+          const matchingResults = toolResults.filter((result) => result.id === toolCall.id);
+          await maybeRunAutoRestart(toolCall.name, matchingResults, tools, onStream);
+          const autoRestartResults = matchingResults.filter(
+            (result) => result.id === `${toolCall.name}:auto-restart`,
+          );
+          if (autoRestartResults.length > 0) {
+            toolResults.push(...autoRestartResults);
+          }
         }
       }
 
