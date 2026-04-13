@@ -1376,7 +1376,18 @@ export async function startCommand(): Promise<void> {
   const gateway = createGateway();
 
   // Register web UI as a channel sender (SSE push)
-  gateway.register('web', webUI.getChannelSender());
+  const webSender = webUI.getChannelSender();
+  gateway.register('web', webSender);
+
+  // If the owner was claimed via CLI setup, the persisted ownerId has
+  // prefix "cli:" but only a "web" channel is registered. Register a
+  // "cli" alias so nudges for "cli:owner" route through the web sender.
+  if (persistedOwnerId?.startsWith('cli:') && !gateway.getRegisteredChannels().includes('cli')) {
+    gateway.register('cli', {
+      ...webSender,
+      name: `${webSender.name} (cli alias)`,
+    });
+  }
 
   // --- Nudge Engine -------------------------------------------------------
 
