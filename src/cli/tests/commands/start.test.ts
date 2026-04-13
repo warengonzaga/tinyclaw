@@ -458,7 +458,9 @@ describe('startCommand', () => {
     const result = await discordStatusTool!.execute({});
 
     expect(result).toContain('Runtime state: unavailable');
-    expect(result).toContain('Last error: Could not load Discord status helper: status helper unavailable');
+    expect(result).toContain(
+      'Last error: Could not load Discord status helper: status helper unavailable',
+    );
     expect(result).toContain('Summary: Discord is configured but not yet confirmed online.');
   });
 });
