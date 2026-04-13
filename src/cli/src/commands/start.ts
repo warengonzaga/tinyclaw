@@ -70,6 +70,7 @@ import type { Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 import { theme } from '../ui/theme.js';
+import { isSecretsIntegrityError, printSecretsIntegrityRecovery } from '../utils/secrets.js';
 
 /**
  * Run the agent start flow
@@ -113,28 +114,10 @@ export async function startCommand(): Promise<void> {
   try {
     secretsManager = await SecretsManager.create();
   } catch (err: unknown) {
-    // Detect IntegrityError from @wgtechlabs/secrets-engine
-    // The HMAC stored in meta.json does not match the database contents.
-    // This may indicate file corruption, tampering, or a partial write.
-    if (
-      err instanceof Error &&
-      'code' in err &&
-      (err as { code: string }).code === 'INTEGRITY_ERROR'
-    ) {
-      const storePath = join(homedir(), '.secrets-engine');
-
-      console.log();
-      console.log(theme.error('  ✖ Secrets store integrity check failed.'));
-      console.log();
-      console.log('    The secrets store may have been corrupted or tampered with.');
-      console.log('    This can happen due to disk errors, power loss, or external changes.');
-      console.log();
-      console.log('    To resolve, delete the store and re-run setup:');
-      console.log();
-      console.log(`      1. ${theme.cmd(`rm -rf ${storePath}`)}`);
-      console.log(`      2. ${theme.cmd('tinyclaw setup')}`);
-      console.log();
+    if (isSecretsIntegrityError(err)) {
+      printSecretsIntegrityRecovery('tinyclaw setup');
       process.exit(1);
+      return;
     }
 
     throw err;
@@ -1007,6 +990,76 @@ export async function startCommand(): Promise<void> {
   };
 
   allTools.push(pluginListTool);
+
+  const discordStatusTool: Tool = {
+    name: 'discord_status',
+    description:
+      'Check the real runtime status of the Discord channel plugin. ' +
+      'Use this when the user asks whether the Discord bot is online, connected, or offline. ' +
+      'Reports config state, whether the token exists, whether the Discord sender is registered, and the last runtime error if any.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    async execute() {
+      const enabled = configManager.get<boolean>('channels.discord.enabled') ?? false;
+      const tokenStored = await secretsManager.check('channel.discord.token');
+      const pluginEnabled = (configManager.get<string[]>('plugins.enabled') ?? []).includes(
+        '@tinyclaw/plugin-channel-discord',
+      );
+      const registered = gateway.getRegisteredChannels().includes('discord');
+
+      let runtimeState = 'unavailable';
+      let readyTag: string | null = null;
+      let lastError: string | null = null;
+
+      try {
+        const mod = await import('@tinyclaw/plugin-channel-discord');
+        if (typeof mod.getDiscordRuntimeStatus === 'function') {
+          const status = mod.getDiscordRuntimeStatus() as {
+            state: string;
+            readyTag: string | null;
+            lastError: string | null;
+          };
+          runtimeState = status.state;
+          readyTag = status.readyTag;
+          lastError = status.lastError;
+        }
+      } catch (error) {
+        lastError = `Could not load Discord status helper: ${error instanceof Error ? error.message : String(error)}`;
+      }
+
+      const lines = [
+        'Discord plugin status:',
+        `  Enabled in channels config: ${enabled ? 'yes' : 'no'}`,
+        `  Present in plugins.enabled: ${pluginEnabled ? 'yes' : 'no'}`,
+        `  Bot token stored: ${tokenStored ? 'yes' : 'no'}`,
+        `  Gateway sender registered: ${registered ? 'yes' : 'no'}`,
+        `  Runtime state: ${runtimeState}`,
+      ];
+
+      if (readyTag) {
+        lines.push(`  Logged in as: ${readyTag}`);
+      }
+
+      if (lastError) {
+        lines.push(`  Last error: ${lastError}`);
+      }
+
+      if (!registered || runtimeState === 'error') {
+        lines.push('  Summary: Discord is not currently online in this Tiny Claw runtime.');
+      } else if (runtimeState === 'connected') {
+        lines.push('  Summary: Discord is connected in this Tiny Claw runtime.');
+      } else {
+        lines.push('  Summary: Discord is configured but not yet confirmed online.');
+      }
+
+      return lines.join('\n');
+    },
+  };
+
+  allTools.push(discordStatusTool);
 
   // --- Create delegation v2 subsystems -----------------------------------
 

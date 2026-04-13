@@ -197,4 +197,20 @@ describe('tinyclaw purge --force', () => {
 
     expect(stdout).toContain('Secrets were deleted');
   });
+
+  test('falls back to raw deletion for a corrupt secrets store', async () => {
+    writeFileSync(join(tempSecretsDir, 'meta.json'), '{not-json');
+    writeFileSync(join(tempSecretsDir, 'store.db'), '');
+    writeFileSync(join(tempSecretsDir, '.keyfile'), 'broken-keyfile');
+
+    const { stdout, exitCode } = await runPurge(['--force', '--yes'], {
+      TINYCLAW_DATA_DIR: tempDataDir,
+      TINYCLAW_SECRETS_DIR: tempSecretsDir,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Purge complete');
+    expect(stdout).toContain('Secrets store deleted');
+    expect(existsSync(tempSecretsDir)).toBe(false);
+  });
 });

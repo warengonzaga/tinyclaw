@@ -53,6 +53,7 @@ import { createWebUI } from '@tinyclaw/web';
 import QRCode from 'qrcode';
 import { showBanner } from '../ui/banner.js';
 import { theme } from '../ui/theme.js';
+import { isSecretsIntegrityError, printSecretsIntegrityRecovery } from '../utils/secrets.js';
 
 /**
  * Copy text to the system clipboard.
@@ -205,7 +206,20 @@ export async function setupCommand(): Promise<void> {
 
   showBanner();
 
-  const secretsManager = await SecretsManager.create();
+  let secretsManager: SecretsManager;
+
+  try {
+    secretsManager = await SecretsManager.create();
+  } catch (err: unknown) {
+    if (isSecretsIntegrityError(err)) {
+      printSecretsIntegrityRecovery('tinyclaw setup');
+      process.exit(1);
+      return;
+    }
+
+    throw err;
+  }
+
   const configManager = await ConfigManager.create();
 
   p.intro(theme.brand("Let's set up Tiny Claw"));

@@ -6,6 +6,8 @@ import type {
   Message,
   PendingApproval,
   ShieldEvent,
+  StreamEvent,
+  Tool,
   ToolCall,
 } from '@tinyclaw/types';
 import { isOwner, OWNER_ONLY_TOOLS } from '@tinyclaw/types';
@@ -17,6 +19,9 @@ import { BUILTIN_MODEL_TAGS } from './models.js';
  * Shield `block` is still honored for these tools.
  */
 const SELF_GATED_TOOLS: ReadonlySet<string> = new Set([...SHELL_TOOL_NAMES]);
+
+/** Name of the built-in restart tool — used in several places below. */
+const RESTART_TOOL_NAME = 'tinyclaw_restart';
 
 // ---------------------------------------------------------------------------
 // Text Sanitization — strip em-dashes from LLM output
@@ -205,6 +210,58 @@ function getWorkingMessage(toolName: string): string {
     return '⚙️ Setting things up…\n\n';
   }
   return '🤔 Working on that…\n\n';
+}
+
+function shouldAutoRestartAfterTool(toolName: string, result: string): boolean {
+  if (!/_(pair|unpair)$/.test(toolName)) {
+    return false;
+  }
+
+  if (result.startsWith('Error')) {
+    return false;
+  }
+
+  return result.includes(RESTART_TOOL_NAME);
+}
+
+async function maybeRunAutoRestart(
+  originalToolName: string,
+  toolResults: Array<{ id: string; result: string }>,
+  tools: Tool[],
+  onStream: ((event: StreamEvent) => void) | undefined,
+): Promise<void> {
+  const needsRestart = toolResults.some((toolResult) =>
+    shouldAutoRestartAfterTool(originalToolName, toolResult.result),
+  );
+
+  if (!needsRestart) {
+    return;
+  }
+
+  const restartTool = tools.find((tool) => tool.name === RESTART_TOOL_NAME);
+  if (!restartTool) {
+    return;
+  }
+
+  if (onStream) {
+    onStream({ type: 'tool_start', tool: restartTool.name });
+  }
+
+  try {
+    const restartResult = await restartTool.execute({
+      reason: `Apply changes from ${originalToolName}`,
+    });
+    toolResults.push({ id: `${originalToolName}:auto-restart`, result: restartResult });
+    if (onStream) {
+      onStream({ type: 'tool_result', tool: restartTool.name, result: restartResult });
+    }
+  } catch (error) {
+    const errorMsg = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    toolResults.push({ id: `${originalToolName}:auto-restart`, result: errorMsg });
+    if (onStream) {
+      onStream({ type: 'tool_result', tool: restartTool.name, result: errorMsg });
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -496,6 +553,18 @@ When the user asks to set up or change their primary provider:
 3. Use primary_model_clear to revert to the built-in
 
 Providers must be installed as plugins first (added to plugins.enabled in the config).
+
+## Plugin Setup Guidance
+
+When the user asks to set up, connect, install, enable, or pair a channel or provider plugin:
+- First figure out whether they have already shared the required credential in the conversation, such as a bot token or API key.
+- If they have not shared it yet, do not pretend the plugin is configured and do not claim it is online.
+- Walk them through the setup step by step, briefly and concretely.
+- For Discord, explain that they need to create an application in the Discord Developer Portal, add a bot, copy the bot token, and enable Message Content Intent.
+- After they provide the required credential, call the appropriate pairing tool.
+- After pairing succeeds, clearly tell them what changed and whether a restart is happening.
+- Never say a plugin is active, connected, or ready unless the pairing tool succeeded and any required restart or activation step has been completed.
+- If the user asks whether the Discord bot is online, offline, connected, or why it failed to start, use the discord_status tool before answering. Do not guess from config alone.
 
 ## How to Use Tools
 
@@ -961,6 +1030,8 @@ export async function agentLoop(
           }
         }
 
+        await maybeRunAutoRestart(toolCall.name, toolResults, tools, onStream);
+
         // For read/search/recall operations, send result back to LLM for natural response
         const isReadOperation =
           toolCall.name.includes('read') ||
@@ -999,11 +1070,10 @@ export async function agentLoop(
         // For write operations, feed the result back to the LLM so it
         // can craft a natural, conversational response instead of the
         // generic "Done!" that was causing a feedback loop in the history.
-        const writeResult = toolResults[0]?.result || 'completed';
-        const _writeSummary = summarizeToolResults([toolCall], toolResults);
+        const resultsText = toolResults.map((result) => result.result).join('\n\n');
         messages.push({
           role: 'assistant',
-          content: `I used ${toolCall.name} and the result was: ${writeResult}`,
+          content: `I used these tools and the results were:\n${resultsText}`,
         });
         messages.push({
           role: 'user',
@@ -1143,6 +1213,25 @@ export async function agentLoop(
         }
       }
 
+      // Determine whether the model already scheduled a tinyclaw_restart in this
+      // batch so we don't trigger a second (duplicate) restart via auto-restart.
+      const batchHasRestartCall = response.toolCalls.some(
+        (tc) => tc.name === RESTART_TOOL_NAME,
+      );
+
+      if (!batchHasRestartCall) {
+        for (const toolCall of response.toolCalls) {
+          const matchingResults = toolResults.filter((result) => result.id === toolCall.id);
+          await maybeRunAutoRestart(toolCall.name, matchingResults, tools, onStream);
+          const autoRestartResults = matchingResults.filter(
+            (result) => result.id === `${toolCall.name}:auto-restart`,
+          );
+          if (autoRestartResults.length > 0) {
+            toolResults.push(...autoRestartResults);
+          }
+        }
+      }
+
       // If pending approvals were queued during structured tool_calls, ask the user
       // about the first one (subsequent ones will be handled on following turns).
       const paQueue = pendingApprovals.get(userId);
@@ -1203,6 +1292,22 @@ export async function agentLoop(
           content: hasDelegation
             ? 'Acknowledge the delegation briefly. Let me know the sub-agent is working on it and I can keep chatting.'
             : 'Now respond naturally to my original question using that information. Be conversational and summarize the key points.',
+        });
+
+        // Continue the loop to get LLM's natural response
+        continue;
+      }
+
+      if (toolResults.some((r) => !r.result.startsWith('Error'))) {
+        const resultsText = toolResults.map((r) => r.result).join('\n\n');
+        messages.push({
+          role: 'assistant',
+          content: `I used these tools and the results were:\n${resultsText}`,
+        });
+        messages.push({
+          role: 'user',
+          content:
+            'Now respond naturally to my original message. Briefly confirm the action you took and be conversational.',
         });
 
         // Continue the loop to get LLM's natural response

@@ -561,6 +561,8 @@ export interface SecretsManagerInterface {
   list(pattern?: string): Promise<string[]>;
   /** Convenience: resolve a provider API key by provider name */
   resolveProviderKey(providerName: string): Promise<string | null>;
+  /** Permanently destroy the underlying secrets store */
+  destroy(): Promise<void>;
   /** Close the underlying secrets engine */
   close(): Promise<void>;
 }
