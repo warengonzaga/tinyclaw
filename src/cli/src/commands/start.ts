@@ -866,13 +866,26 @@ export async function startCommand(): Promise<void> {
           type: 'string',
           description: 'The npm package name to install (e.g. "@acme/tinyclaw-plugin-telegram")',
         },
+        confirm: {
+          type: 'boolean',
+          description:
+            'Must be true. Set this only after the user has explicitly confirmed they want to install this community plugin. ' +
+            'Community plugins are unverified third-party code.',
+        },
       },
-      required: ['package_name'],
+      required: ['package_name', 'confirm'],
     },
     async execute(args) {
       const packageName = (args.package_name as string)?.trim();
       if (!packageName) {
         return 'Error: package_name is required. Ask the user for the npm package name.';
+      }
+      if (args.confirm !== true) {
+        return (
+          'Error: You must confirm with the user before installing a community plugin. ' +
+          'Warn them that community plugins are unverified third-party code that will execute on their machine, ' +
+          'then call this tool again with confirm: true.'
+        );
       }
 
       const result = await installCommunityPlugin(packageName, configManager);

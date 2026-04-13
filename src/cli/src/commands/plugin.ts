@@ -78,8 +78,8 @@ async function addPlugin(
     console.log();
 
     const validation = validatePackageName(packageName);
-    if (!validation.valid) {
-      console.log(`  ${theme.error('✖')} ${validation.reason}`);
+    if (!validation) {
+      console.log(`  ${theme.error('✖')} Invalid or disallowed package name: ${packageName}`);
       console.log();
       return;
     }
@@ -91,7 +91,7 @@ async function addPlugin(
         signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) {
-        console.log(`  ${theme.error('✖')} Package not found on npm: ${validation.name}`);
+        console.log(`  ${theme.error('\u2716')} Package not found on npm: ${validation.name}`);
         console.log();
         return;
       }
