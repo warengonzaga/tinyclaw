@@ -196,11 +196,15 @@ describe('agentLoop', () => {
 
     const result = await agentLoop('Connect my Discord bot.', 'web:test', context);
 
-    expect(result).toBe('Discord is paired, and Tiny Claw is restarting now so the bot can connect.');
+    expect(result).toBe(
+      'Discord is paired, and Tiny Claw is restarting now so the bot can connect.',
+    );
     expect(restartCalls).toBe(1);
     expect(prompts).toHaveLength(2);
     expect(prompts[1]?.at(-2)?.content).toContain('Discord bot paired successfully');
-    expect(prompts[1]?.at(-2)?.content).toContain('Restart initiated. Tiny Claw will automatically respawn');
+    expect(prompts[1]?.at(-2)?.content).toContain(
+      'Restart initiated. Tiny Claw will automatically respawn',
+    );
   });
 
   test('includes auto-restart results in the single-tool natural reply path', async () => {
@@ -269,12 +273,16 @@ describe('agentLoop', () => {
 
     const result = await agentLoop('Connect my Discord bot.', 'web:test', context);
 
-    expect(result).toBe('Discord is paired, and Tiny Claw is restarting now so the bot can connect.');
+    expect(result).toBe(
+      'Discord is paired, and Tiny Claw is restarting now so the bot can connect.',
+    );
     expect(restartCalls).toBe(1);
     expect(prompts).toHaveLength(2);
     expect(prompts[1]?.at(-2)?.role).toBe('assistant');
     expect(prompts[1]?.at(-2)?.content).toContain('Discord bot paired successfully');
-    expect(prompts[1]?.at(-2)?.content).toContain('Restart initiated. Tiny Claw will automatically respawn');
+    expect(prompts[1]?.at(-2)?.content).toContain(
+      'Restart initiated. Tiny Claw will automatically respawn',
+    );
     expect(prompts[1]?.at(-1)?.role).toBe('user');
     expect(prompts[1]?.at(-1)?.content).toContain('respond naturally to my original message');
   });
