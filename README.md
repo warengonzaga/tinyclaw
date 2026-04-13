@@ -89,6 +89,12 @@ Everything above the plugin line is the **tiny core**. Channels, extra providers
 bun install
 ```
 
+### Build
+
+```bash
+bun run build
+```
+
 ### Run
 
 ```bash
