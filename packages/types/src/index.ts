@@ -153,6 +153,14 @@ export const OWNER_ONLY_TOOLS: ReadonlySet<string> = new Set([
   // Telegram channel management
   'telegram_pair',
   'telegram_unpair',
+  // Provider pairing
+  'openai_pair',
+  'openai_unpair',
+  'ollama_pair',
+  'ollama_unpair',
+  // Community plugin management
+  'plugin_install',
+  'plugin_remove',
 ]);
 
 /**
