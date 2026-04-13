@@ -138,7 +138,8 @@ describe('matchEvent — tool.call', () => {
       toolName: 'heartware_write',
       toolArgs: {
         filename: 'FRIEND.md',
-        content: '# About My Owner\n\n- **Name:** Waren\n\n---\nThis file helps me understand you better.',
+        content:
+          '# About My Owner\n\n- **Name:** Waren\n\n---\nThis file helps me understand you better.',
       },
     };
 

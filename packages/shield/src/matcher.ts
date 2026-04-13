@@ -42,6 +42,17 @@ export interface MatchResult {
 }
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/**
+ * Tool argument keys that carry document payloads (not SQL parameters).
+ * Excluded from SQL injection scanning to prevent false positives on
+ * document writes (e.g. write_file with `content`, chat with `message`).
+ */
+const CONTENT_FIELDS: ReadonlySet<string> = new Set(['content', 'body', 'message', 'text']);
+
+// ---------------------------------------------------------------------------
 // Directive parsing
 // ---------------------------------------------------------------------------
 
@@ -145,12 +156,6 @@ function evaluateCondition(
       // Only scan fields that could be SQL injection vectors.
       // Exclude content-body fields (document payloads written to files,
       // not SQL parameters) to prevent false positives.
-      const CONTENT_FIELDS: ReadonlySet<string> = new Set([
-        'content',
-        'body',
-        'message',
-        'text',
-      ]);
       const rawArgs = event.toolArgs ?? {};
       const filteredArgs: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(rawArgs)) {
