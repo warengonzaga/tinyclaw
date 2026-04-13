@@ -39,14 +39,19 @@
 
     <!-- Logo -->
     <div class="mx-auto mb-6 h-24 w-24 sm:h-32 sm:w-32 logo-glow">
-      <img
-        bind:this={logoEl}
-        src="/tinyclaw_logo.png"
-        alt=""
-        aria-hidden="true"
-        class="h-full w-full select-none cursor-pointer transition-transform duration-300 hover:scale-110"
+      <button
+        type="button"
+        class="h-full w-full bg-transparent border-none p-0 cursor-pointer"
+        aria-label="Tiny Claw logo animation"
         on:click={triggerTwitch}
-      />
+      >
+        <img
+          bind:this={logoEl}
+          src="/tinyclaw_logo.png"
+          alt="Tiny Claw logo"
+          class="h-full w-full select-none transition-transform duration-300 hover:scale-110"
+        />
+      </button>
     </div>
 
     <!-- Heading -->
