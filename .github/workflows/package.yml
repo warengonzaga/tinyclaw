@@ -55,7 +55,7 @@ jobs:
           npm-token: ${{ secrets.NPM_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           publish-enabled: 'true'
-          dry-run: ${{ github.event.inputs.dry-run || 'false' }}
+          dry-run: ${{ github.event_name == 'pull_request' && 'true' || github.event.inputs.dry-run || 'false' }}
           build-script: 'build'
           audit-enabled: 'true'
           audit-level: 'high'
