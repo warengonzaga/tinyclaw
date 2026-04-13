@@ -30,7 +30,10 @@ COPY src/cli/package.json ./src/cli/
 COPY src/web/package.json ./src/web/
 COPY plugins/channel/plugin-channel-discord/package.json ./plugins/channel/plugin-channel-discord/
 COPY plugins/channel/plugin-channel-friends/package.json ./plugins/channel/plugin-channel-friends/
+COPY plugins/channel/plugin-channel-telegram/package.json ./plugins/channel/plugin-channel-telegram/
 COPY plugins/provider/plugin-provider-openai/package.json ./plugins/provider/plugin-provider-openai/
+COPY plugins/provider/plugin-provider-ollama/package.json ./plugins/provider/plugin-provider-ollama/
+COPY src/landing/package.json ./src/landing/
 
 # Install all deps (dev included — needed to build)
 RUN bun install
