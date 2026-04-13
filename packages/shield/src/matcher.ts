@@ -142,7 +142,23 @@ function evaluateCondition(
 
     // "tool.call with arguments containing SQL syntax (DROP, DELETE, UNION, --)"
     if (lc.includes('arguments containing')) {
-      const argsStr = JSON.stringify(event.toolArgs ?? {}).toLowerCase();
+      // Only scan fields that could be SQL injection vectors.
+      // Exclude content-body fields (document payloads written to files,
+      // not SQL parameters) to prevent false positives.
+      const CONTENT_FIELDS: ReadonlySet<string> = new Set([
+        'content',
+        'body',
+        'message',
+        'text',
+      ]);
+      const rawArgs = event.toolArgs ?? {};
+      const filteredArgs: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(rawArgs)) {
+        if (!CONTENT_FIELDS.has(key)) {
+          filteredArgs[key] = val;
+        }
+      }
+      const argsStr = JSON.stringify(filteredArgs).toLowerCase();
       // Extract keywords from parenthetical list
       const openIdx = condition.indexOf('(');
       const closeIdx = openIdx >= 0 ? condition.indexOf(')', openIdx + 1) : -1;
@@ -152,7 +168,13 @@ function evaluateCondition(
           .split(',')
           .map((k) => k.trim().toLowerCase());
         for (const keyword of keywords) {
-          if (keyword && argsStr.includes(keyword)) {
+          if (!keyword) continue;
+          if (keyword === '--') {
+            // Match SQL comment marker (--) but NOT markdown separators (---)
+            if (/(?<!-)--(?!-)/.test(argsStr)) {
+              return { matchedOn: 'tool.args', matchValue: keyword };
+            }
+          } else if (argsStr.includes(keyword)) {
             return { matchedOn: 'tool.args', matchValue: keyword };
           }
         }

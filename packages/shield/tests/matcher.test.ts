@@ -127,6 +127,61 @@ describe('matchEvent — tool.call', () => {
     expect(matches).toHaveLength(0);
   });
 
+  it('should not match -- in markdown separators (---) inside content fields', () => {
+    const threat = makeThreat({
+      recommendationAgent:
+        'BLOCK: tool.call with arguments containing SQL syntax (DROP, DELETE, UNION, --)',
+    });
+
+    const event: ShieldEvent = {
+      scope: 'tool.call',
+      toolName: 'heartware_write',
+      toolArgs: {
+        filename: 'FRIEND.md',
+        content: '# About My Owner\n\n- **Name:** Waren\n\n---\nThis file helps me understand you better.',
+      },
+    };
+
+    const matches = matchEvent(event, [threat]);
+    expect(matches).toHaveLength(0);
+  });
+
+  it('should not false-positive on content-body fields containing SQL words', () => {
+    const threat = makeThreat({
+      recommendationAgent:
+        'BLOCK: tool.call with arguments containing SQL syntax (DROP, DELETE, UNION, --)',
+    });
+
+    const event: ShieldEvent = {
+      scope: 'tool.call',
+      toolName: 'heartware_write',
+      toolArgs: {
+        filename: 'MEMORY.md',
+        content: 'User asked me to delete the old notes and drop the schedule',
+      },
+    };
+
+    const matches = matchEvent(event, [threat]);
+    expect(matches).toHaveLength(0);
+  });
+
+  it('should still block SQL keywords in non-content args', () => {
+    const threat = makeThreat({
+      recommendationAgent:
+        'BLOCK: tool.call with arguments containing SQL syntax (DROP, DELETE, UNION, --)',
+    });
+
+    const event: ShieldEvent = {
+      scope: 'tool.call',
+      toolName: 'db_query',
+      toolArgs: { query: 'DROP TABLE users; -- pwned' },
+    };
+
+    const matches = matchEvent(event, [threat]);
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches[0].matchedOn).toBe('tool.args');
+  });
+
   it('should match compatible scope/category', () => {
     const threat = makeThreat({
       category: 'prompt', // prompt category
