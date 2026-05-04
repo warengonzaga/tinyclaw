@@ -27,7 +27,7 @@ jobs:
 
       - name: Build and Push Container
         if: ${{ github.event_name != 'pull_request' }}
-        uses: wgtechlabs/container-build-flow-action@v1.7.1
+        uses: wgtechlabs/container-build-flow-action@v1.8.0
         with:
           registry: both
           dockerhub-username: ${{ secrets.DOCKER_HUB_USERNAME }}
