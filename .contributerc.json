@@ -13,5 +13,9 @@
     "test",
     "refactor"
   ],
-  "commitConvention": "clean-commit"
+  "commitConvention": "clean-commit",
+  "aiEnabled": true,
+  "aiProvider": "openrouter",
+  "aiModel": "openai/gpt-oss-20b:free",
+  "showTips": true
 }
