@@ -272,9 +272,11 @@ const mockWebUIStop = mock(() => Promise.resolve());
 
 // ── Mock @tinyclaw/gateway ────────────────────────────────────────────
 
+const mockGatewayRegister = mock(() => {});
+
 mock.module('@tinyclaw/gateway', () => ({
   createGateway: mock(() => ({
-    register: mock(() => {}),
+    register: mockGatewayRegister,
     unregister: mock(() => {}),
     send: mock(() => Promise.resolve({ success: true, channel: 'web', userId: 'web:owner' })),
     broadcast: mock(() => Promise.resolve([])),
@@ -375,6 +377,7 @@ beforeEach(() => {
     readyTag: 'Tiny Claw#1234',
     lastError: null,
   }));
+  mockGatewayRegister.mockClear();
 });
 
 afterEach(() => {
@@ -393,6 +396,31 @@ describe('startCommand', () => {
   test('starts the web UI server', async () => {
     await startCommand();
     expect(mockWebUIStart).toHaveBeenCalled();
+  });
+
+  test('registers cli channel alias for cli-prefixed owner', async () => {
+    await startCommand();
+    const registeredChannels = mockGatewayRegister.mock.calls.map(
+      ([channel]: [string, ...unknown[]]) => channel,
+    );
+    expect(registeredChannels).toContain('cli');
+  });
+
+  test('does not register cli channel alias for non-cli-prefixed owner', async () => {
+    mockConfigGet.mockImplementation((key: string) => {
+      if (key === 'providers.starterBrain.model') return 'kimi-k2.5:cloud';
+      if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
+      if (key === 'heartware.seed') return 42;
+      if (key === 'owner.ownerId') return 'web:owner';
+      if (key === 'channels.discord.enabled') return true;
+      if (key === 'plugins.enabled') return ['@tinyclaw/plugin-channel-discord'];
+      return undefined;
+    });
+    await startCommand();
+    const registeredChannels = mockGatewayRegister.mock.calls.map(
+      ([channel]: [string, ...unknown[]]) => channel,
+    );
+    expect(registeredChannels).not.toContain('cli');
   });
 
   test('initializes heartware', async () => {
