@@ -457,8 +457,11 @@ describe('startCommand', () => {
     const discordStatusTool = tools?.find((tool) => tool.name === 'discord_status');
 
     expect(discordStatusTool).toBeDefined();
+    if (!discordStatusTool) {
+      throw new Error('discord_status tool was not registered');
+    }
 
-    const result = await discordStatusTool!.execute({});
+    const result = await discordStatusTool.execute({});
 
     expect(result).toContain('Enabled in channels config: yes');
     expect(result).toContain('Present in plugins.enabled: yes');
@@ -482,8 +485,11 @@ describe('startCommand', () => {
     const discordStatusTool = tools?.find((tool) => tool.name === 'discord_status');
 
     expect(discordStatusTool).toBeDefined();
+    if (!discordStatusTool) {
+      throw new Error('discord_status tool was not registered');
+    }
 
-    const result = await discordStatusTool!.execute({});
+    const result = await discordStatusTool.execute({});
 
     expect(result).toContain('Runtime state: unavailable');
     expect(result).toContain(

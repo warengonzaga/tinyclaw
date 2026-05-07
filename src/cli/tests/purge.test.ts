@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -18,9 +18,7 @@ const CLI_ENTRY = resolve(__dirname, '../src/index.ts');
  * Create a unique temp directory for each test
  */
 function createTempDir(suffix: string): string {
-  const dir = join(tmpdir(), `tinyclaw-purge-test-${suffix}-${Date.now()}`);
-  mkdirSync(dir, { recursive: true });
-  return dir;
+  return mkdtempSync(join(tmpdir(), `tinyclaw-purge-test-${suffix}-`));
 }
 
 /**

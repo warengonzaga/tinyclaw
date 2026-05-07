@@ -53,6 +53,9 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 /** npm registry base URL. */
 const NPM_REGISTRY_BASE = 'https://registry.npmjs.org';
 
+/** Strict npm package name allowlist before building registry URLs. */
+const NPM_PACKAGE_NAME_RE = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
+
 /** Maximum time to wait for each registry response (ms). */
 const FETCH_TIMEOUT_MS = 5_000;
 
@@ -101,6 +104,16 @@ function sanitizeVersion(value: string): string {
 function sanitizePackageName(value: string): string {
   // Only allow scoped npm package names: @scope/name with alphanumeric, hyphens, dots
   return value.replace(/[^a-zA-Z0-9@/_.-]/g, '');
+}
+
+/** Validate package names before using them in registry requests. */
+function normalizeRegistryPackageName(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > 214) return null;
+  if (trimmed.includes('..')) return null;
+  if (trimmed.startsWith('.') || trimmed.startsWith('_')) return null;
+  if (!NPM_PACKAGE_NAME_RE.test(trimmed)) return null;
+  return trimmed;
 }
 
 // ---------------------------------------------------------------------------
@@ -260,10 +273,13 @@ function writeCache(dataDir: string, info: PluginUpdateInfo): void {
 // ---------------------------------------------------------------------------
 
 async function fetchLatestPluginVersion(packageName: string): Promise<string | null> {
+  const safePackageName = normalizeRegistryPackageName(packageName);
+  if (!safePackageName) return null;
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const url = `${NPM_REGISTRY_BASE}/${encodeURIComponent(packageName)}/latest`;
+    const url = `${NPM_REGISTRY_BASE}/${encodeURIComponent(safePackageName)}/latest`;
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { Accept: 'application/json' },
