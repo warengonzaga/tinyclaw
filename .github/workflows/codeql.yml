@@ -1,13 +1,14 @@
 name: CodeQL
 
 on:
-  pull_request:
-    branches: [main, dev]
-  push:
-    branches: [main, dev]
   schedule:
-    # Run every Monday at 6:00 UTC to catch new vulnerabilities
-    - cron: '0 6 * * 1'
+    - cron: "0 6 * * 1"
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: CodeQL-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -15,23 +16,19 @@ permissions:
 
 jobs:
   analyze:
+    name: Analyze (TypeScript)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ['javascript-typescript']
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout code
+        uses: actions/checkout@v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 # v4
+        uses: github/codeql-action/init@v4
         with:
-          languages: ${{ matrix.language }}
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@c10b8064de6f491fea524254123dbe5e09572f13 # v4
+          languages: javascript-typescript
+          queries: security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13 # v4
+        uses: github/codeql-action/analyze@v4
         with:
-          category: '/language:${{ matrix.language }}'
+          category: /language:javascript-typescript
