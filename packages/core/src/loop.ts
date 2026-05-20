@@ -873,9 +873,13 @@ export async function agentLoop(
   const sanitizedMessage = sanitizeMessage(message, userId, context.ownerId);
 
   // Build messages
+  // Inject sender identity before the user message so the LLM can correctly
+  // apply owner-vs-friend rules. Without this, the LLM has no way to know
+  // who is sending the current message and may misidentify the owner.
   const messages: Message[] = [
     { role: 'system', content: systemPrompt },
     ...history,
+    { role: 'system', content: `[Current message sender: userId = \`${userId}\`]` },
     { role: 'user', content: sanitizedMessage },
   ];
 
