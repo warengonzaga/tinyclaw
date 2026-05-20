@@ -49,6 +49,12 @@ export class SecretsManager implements SecretsManagerInterface {
     return await this.retrieve(key);
   }
 
+  async destroy(): Promise<void> {
+    const storagePath = this.engine.storagePath;
+    await this.engine.destroy();
+    logger.debug('Secrets engine destroyed', { storagePath });
+  }
+
   get size(): number {
     return this.engine.size;
   }

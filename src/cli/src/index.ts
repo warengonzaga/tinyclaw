@@ -32,6 +32,7 @@ function showHelp(): void {
   );
   console.log(`    ${theme.cmd('start')}    Start the Tiny Claw agent`);
   console.log(`    ${theme.cmd('config')}   Manage models, providers, and settings`);
+  console.log(`    ${theme.cmd('plugin')}   Manage community plugins (add, remove, list)`);
   console.log(`    ${theme.cmd('seed')}     Show your Tiny Claw's soul seed`);
   console.log(`    ${theme.cmd('backup')}   Export or import a .tinyclaw backup archive`);
   console.log(
@@ -93,6 +94,12 @@ async function main(): Promise<void> {
     case 'backup': {
       const { backupCommand } = await import('./commands/backup.js');
       await backupCommand(args.slice(1));
+      break;
+    }
+
+    case 'plugin': {
+      const { pluginCommand } = await import('./commands/plugin.js');
+      await pluginCommand(args.slice(1));
       break;
     }
 

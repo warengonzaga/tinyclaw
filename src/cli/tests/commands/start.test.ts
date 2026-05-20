@@ -8,6 +8,8 @@
 
 import { afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
+let capturedContext: Record<string, unknown> | undefined;
+
 // ── Mock @tinyclaw/secrets ───────────────────────────────────────────
 
 const mockSecretsCheck = mock(() => Promise.resolve(true));
@@ -19,6 +21,7 @@ mock.module('@tinyclaw/secrets', () => ({
       Promise.resolve({
         check: mockSecretsCheck,
         close: mockSecretsClose,
+        destroy: mock(() => Promise.resolve()),
         storagePath: '/tmp/test-secrets',
       }),
     ),
@@ -70,10 +73,19 @@ mock.module('@tinyclaw/core', () => ({
   DEFAULT_MODEL: 'kimi-k2.5:cloud',
   DEFAULT_BASE_URL: 'https://ollama.com',
   BUILTIN_MODEL_TAGS: ['kimi-k2.5:cloud', 'gpt-oss:120b-cloud'],
+  checkForUpdate: mock(() => Promise.resolve(null)),
+  buildUpdateContext: mock(() => undefined),
 }));
 
 mock.module('@tinyclaw/plugins', () => ({
   loadPlugins: mock(() => Promise.resolve({ channels: [], providers: [], tools: [] })),
+  discoverPairingTools: mock(() => Promise.resolve([])),
+  checkPluginUpdates: mock(() => Promise.resolve(null)),
+  buildPluginUpdateContext: mock(() => undefined),
+  getCommunityPlugins: mock(() => []),
+  installCommunityPlugin: mock(() => Promise.resolve({ success: false, message: 'mock' })),
+  removeCommunityPlugin: mock(() => Promise.resolve({ success: false, message: 'mock' })),
+  listCommunityPlugins: mock(() => Promise.resolve([])),
 }));
 
 mock.module('@tinyclaw/pulse', () => ({
@@ -184,6 +196,15 @@ mock.module('@tinyclaw/delegation', () => ({
     tools: [],
     blackboard: { read: mock(() => null), write: mock(() => {}), list: mock(() => []) },
     estimator: { estimate: mock(() => 30000) },
+    lifecycle: {},
+    templates: {},
+    background: {
+      getAll: mock(() => []),
+      getUndelivered: mock(() => []),
+      markDelivered: mock(() => {}),
+      cancelAll: mock(() => {}),
+      cleanupStale: mock(() => 0),
+    },
   })),
   createBlackboard: mock(() => ({
     read: mock(() => null),
@@ -251,14 +272,26 @@ const mockWebUIStop = mock(() => Promise.resolve());
 
 // ── Mock @tinyclaw/gateway ────────────────────────────────────────────
 
+const mockGatewayRegister = mock(() => {});
+
 mock.module('@tinyclaw/gateway', () => ({
   createGateway: mock(() => ({
-    register: mock(() => {}),
+    register: mockGatewayRegister,
     unregister: mock(() => {}),
     send: mock(() => Promise.resolve({ success: true, channel: 'web', userId: 'web:owner' })),
     broadcast: mock(() => Promise.resolve([])),
-    getRegisteredChannels: mock(() => []),
+    getRegisteredChannels: mock(() => ['discord']),
   })),
+}));
+
+const mockDiscordRuntimeStatus = mock(() => ({
+  state: 'connected',
+  readyTag: 'Tiny Claw#1234',
+  lastError: null,
+}));
+
+mock.module('@tinyclaw/plugin-channel-discord', () => ({
+  getDiscordRuntimeStatus: mockDiscordRuntimeStatus,
 }));
 
 // ── Mock @tinyclaw/web ────────────────────────────────────────────────
@@ -289,7 +322,10 @@ mock.module('@tinyclaw/nudge', () => ({
   })),
   wireNudgeToIntercom: mock(() => mock(() => {})),
   createNudgeTools: mock(() => []),
-  createCompanionJobs: mock(() => []),
+  createCompanionJobs: mock((args: Record<string, unknown>) => {
+    capturedContext = args.context as Record<string, unknown>;
+    return [];
+  }),
   getCompanionTouchActivity: mock(() => mock(() => {})),
 }));
 
@@ -315,6 +351,7 @@ beforeEach(() => {
   originalArgv = [...process.argv];
   consoleOutput = [];
   exitCode = undefined;
+  capturedContext = undefined;
 
   console.log = (...args: unknown[]) => {
     consoleOutput.push(args.map(String).join(' '));
@@ -331,8 +368,16 @@ beforeEach(() => {
     if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
     if (key === 'heartware.seed') return 42;
     if (key === 'owner.ownerId') return 'cli:owner';
+    if (key === 'channels.discord.enabled') return true;
+    if (key === 'plugins.enabled') return ['@tinyclaw/plugin-channel-discord'];
     return undefined;
   });
+  mockDiscordRuntimeStatus.mockImplementation(() => ({
+    state: 'connected',
+    readyTag: 'Tiny Claw#1234',
+    lastError: null,
+  }));
+  mockGatewayRegister.mockClear();
 });
 
 afterEach(() => {
@@ -353,6 +398,31 @@ describe('startCommand', () => {
     expect(mockWebUIStart).toHaveBeenCalled();
   });
 
+  test('registers cli channel alias for cli-prefixed owner', async () => {
+    await startCommand();
+    const registeredChannels = mockGatewayRegister.mock.calls.map(
+      ([channel]: [string, ...unknown[]]) => channel,
+    );
+    expect(registeredChannels).toContain('cli');
+  });
+
+  test('does not register cli channel alias for non-cli-prefixed owner', async () => {
+    mockConfigGet.mockImplementation((key: string) => {
+      if (key === 'providers.starterBrain.model') return 'kimi-k2.5:cloud';
+      if (key === 'providers.starterBrain.baseUrl') return 'https://ollama.com';
+      if (key === 'heartware.seed') return 42;
+      if (key === 'owner.ownerId') return 'web:owner';
+      if (key === 'channels.discord.enabled') return true;
+      if (key === 'plugins.enabled') return ['@tinyclaw/plugin-channel-discord'];
+      return undefined;
+    });
+    await startCommand();
+    const registeredChannels = mockGatewayRegister.mock.calls.map(
+      ([channel]: [string, ...unknown[]]) => channel,
+    );
+    expect(registeredChannels).not.toContain('cli');
+  });
+
   test('initializes heartware', async () => {
     await startCommand();
     expect(mockHeartwareInitialize).toHaveBeenCalled();
@@ -369,6 +439,63 @@ describe('startCommand', () => {
   test('reads learning stats', async () => {
     await startCommand();
     expect(mockGetStats).toHaveBeenCalled();
+  });
+
+  test('registers discord_status in the runtime tool list', async () => {
+    await startCommand();
+
+    const tools = capturedContext?.tools as Array<{ name: string }> | undefined;
+    expect(tools?.some((tool) => tool.name === 'discord_status')).toBe(true);
+  });
+
+  test('discord_status reports connected runtime state', async () => {
+    await startCommand();
+
+    const tools = capturedContext?.tools as
+      | Array<{ name: string; execute: (args: Record<string, unknown>) => Promise<string> }>
+      | undefined;
+    const discordStatusTool = tools?.find((tool) => tool.name === 'discord_status');
+
+    expect(discordStatusTool).toBeDefined();
+    if (!discordStatusTool) {
+      throw new Error('discord_status tool was not registered');
+    }
+
+    const result = await discordStatusTool.execute({});
+
+    expect(result).toContain('Enabled in channels config: yes');
+    expect(result).toContain('Present in plugins.enabled: yes');
+    expect(result).toContain('Bot token stored: yes');
+    expect(result).toContain('Gateway sender registered: yes');
+    expect(result).toContain('Runtime state: connected');
+    expect(result).toContain('Logged in as: Tiny Claw#1234');
+    expect(result).toContain('Summary: Discord is connected in this Tiny Claw runtime.');
+  });
+
+  test('discord_status reports plugin helper load failures', async () => {
+    mockDiscordRuntimeStatus.mockImplementation(() => {
+      throw new Error('status helper unavailable');
+    });
+
+    await startCommand();
+
+    const tools = capturedContext?.tools as
+      | Array<{ name: string; execute: (args: Record<string, unknown>) => Promise<string> }>
+      | undefined;
+    const discordStatusTool = tools?.find((tool) => tool.name === 'discord_status');
+
+    expect(discordStatusTool).toBeDefined();
+    if (!discordStatusTool) {
+      throw new Error('discord_status tool was not registered');
+    }
+
+    const result = await discordStatusTool.execute({});
+
+    expect(result).toContain('Runtime state: unavailable');
+    expect(result).toContain(
+      'Last error: Could not load Discord status helper: status helper unavailable',
+    );
+    expect(result).toContain('Summary: Discord is configured but not yet confirmed online.');
   });
 });
 

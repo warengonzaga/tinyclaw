@@ -20,7 +20,7 @@ The startup flow is:
 1. CLI loads plugin IDs from the `plugins.enabled` config array.
 2. Plugin modules are imported dynamically by package name.
 3. Pairing tools from provider (and channel) plugins are merged into the agent tool list.
-4. For each enabled provider plugin, Tiny Claw calls `plugin.createProvider(secrets)` to obtain a `Provider` instance.
+4. For each enabled provider plugin, Tiny Claw calls `plugin.createProvider(secrets, configManager)` to obtain a `Provider` instance.
 5. The routing system maps query complexity tiers (simple, moderate, complex, reasoning) to provider IDs.
 6. At query time, the router selects the appropriate provider based on the tier mapping.
 
@@ -31,7 +31,10 @@ Provider plugins must default-export an object that satisfies `ProviderPlugin` f
 ```ts
 export interface ProviderPlugin extends PluginMeta {
   readonly type: 'provider';
-  createProvider(secrets: SecretsManagerInterface): Promise<Provider>;
+  createProvider(
+    secrets: SecretsManagerInterface,
+    configManager: ConfigManagerInterface,
+  ): Promise<Provider>;
   getPairingTools?(
     secrets: SecretsManagerInterface,
     configManager: ConfigManagerInterface,
@@ -59,7 +62,7 @@ Required fields on the plugin:
 | `description` | Short summary |
 | `type` | Must be `'provider'` |
 | `version` | SemVer string |
-| `createProvider(secrets)` | Factory that returns a `Provider` instance |
+| `createProvider(secrets, configManager)` | Factory that returns a `Provider` instance |
 
 Optional field:
 
@@ -130,8 +133,15 @@ const plugin: ProviderPlugin = {
   type: 'provider',
   version: '0.1.0',
 
-  async createProvider(secrets: SecretsManagerInterface) {
-    return createMyProvider({ secrets });
+  async createProvider(
+    secrets: SecretsManagerInterface,
+    configManager: ConfigManagerInterface,
+  ) {
+    return createMyProvider({
+      secrets,
+      model: configManager.get<string>('providers.<name>.model') ?? undefined,
+      baseUrl: configManager.get<string>('providers.<name>.baseUrl') ?? undefined,
+    });
   },
 
   getPairingTools(
@@ -294,6 +304,7 @@ configManager.set('routing.tierMapping.reasoning', '<name>');
 | Plugin | Path | Description |
 |--------|------|-------------|
 | **OpenAI** | `plugins/provider/plugin-provider-openai/` | OpenAI GPT models via raw fetch (no SDK) |
+| **Ollama** | `plugins/provider/plugin-provider-ollama/` | Local Ollama and custom Ollama Cloud models |
 
 Key files in the OpenAI plugin:
 

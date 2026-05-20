@@ -8,7 +8,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -18,9 +18,7 @@ const CLI_ENTRY = resolve(__dirname, '../src/index.ts');
  * Create a unique temp directory for each test
  */
 function createTempDir(suffix: string): string {
-  const dir = join(tmpdir(), `tinyclaw-purge-test-${suffix}-${Date.now()}`);
-  mkdirSync(dir, { recursive: true });
-  return dir;
+  return mkdtempSync(join(tmpdir(), `tinyclaw-purge-test-${suffix}-`));
 }
 
 /**
@@ -196,5 +194,21 @@ describe('tinyclaw purge --force', () => {
     });
 
     expect(stdout).toContain('Secrets were deleted');
+  });
+
+  test('falls back to raw deletion for a corrupt secrets store', async () => {
+    writeFileSync(join(tempSecretsDir, 'meta.json'), '{not-json');
+    writeFileSync(join(tempSecretsDir, 'store.db'), '');
+    writeFileSync(join(tempSecretsDir, '.keyfile'), 'broken-keyfile');
+
+    const { stdout, exitCode } = await runPurge(['--force', '--yes'], {
+      TINYCLAW_DATA_DIR: tempDataDir,
+      TINYCLAW_SECRETS_DIR: tempSecretsDir,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('Purge complete');
+    expect(stdout).toContain('Secrets store deleted');
+    expect(existsSync(tempSecretsDir)).toBe(false);
   });
 });

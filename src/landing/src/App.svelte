@@ -11,7 +11,7 @@
   <nav class="fixed top-0 left-0 right-0 z-50 border-b border-border bg-bg-primary/80 backdrop-blur-md" aria-label="Primary navigation">
     <div class="mx-auto max-w-6xl flex items-center justify-between px-6 py-4">
       <a href="/" class="flex items-center gap-2 text-lg font-bold text-text-normal no-underline">
-        <span class="text-2xl">🐜</span>
+        <img src="/tinyclaw_logo.png" alt="Tiny Claw logo" class="h-8 w-8 transition-transform duration-300 hover:scale-110 hover:rotate-[-8deg]" style="filter: drop-shadow(0 0 4px rgba(232, 82, 22, 0.4));" />
         <span>Tiny Claw</span>
       </a>
       <div class="hidden sm:flex items-center gap-8">

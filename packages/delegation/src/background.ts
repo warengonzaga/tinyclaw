@@ -217,9 +217,35 @@ export function createBackgroundRunner(
           }
         })
         .catch((err) => {
-          // Queue-level error (e.g. queue stopped)
-          logger.error('Background queue error', { taskId, error: err });
+          // Queue-level error (e.g. queue stopped, DB unavailable).
+          // Best-effort cleanup — DB may also be unreachable.
+          const errorMsg = err instanceof Error ? err.message : 'Queue error';
+          logger.error('Background queue error', { taskId, error: errorMsg });
           controllers.delete(taskId);
+
+          try {
+            db.updateBackgroundTask(taskId, 'failed', errorMsg, Date.now());
+            lifecycle.recordTaskResult(agentId, false);
+
+            // Emit intercom event so nudge system can notify the user
+            intercom?.emit('task:failed', userId, {
+              taskId,
+              agentId,
+              error: errorMsg,
+            });
+
+            // Auto-dismiss sub-agent if no remaining running tasks
+            const allTasks = db.getUserBackgroundTasks(userId);
+            const hasRunningTasks = allTasks.some(
+              (t) => t.agentId === agentId && t.status === 'running',
+            );
+            if (!hasRunningTasks) {
+              lifecycle.dismiss(agentId);
+              logger.info('Sub-agent auto-dismissed (queue error)', { agentId });
+            }
+          } catch {
+            logger.error('Failed to update task status after queue error', { taskId });
+          }
         });
 
       return taskId;

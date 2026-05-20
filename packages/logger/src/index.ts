@@ -75,5 +75,5 @@ export function setLogMode(level: LogModeName | LogMode): void {
 }
 
 // Re-export configured logger and emoji utilities
-export const logger = LogEngine;
+export const logger: typeof LogEngine = LogEngine;
 export { LogMode, EmojiSelector, EMOJI_MAPPINGS, FALLBACK_EMOJI, type LogCallOptions };

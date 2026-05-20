@@ -22,6 +22,8 @@ export type { ConfigManagerConfig, ConfigManagerInterface } from '@tinyclaw/type
  * stored in secrets-engine (never the actual secret).
  */
 const ProviderEntrySchema = z.object({
+  providerId: z.string().optional(),
+  mode: z.enum(['local', 'cloud']).optional(),
   model: z.string().optional(),
   baseUrl: z.string().url().optional(),
   apiKeyRef: z.string().optional(),
@@ -61,7 +63,7 @@ export const TinyClawConfigSchema = z
         starterBrain: ProviderEntrySchema.optional(),
         primary: ProviderEntrySchema.optional(),
       })
-      .passthrough()
+      .catchall(ProviderEntrySchema)
       .optional(),
 
     /** Channel configurations (telegram, discord, slack, etc.) */

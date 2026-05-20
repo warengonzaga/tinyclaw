@@ -1,19 +1,22 @@
-name: Package Build
+name: Package
 
 on:
   pull_request:
-    branches: [main, dev]
+    branches: [ dev, main ]
   push:
-    branches: [main, dev]
-  workflow_call:
+    branches: [ dev, main ]
+  release:
+    types: [ published ]
   workflow_dispatch:
     inputs:
       dry-run:
-        description: 'Perform dry run without publishing'
+        description: "Perform dry run without publishing"
         type: boolean
         default: true
-  release:
-    types: [published]
+
+concurrency:
+  group: Package-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -21,40 +24,58 @@ permissions:
   pull-requests: write
 
 jobs:
+  ci:
+    name: CI Gate
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      pull-requests: write
+
+  codeql:
+    name: CodeQL Gate
+    uses: ./.github/workflows/codeql.yml
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
   publish:
-    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
+    name: Build and Publish Packages
     runs-on: ubuntu-latest
+    needs: [ ci, codeql ]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout code
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - uses: oven-sh/setup-bun@v2
-
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '22'
+          bun-version: 1.3.13
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build workspace packages
-        run: bun run build:packages
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
 
       - name: Build & Publish Packages
-        uses: wgtechlabs/package-build-flow-action@v2.0.1
+        uses: wgtechlabs/package-build-flow-action@v2.1.1
         with:
           monorepo: 'true'
           workspace-detection: 'true'
           package-manager: 'bun'
           dependency-order: 'true'
           changed-only: 'false'
+          commit-convention-enabled: 'true'
+          bot-detection: 'true'
           registry: 'both'
           access: 'public'
           npm-token: ${{ secrets.NPM_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
           publish-enabled: 'true'
-          dry-run: ${{ github.event.inputs.dry-run || 'false' }}
+          dry-run: ${{ github.event_name == 'pull_request' && 'true' || (github.event_name == 'workflow_dispatch' && inputs['dry-run'] && 'true' || 'false') }}
           build-script: 'build'
           audit-enabled: 'true'
           audit-level: 'high'

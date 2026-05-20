@@ -1,3 +1,29 @@
+<script>
+  import { onMount, onDestroy } from 'svelte';
+
+  let logoEl;
+  let twitchTimer;
+
+  function triggerTwitch() {
+    if (!logoEl) return;
+    logoEl.classList.add('ant-twitch');
+    logoEl.addEventListener('animationend', () => {
+      logoEl.classList.remove('ant-twitch');
+    }, { once: true });
+  }
+
+  function scheduleNext() {
+    const delay = 2000 + Math.random() * 5000;
+    twitchTimer = setTimeout(() => {
+      triggerTwitch();
+      scheduleNext();
+    }, delay);
+  }
+
+  onMount(() => scheduleNext());
+  onDestroy(() => clearTimeout(twitchTimer));
+</script>
+
 <section class="relative pt-32 pb-24 sm:pt-40 sm:pb-32 overflow-hidden">
   <!-- Subtle radial glow behind hero -->
   <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
@@ -11,8 +37,22 @@
       Under Active Development
     </div>
 
-    <!-- Ant icon -->
-    <div class="mb-6 text-7xl sm:text-8xl select-none" aria-hidden="true">🐜</div>
+    <!-- Logo -->
+    <div class="mx-auto mb-6 h-24 w-24 sm:h-32 sm:w-32 logo-glow">
+      <button
+        type="button"
+        class="h-full w-full bg-transparent border-none p-0 cursor-pointer"
+        aria-label="Tiny Claw logo animation"
+        on:click={triggerTwitch}
+      >
+        <img
+          bind:this={logoEl}
+          src="/tinyclaw_logo.png"
+          alt="Tiny Claw logo"
+          class="h-full w-full select-none transition-transform duration-300 hover:scale-110"
+        />
+      </button>
+    </div>
 
     <!-- Heading -->
     <h1 class="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight">

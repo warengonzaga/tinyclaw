@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { platform, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createShellExecutor, type ShellExecutor } from '../src/executor.js';
 
@@ -8,6 +8,12 @@ import { createShellExecutor, type ShellExecutor } from '../src/executor.js';
 const TEMP_DIR = join(tmpdir(), 'tinyclaw-shell-tests');
 const SLEEP_SCRIPT = join(TEMP_DIR, 'sleep.js');
 const BIGOUT_SCRIPT = join(TEMP_DIR, 'bigout.js');
+const IS_WINDOWS = platform() === 'win32';
+const PWD_COMMAND = IS_WINDOWS ? 'cd' : 'pwd';
+const EMPTY_SUCCESS_COMMAND = IS_WINDOWS ? 'ver >nul' : 'true';
+const FAILURE_COMMAND = IS_WINDOWS ? 'exit /b 1' : 'false';
+const ENV_COMMAND = IS_WINDOWS ? 'set' : 'env';
+const echoEnvCommand = (name: string) => (IS_WINDOWS ? `echo %${name}%` : `echo $${name}`);
 
 describe('Shell Executor', () => {
   const executor: ShellExecutor = createShellExecutor({
@@ -47,8 +53,8 @@ describe('Shell Executor', () => {
       expect(result.timedOut).toBe(false);
     });
 
-    it('executes pwd and returns a path', async () => {
-      const result = await executor.execute('pwd');
+    it('executes a working-directory command and returns a path', async () => {
+      const result = await executor.execute(PWD_COMMAND);
       expect(result.success).toBe(true);
       expect(result.stdout.trim().length).toBeGreaterThan(0);
     });
@@ -62,13 +68,13 @@ describe('Shell Executor', () => {
     });
 
     it('handles empty output commands', async () => {
-      const result = await executor.execute('true');
+      const result = await executor.execute(EMPTY_SUCCESS_COMMAND);
       expect(result.success).toBe(true);
       expect(result.exitCode).toBe(0);
     });
 
     it('returns non-zero exit codes', async () => {
-      const result = await executor.execute('false');
+      const result = await executor.execute(FAILURE_COMMAND);
       expect(result.success).toBe(false);
       expect(result.exitCode).not.toBe(0);
     });
@@ -131,22 +137,23 @@ describe('Shell Executor', () => {
 
   describe('working directory', () => {
     it('executes in the configured working directory', async () => {
+      const workingDirectory = tmpdir();
       const tempExecutor = createShellExecutor({
-        workingDirectory: '/tmp',
+        workingDirectory,
       });
 
-      const result = await tempExecutor.execute('pwd');
+      const result = await tempExecutor.execute(PWD_COMMAND);
       expect(result.success).toBe(true);
-      // On some systems /tmp may resolve to /private/tmp
-      expect(result.stdout.trim()).toMatch(/tmp/);
+      expect(result.stdout.trim().toLowerCase()).toBe(workingDirectory.toLowerCase());
     });
 
     it('allows updating the working directory', () => {
       const ex = createShellExecutor();
       const original = ex.getWorkingDirectory();
+      const workingDirectory = tmpdir();
 
-      ex.setWorkingDirectory('/tmp');
-      expect(ex.getWorkingDirectory()).toBe('/tmp');
+      ex.setWorkingDirectory(workingDirectory);
+      expect(ex.getWorkingDirectory()).toBe(workingDirectory);
 
       // Restore
       ex.setWorkingDirectory(original);
@@ -164,7 +171,7 @@ describe('Shell Executor', () => {
       process.env.OPENAI_API_KEY = 'sk-test-secret-key';
 
       try {
-        const result = await executor.execute('env');
+        const result = await executor.execute(ENV_COMMAND);
         expect(result.success).toBe(true);
         expect(result.stdout).not.toContain('sk-test-secret-key');
         expect(result.stdout).not.toContain('OPENAI_API_KEY');
@@ -178,9 +185,15 @@ describe('Shell Executor', () => {
     });
 
     it('passes non-sensitive environment variables', async () => {
-      const result = await executor.execute('echo $HOME');
+      const envExecutor = createShellExecutor({
+        extraEnv: {
+          TINYCLAW_SAFE_TEST_VALUE: 'visible-safe-value',
+        },
+      });
+
+      const result = await envExecutor.execute(echoEnvCommand('TINYCLAW_SAFE_TEST_VALUE'));
       expect(result.success).toBe(true);
-      expect(result.stdout.trim().length).toBeGreaterThan(0);
+      expect(result.stdout.trim()).toBe('visible-safe-value');
     });
   });
 

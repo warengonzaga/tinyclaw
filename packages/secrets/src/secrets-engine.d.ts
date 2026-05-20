@@ -11,6 +11,7 @@ declare module '@wgtechlabs/secrets-engine' {
     get(key: string): Promise<string | null>;
     has(key: string): Promise<boolean>;
     keys(pattern?: string): Promise<string[]>;
+    destroy(): Promise<void>;
     close(): Promise<void>;
   }
 }
