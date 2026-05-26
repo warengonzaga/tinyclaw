@@ -295,5 +295,17 @@ describe('agentLoop', () => {
     );
     expect(prompts[1]?.at(-1)?.role).toBe('user');
     expect(prompts[1]?.at(-1)?.content).toContain('respond naturally to my original message');
-  });
-});
+    });
+    });
+
+    describe('sanitizeUserIdForPrompt', () => {
+    const { sanitizeUserIdForPrompt } = require('../src/loop.js');
+
+    test('strips backticks, brackets, and newlines', () => {
+    expect(sanitizeUserIdForPrompt('test`[id]\n')).toBe('testid');
+    expect(sanitizeUserIdForPrompt('normal-id')).toBe('normal-id');
+    expect(sanitizeUserIdForPrompt('')).toBe('');
+    expect(sanitizeUserIdForPrompt('`[\\n\\r]')).toBe('');
+    });
+    });
+    };// This is to close the outer describe block that was truncated in the initial read

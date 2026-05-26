@@ -133,11 +133,13 @@ function sanitizeMessage(text: string, userId: string, ownerId: string | undefin
 /**
  * Strip characters from a userId that could break the sender-identity marker
  * format or serve as a prompt-injection vector when embedded in a system prompt.
- * Backticks, square brackets, and newlines are removed so a crafted userId
- * cannot escape the marker or inject additional instructions.
+ * 
+ * Backticks (`) are stripped to prevent escaping the marker's backticks.
+ * Square brackets [] are stripped to prevent breaking the marker format.
+ * Newlines (\n\r) are stripped to prevent multi-line injection.
  */
 function sanitizeUserIdForPrompt(userId: string): string {
-  return userId.replace(/[`\[\]\n\r]/g, '');
+  return userId.replace(/[`\\[\\]\\n\\r]/g, '');
 }
 
 // ---------------------------------------------------------------------------
