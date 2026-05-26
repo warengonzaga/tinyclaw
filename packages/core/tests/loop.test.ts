@@ -52,6 +52,11 @@ describe('agentLoop', () => {
     expect(systemPrompt).toContain('## Plugin Setup Guidance');
     expect(systemPrompt).toContain('For Discord, explain that they need to create an application');
     expect(systemPrompt).toContain('do not pretend the plugin is configured');
+    // Sender-identity must be embedded in the system prompt so the LLM always
+    // knows who sent the message — verify the marker is present and the very
+    // next message is the user turn (no separate system message in between).
+    expect(systemPrompt).toContain('[Current message sender: userId = `web:test`]');
+    expect(firstPrompt.at(-1)?.role).toBe('user');
   });
 
   test('turns structured write tool calls into a natural final reply', async () => {
@@ -113,6 +118,11 @@ describe('agentLoop', () => {
 
     expect(result).toBe('I refreshed the configuration. Please restart Tiny Claw when convenient.');
     expect(prompts).toHaveLength(2);
+    // Sender-identity is embedded in the system prompt (prompts[0][0]) and
+    // immediately followed by the user message — no separate system entry.
+    expect(prompts[0]?.[0]?.role).toBe('system');
+    expect(prompts[0]?.[0]?.content).toContain('[Current message sender: userId = `web:test`]');
+    expect(prompts[0]?.at(-1)?.role).toBe('user');
     expect(prompts[1]?.at(-2)?.role).toBe('assistant');
     expect(prompts[1]?.at(-2)?.content).toContain('I used these tools and the results were:');
     expect(prompts[1]?.at(-2)?.content).toContain('Restart required: refresh config');

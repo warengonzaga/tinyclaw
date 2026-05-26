@@ -130,6 +130,16 @@ function sanitizeMessage(text: string, userId: string, ownerId: string | undefin
   return text;
 }
 
+/**
+ * Strip characters from a userId that could break the sender-identity marker
+ * format or serve as a prompt-injection vector when embedded in a system prompt.
+ * Backticks, square brackets, and newlines are removed so a crafted userId
+ * cannot escape the marker or inject additional instructions.
+ */
+function sanitizeUserIdForPrompt(userId: string): string {
+  return userId.replace(/[`\[\]\n\r]/g, '');
+}
+
 // ---------------------------------------------------------------------------
 // Shield — in-memory pending approvals (conversational flow)
 // ---------------------------------------------------------------------------
@@ -873,8 +883,14 @@ export async function agentLoop(
   const sanitizedMessage = sanitizeMessage(message, userId, context.ownerId);
 
   // Build messages
+  // Embed sender identity directly in the system prompt so the LLM can
+  // correctly apply owner-vs-friend rules for this entire turn (including any
+  // follow-up tool-result messages). Placing it in a separate system message
+  // would leave subsequent tool-follow-up user messages without a sender marker
+  // and would shift message indices expected by tests.
+  const senderIdentityPrompt = `\n\n[Current message sender: userId = \`${sanitizeUserIdForPrompt(userId)}\`]`;
   const messages: Message[] = [
-    { role: 'system', content: systemPrompt },
+    { role: 'system', content: systemPrompt + senderIdentityPrompt },
     ...history,
     { role: 'user', content: sanitizedMessage },
   ];
