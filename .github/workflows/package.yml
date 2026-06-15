@@ -61,7 +61,7 @@ jobs:
           node-version: "22"
 
       - name: Build & Publish Packages
-        uses: wgtechlabs/package-build-flow-action@v2.1.1
+        uses: wgtechlabs/package-build-flow-action@v2.1.2
         with:
           monorepo: 'true'
           workspace-detection: 'true'
