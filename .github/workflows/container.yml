@@ -42,7 +42,7 @@ jobs:
     needs: [ ci, codeql ]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Build and Push Container
         uses: wgtechlabs/container-build-flow-action@v1.8.1
