@@ -33,7 +33,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
     "@types/bun": "latest",
-    "@types/node": "^25.3.3",
+    "@types/node": "^26.2.0",
     "typescript": "^6.0.2"
   },
   "dependencies": {
