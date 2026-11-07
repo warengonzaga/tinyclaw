@@ -61,9 +61,15 @@ describe('TinyClawConfigSchema — valid data', () => {
           baseUrl: 'http://localhost:11434',
         },
         primary: {
+          providerId: 'openai',
           model: 'gpt-4',
           baseUrl: 'https://api.openai.com/v1',
           apiKeyRef: 'provider.openai.apiKey',
+        },
+        ollama: {
+          mode: 'local',
+          model: 'llama3.2:3b',
+          baseUrl: 'http://127.0.0.1:11434',
         },
       },
       channels: {
@@ -114,6 +120,25 @@ describe('TinyClawConfigSchema — valid data', () => {
         customProvider: { model: 'custom-model' },
       },
     });
+    expect(result.success).toBe(true);
+  });
+
+  test('accepts provider mode and providerId fields', () => {
+    const result = TinyClawConfigSchema.safeParse({
+      providers: {
+        primary: {
+          providerId: 'ollama',
+          model: 'llama3.2:3b',
+        },
+        ollama: {
+          mode: 'cloud',
+          model: 'qwen3:32b',
+          baseUrl: 'https://ollama.com',
+          apiKeyRef: 'provider.ollama.apiKey',
+        },
+      },
+    });
+
     expect(result.success).toBe(true);
   });
 });
@@ -171,6 +196,16 @@ describe('TinyClawConfigSchema — invalid data', () => {
     const result = TinyClawConfigSchema.safeParse({
       channels: { telegram: { enabled: 'true' } },
     });
+    expect(result.success).toBe(false);
+  });
+
+  test('rejects invalid provider mode', () => {
+    const result = TinyClawConfigSchema.safeParse({
+      providers: {
+        ollama: { mode: 'edge' },
+      },
+    });
+
     expect(result.success).toBe(false);
   });
 });

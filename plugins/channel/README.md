@@ -1,6 +1,6 @@
 # Channel Plugin Development Guide
 
-This guide documents how Tiny Claw channel plugins work so you can build your own. Two reference implementations ship with the repo: **Discord** (external platform integration) and **Friends** (built-in web chat).
+This guide documents how Tiny Claw channel plugins work so you can build your own. Three reference implementations ship with the repo: **Discord** (external platform integration), **Telegram** (minimal Bot API integration), and **Friends** (built-in web chat).
 
 ## What a Channel Plugin Does
 
@@ -217,6 +217,7 @@ When implementing `start(context)`:
 | Plugin | Path | Description |
 |--------|------|-------------|
 | **Discord** | `plugins/channel/plugin-channel-discord/` | External platform integration via discord.js |
+| **Telegram** | `plugins/channel/plugin-channel-telegram/` | Minimal Telegram Bot API integration via long polling |
 | **Friends** | `plugins/channel/plugin-channel-friends/` | Built-in invite-based web chat channel |
 
 Key files in the Discord plugin:

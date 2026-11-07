@@ -4,7 +4,7 @@
       <!-- Brand -->
       <div>
         <div class="flex items-center gap-2 mb-3">
-          <span class="text-2xl">🐜</span>
+          <img src="/tinyclaw_logo.png" alt="Tiny Claw logo" class="h-8 w-8" />
           <span class="text-lg font-bold text-text-normal">Tiny Claw</span>
         </div>
         <p class="text-sm text-text-muted leading-relaxed">
@@ -68,12 +68,12 @@
     </div>
 
     <!-- Bottom bar -->
-    <div class="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="mt-10 pt-6 border-t border-border text-center">
       <p class="text-xs text-text-muted">
-        &copy; {new Date().getFullYear()} <a href="https://warengonzaga.com" target="_blank" rel="noopener noreferrer" class="text-text-link hover:underline no-underline">Waren Gonzaga</a>. Licensed under GPL-3.0.
+        💻💖☕ by <a href="https://warengonzaga.com" target="_blank" rel="noopener noreferrer" class="text-text-link hover:underline no-underline">Waren Gonzaga</a> &amp; <a href="https://www.youtube.com/watch?v=VOZbswniA-g" target="_blank" rel="noopener noreferrer" class="text-text-link hover:underline no-underline">YHWH</a> 🙏 — Without <strong>Him</strong>, none of this exists, <em><strong>even me</strong></em>.
       </p>
-      <p class="text-xs text-text-muted">
-        Made with 💻💖☕
+      <p class="mt-2 text-xs text-text-muted">
+        &copy; {new Date().getFullYear()} Waren Gonzaga. Licensed under GPL-3.0.
       </p>
     </div>
   </div>

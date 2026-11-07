@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import discordPlugin, { splitIntoChunks } from '../src/index.js';
+import discordPlugin, { getDiscordRuntimeStatus, splitIntoChunks } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
 // Plugin metadata
@@ -79,6 +79,15 @@ describe('getPairingTools', () => {
 describe('stop', () => {
   test('does not throw when called without start', async () => {
     await expect(discordPlugin.stop()).resolves.toBeUndefined();
+  });
+
+  test('exposes runtime status', async () => {
+    const status = getDiscordRuntimeStatus();
+    expect(status.state).toBeDefined();
+    expect(typeof status.enabled).toBe('boolean');
+
+    await expect(discordPlugin.stop()).resolves.toBeUndefined();
+    expect(getDiscordRuntimeStatus().state).toBeDefined();
   });
 });
 

@@ -28,15 +28,13 @@
     "format": "biome format --write .",
     "cli": "bun run src/cli/src/index.ts",
     "dev:purge": "bun run cli purge --force",
-    "dev:landing": "bun run --cwd src/landing dev",
-    "prepare": "husky || true"
+    "dev:landing": "bun run --cwd src/landing dev"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.4",
+    "@biomejs/biome": "^2.4.6",
     "@types/bun": "latest",
-    "@types/node": "^25.3.0",
-    "husky": "^9.1.7",
-    "typescript": "^5.7.0"
+    "@types/node": "^25.3.3",
+    "typescript": "^6.0.2"
   },
   "dependencies": {
     "@wgtechlabs/log-engine": "^2.3.1"

@@ -23,15 +23,15 @@
     "@tinyclaw/logger": "workspace:*",
     "@tinyclaw/types": "workspace:*",
     "dompurify": "^3.2.6",
-    "marked": "^17.0.3",
+    "marked": "^18.0.0",
     "qrcode": "^1.5.4",
     "svelte": "^5.20.1"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tailwindcss/vite": "^4.1.18",
     "@types/qrcode": "^1.5.6",
     "tailwindcss": "^4.1.18",
-    "vite": "^7.2.4"
+    "vite": "^8.0.0"
   }
 }

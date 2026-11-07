@@ -49,7 +49,16 @@ import {
   getCompanionTouchActivity,
   wireNudgeToIntercom,
 } from '@tinyclaw/nudge';
-import { loadPlugins } from '@tinyclaw/plugins';
+import {
+  buildPluginUpdateContext,
+  checkPluginUpdates,
+  discoverPairingTools,
+  getCommunityPlugins,
+  installCommunityPlugin,
+  listCommunityPlugins,
+  loadPlugins,
+  removeCommunityPlugin,
+} from '@tinyclaw/plugins';
 import { createPulseScheduler } from '@tinyclaw/pulse';
 import { createSessionQueue } from '@tinyclaw/queue';
 import { ProviderOrchestrator, type ProviderTierConfig } from '@tinyclaw/router';
@@ -61,6 +70,7 @@ import type { Provider, StreamCallback, Tool } from '@tinyclaw/types';
 import { createWebUI } from '@tinyclaw/web';
 import { RESTART_EXIT_CODE } from '../supervisor.js';
 import { theme } from '../ui/theme.js';
+import { isSecretsIntegrityError, printSecretsIntegrityRecovery } from '../utils/secrets.js';
 
 /**
  * Run the agent start flow
@@ -104,28 +114,10 @@ export async function startCommand(): Promise<void> {
   try {
     secretsManager = await SecretsManager.create();
   } catch (err: unknown) {
-    // Detect IntegrityError from @wgtechlabs/secrets-engine
-    // The HMAC stored in meta.json does not match the database contents.
-    // This may indicate file corruption, tampering, or a partial write.
-    if (
-      err instanceof Error &&
-      'code' in err &&
-      (err as { code: string }).code === 'INTEGRITY_ERROR'
-    ) {
-      const storePath = join(homedir(), '.secrets-engine');
-
-      console.log();
-      console.log(theme.error('  ✖ Secrets store integrity check failed.'));
-      console.log();
-      console.log('    The secrets store may have been corrupted or tampered with.');
-      console.log('    This can happen due to disk errors, power loss, or external changes.');
-      console.log();
-      console.log('    To resolve, delete the store and re-run setup:');
-      console.log();
-      console.log(`      1. ${theme.cmd(`rm -rf ${storePath}`)}`);
-      console.log(`      2. ${theme.cmd('tinyclaw setup')}`);
-      console.log();
+    if (isSecretsIntegrityError(err)) {
+      printSecretsIntegrityRecovery('tinyclaw setup');
       process.exit(1);
+      return;
     }
 
     throw err;
@@ -319,7 +311,7 @@ export async function startCommand(): Promise<void> {
 
   for (const pp of plugins.providers) {
     try {
-      const provider = await pp.createProvider(secretsManager);
+      const provider = await pp.createProvider(secretsManager, configManager);
       pluginProviders.push(provider);
       logger.info(`Plugin provider initialized: ${pp.name} (${provider.id})`, undefined, {
         emoji: '✅',
@@ -339,20 +331,12 @@ export async function startCommand(): Promise<void> {
   let activeProviderName = defaultProvider.name;
   let activeModelName = providerModel;
 
-  const primaryModel = configManager.get<string>('providers.primary.model');
+  const primaryProviderId =
+    configManager.get<string>('providers.primary.providerId') ??
+    configManager.get<string>('providers.primary.model');
 
-  if (primaryModel) {
-    // Find a plugin provider whose id matches the primary config.
-    // Convention: the provider ID from the plugin is used to look up matching.
-
-    // Try to find a matching plugin provider by checking if any plugin
-    // provider's id is referenced in the tier mapping or matches a known pattern.
-    // For now, we look for a plugin provider whose model matches.
-    const matchingProvider = pluginProviders.find((pp) => {
-      // Check if this provider was configured with the primary model
-      // Plugin providers set their own id, so we check availability instead
-      return pp.id !== defaultProvider.id;
-    });
+  if (primaryProviderId) {
+    const matchingProvider = pluginProviders.find((pp) => pp.id === primaryProviderId);
 
     if (matchingProvider) {
       try {
@@ -360,12 +344,14 @@ export async function startCommand(): Promise<void> {
         if (available) {
           routerDefaultProvider = matchingProvider;
           activeProviderName = matchingProvider.name;
-          activeModelName = primaryModel;
+          activeModelName =
+            configManager.get<string>(`providers.${matchingProvider.id}.model`) ??
+            matchingProvider.name;
           logger.info(
             'Primary provider active, overriding built-in as default',
             {
               primary: matchingProvider.id,
-              model: primaryModel,
+              model: activeModelName,
             },
             { emoji: '✅' },
           );
@@ -417,11 +403,32 @@ export async function startCommand(): Promise<void> {
     ...createConfigTools(configManager),
   ];
 
-  // Merge plugin pairing tools (channels + providers)
-  const pairingTools = [
+  // Merge plugin pairing tools (channels + providers) from enabled plugins
+  const enabledPairingTools = [
     ...plugins.channels.flatMap((ch) => ch.getPairingTools?.(secretsManager, configManager) ?? []),
     ...plugins.providers.flatMap((pp) => pp.getPairingTools?.(secretsManager, configManager) ?? []),
   ];
+
+  // Discover pairing tools from installed-but-not-yet-enabled plugins.
+  // This solves the chicken-and-egg problem: the agent needs pairing tools
+  // (e.g. discord_pair) to activate plugins conversationally, but those tools
+  // were previously only loaded from already-enabled plugins.
+  const enabledIds = configManager.get<string[]>('plugins.enabled') ?? [];
+  const discoveredPairingTools = await discoverPairingTools(
+    enabledIds,
+    secretsManager,
+    configManager,
+  );
+
+  if (discoveredPairingTools.length > 0) {
+    logger.info(
+      'Discovered pairing tools from available plugins',
+      { count: discoveredPairingTools.length, tools: discoveredPairingTools.map((t) => t.name) },
+      { emoji: '🔌' },
+    );
+  }
+
+  const pairingTools = [...enabledPairingTools, ...discoveredPairingTools];
 
   // Create a temporary context for plugin tools that need AgentContext
   const baseContext = {
@@ -649,7 +656,9 @@ export async function startCommand(): Promise<void> {
       required: [],
     },
     async execute() {
-      const currentPrimary = configManager.get<string>('providers.primary.model');
+      const currentPrimary =
+        configManager.get<string>('providers.primary.providerId') ??
+        configManager.get<string>('providers.primary.model');
       const lines: string[] = [];
 
       // Built-in provider
@@ -673,6 +682,8 @@ export async function startCommand(): Promise<void> {
         for (const pp of pluginProviders) {
           const isPrimary = routerDefaultProvider.id === pp.id;
           let status = 'available';
+          const configuredModel = configManager.get<string>(`providers.${pp.id}.model`);
+          const configuredMode = configManager.get<string>(`providers.${pp.id}.mode`);
           try {
             const avail = await pp.isAvailable();
             status = avail ? 'available' : 'unavailable';
@@ -682,6 +693,12 @@ export async function startCommand(): Promise<void> {
 
           const primaryTag = isPrimary ? ' [PRIMARY]' : '';
           lines.push(`  • ${pp.name} (${pp.id})${primaryTag}`);
+          if (configuredModel) {
+            lines.push(`    Model: ${configuredModel}`);
+          }
+          if (configuredMode) {
+            lines.push(`    Mode: ${configuredMode}`);
+          }
           lines.push(`    Status: ${status}`);
         }
 
@@ -763,9 +780,10 @@ export async function startCommand(): Promise<void> {
 
       // Persist primary config
       configManager.set('providers.primary', {
-        model: target.id,
-        baseUrl: undefined,
-        apiKeyRef: undefined,
+        providerId: target.id,
+        model: configManager.get<string>(`providers.${target.id}.model`) ?? target.id,
+        baseUrl: configManager.get<string>(`providers.${target.id}.baseUrl`) ?? undefined,
+        apiKeyRef: configManager.get<string>(`providers.${target.id}.apiKeyRef`) ?? undefined,
       });
 
       logger.info(`Primary provider set: ${target.name} (${target.id})`, undefined, {
@@ -802,7 +820,9 @@ export async function startCommand(): Promise<void> {
       required: [],
     },
     async execute() {
-      const currentPrimary = configManager.get<string>('providers.primary.model');
+      const currentPrimary =
+        configManager.get<string>('providers.primary.providerId') ??
+        configManager.get<string>('providers.primary.model');
 
       if (!currentPrimary) {
         return 'No primary provider is currently set. The built-in is already the default.';
@@ -824,6 +844,235 @@ export async function startCommand(): Promise<void> {
   };
 
   allTools.push(providerClearPrimaryTool);
+
+  // plugin_install tool — allows the agent to install community plugins conversationally
+  const pluginInstallTool: Tool = {
+    name: 'plugin_install',
+    description:
+      'Install a community plugin from npm by package name. The user can paste ' +
+      'an npm package name (e.g. "@acme/tinyclaw-plugin-telegram" or ' +
+      '"tinyclaw-plugin-notion") and this tool will install it, validate it is ' +
+      'a valid Tiny Claw plugin, and register it. After successful installation, ' +
+      'call tinyclaw_restart to activate the plugin. ' +
+      'IMPORTANT: Always confirm with the user before installing. Warn them that ' +
+      'community plugins are unverified third-party code that will execute on ' +
+      'their machine. ' +
+      'Official @tinyclaw/plugin-* packages are managed separately and cannot ' +
+      'be installed through this tool.',
+    parameters: {
+      type: 'object',
+      properties: {
+        package_name: {
+          type: 'string',
+          description: 'The npm package name to install (e.g. "@acme/tinyclaw-plugin-telegram")',
+        },
+        confirm: {
+          type: 'boolean',
+          description:
+            'Must be true. Set this only after the user has explicitly confirmed they want to install this community plugin. ' +
+            'Community plugins are unverified third-party code.',
+        },
+      },
+      required: ['package_name', 'confirm'],
+    },
+    async execute(args) {
+      const packageName = (args.package_name as string)?.trim();
+      if (!packageName) {
+        return 'Error: package_name is required. Ask the user for the npm package name.';
+      }
+      if (args.confirm !== true) {
+        return (
+          'Error: You must confirm with the user before installing a community plugin. ' +
+          'Warn them that community plugins are unverified third-party code that will execute on their machine, ' +
+          'then call this tool again with confirm: true.'
+        );
+      }
+
+      const result = await installCommunityPlugin(packageName, configManager);
+
+      if (result.success && result.plugin) {
+        return (
+          `${result.message}\n\n` +
+          `Plugin details:\n` +
+          `  Name: ${result.plugin.name}\n` +
+          `  ID: ${result.plugin.id}\n` +
+          `  Type: ${result.plugin.type}\n` +
+          `  Version: ${result.plugin.version}\n` +
+          `  Source: community (unverified)\n\n` +
+          'Call tinyclaw_restart to activate the plugin.'
+        );
+      }
+
+      return result.message;
+    },
+  };
+
+  allTools.push(pluginInstallTool);
+
+  // plugin_remove tool — allows the agent to remove community plugins
+  const pluginRemoveTool: Tool = {
+    name: 'plugin_remove',
+    description:
+      'Remove a community plugin. This unregisters the plugin from config, ' +
+      'removes it from the enabled list, and uninstalls the npm package. ' +
+      'After removal, call tinyclaw_restart to apply changes. ' +
+      'Only works for community plugins — official @tinyclaw/plugin-* ' +
+      'packages cannot be removed through this tool.',
+    parameters: {
+      type: 'object',
+      properties: {
+        package_name: {
+          type: 'string',
+          description: 'The npm package name of the community plugin to remove',
+        },
+      },
+      required: ['package_name'],
+    },
+    async execute(args) {
+      const packageName = (args.package_name as string)?.trim();
+      if (!packageName) {
+        return 'Error: package_name is required.';
+      }
+
+      const result = await removeCommunityPlugin(packageName, configManager);
+      return result.message;
+    },
+  };
+
+  allTools.push(pluginRemoveTool);
+
+  // plugin_list tool — shows all plugins (official + community)
+  const pluginListTool: Tool = {
+    name: 'plugin_list',
+    description:
+      'List all installed plugins — both official (@tinyclaw/plugin-*) and ' +
+      "community plugins. Shows each plugin's name, type, version, enabled " +
+      'status, and source (official or community).',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    async execute() {
+      const enabledIds = configManager.get<string[]>('plugins.enabled') ?? [];
+      const lines: string[] = [];
+
+      // Official plugins — show enabled ones, plus note about discoverable ones
+      const officialEnabled = enabledIds.filter((id) => id.startsWith('@tinyclaw/plugin-'));
+      lines.push('Official Plugins (verified @tinyclaw/plugin-*):');
+      if (officialEnabled.length > 0) {
+        for (const id of officialEnabled) {
+          try {
+            const mod = await import(id);
+            const p = mod.default;
+            lines.push(
+              `  • ${p?.name ?? id} (${id}) v${p?.version ?? '?'} — ${p?.type ?? '?'} [enabled]`,
+            );
+          } catch {
+            lines.push(`  • ${id} [enabled, but failed to load]`);
+          }
+        }
+      } else {
+        lines.push('  (none enabled)');
+      }
+      lines.push(
+        '  Note: Official plugins not yet enabled are discovered automatically — ask me to pair one.',
+      );
+
+      lines.push('');
+
+      // Community plugins
+      const communityPlugins = await listCommunityPlugins(configManager);
+      lines.push('Community Plugins (unverified):');
+      if (communityPlugins.length > 0) {
+        for (const cp of communityPlugins) {
+          const status = cp.enabled ? 'enabled' : 'installed';
+          lines.push(`  • ${cp.name} (${cp.id}) v${cp.version} — ${cp.type} [${status}]`);
+        }
+      } else {
+        lines.push('  (none installed)');
+        lines.push('');
+        lines.push(
+          'To install a community plugin, the user can provide an npm package name ' +
+            'and you can use plugin_install to add it.',
+        );
+      }
+
+      return lines.join('\n');
+    },
+  };
+
+  allTools.push(pluginListTool);
+
+  const discordStatusTool: Tool = {
+    name: 'discord_status',
+    description:
+      'Check the real runtime status of the Discord channel plugin. ' +
+      'Use this when the user asks whether the Discord bot is online, connected, or offline. ' +
+      'Reports config state, whether the token exists, whether the Discord sender is registered, and the last runtime error if any.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    async execute() {
+      const enabled = configManager.get<boolean>('channels.discord.enabled') ?? false;
+      const tokenStored = await secretsManager.check('channel.discord.token');
+      const pluginEnabled = (configManager.get<string[]>('plugins.enabled') ?? []).includes(
+        '@tinyclaw/plugin-channel-discord',
+      );
+      const registered = gateway.getRegisteredChannels().includes('discord');
+
+      let runtimeState = 'unavailable';
+      let readyTag: string | null = null;
+      let lastError: string | null = null;
+
+      try {
+        const mod = await import('@tinyclaw/plugin-channel-discord');
+        if (typeof mod.getDiscordRuntimeStatus === 'function') {
+          const status = mod.getDiscordRuntimeStatus() as {
+            state: string;
+            readyTag: string | null;
+            lastError: string | null;
+          };
+          runtimeState = status.state;
+          readyTag = status.readyTag;
+          lastError = status.lastError;
+        }
+      } catch (error) {
+        lastError = `Could not load Discord status helper: ${error instanceof Error ? error.message : String(error)}`;
+      }
+
+      const lines = [
+        'Discord plugin status:',
+        `  Enabled in channels config: ${enabled ? 'yes' : 'no'}`,
+        `  Present in plugins.enabled: ${pluginEnabled ? 'yes' : 'no'}`,
+        `  Bot token stored: ${tokenStored ? 'yes' : 'no'}`,
+        `  Gateway sender registered: ${registered ? 'yes' : 'no'}`,
+        `  Runtime state: ${runtimeState}`,
+      ];
+
+      if (readyTag) {
+        lines.push(`  Logged in as: ${readyTag}`);
+      }
+
+      if (lastError) {
+        lines.push(`  Last error: ${lastError}`);
+      }
+
+      if (!registered || runtimeState === 'error') {
+        lines.push('  Summary: Discord is not currently online in this Tiny Claw runtime.');
+      } else if (runtimeState === 'connected') {
+        lines.push('  Summary: Discord is connected in this Tiny Claw runtime.');
+      } else {
+        lines.push('  Summary: Discord is configured but not yet confirmed online.');
+      }
+
+      return lines.join('\n');
+    },
+  };
+
+  allTools.push(discordStatusTool);
 
   // --- Create delegation v2 subsystems -----------------------------------
 
@@ -877,6 +1126,18 @@ export async function startCommand(): Promise<void> {
     if (ctx) updateContext = ctx;
   } catch (err) {
     logger.debug('Update check skipped', err);
+  }
+
+  // Check for plugin updates (non-blocking, same pattern as core)
+  try {
+    const communityIds = getCommunityPlugins(configManager);
+    const pluginUpdateInfo = await checkPluginUpdates(dataDir, communityIds);
+    const pluginCtx = buildPluginUpdateContext(pluginUpdateInfo);
+    if (pluginCtx) {
+      updateContext = (updateContext ?? '') + pluginCtx;
+    }
+  } catch (err) {
+    logger.debug('Plugin update check skipped', err);
   }
 
   const context = {
@@ -1115,7 +1376,18 @@ export async function startCommand(): Promise<void> {
   const gateway = createGateway();
 
   // Register web UI as a channel sender (SSE push)
-  gateway.register('web', webUI.getChannelSender());
+  const webSender = webUI.getChannelSender();
+  gateway.register('web', webSender);
+
+  // If the owner was claimed via CLI setup, the persisted ownerId has
+  // prefix "cli:" but only a "web" channel is registered. Register a
+  // "cli" alias so nudges for "cli:owner" route through the web sender.
+  if (persistedOwnerId?.startsWith('cli:') && !gateway.getRegisteredChannels().includes('cli')) {
+    gateway.register('cli', {
+      ...webSender,
+      name: `${webSender.name} (cli alias)`,
+    });
+  }
 
   // --- Nudge Engine -------------------------------------------------------
 
@@ -1217,6 +1489,55 @@ export async function startCommand(): Promise<void> {
         });
       } catch (err) {
         logger.debug('Nudge: update check skipped', err);
+      }
+    },
+  });
+
+  // Register plugin update check nudge (every 6 hours, same cadence as core)
+  pulse.register({
+    id: 'nudge-plugin-update-check',
+    schedule: '6h',
+    handler: async () => {
+      try {
+        const pluginUpdateInfo = await checkPluginUpdates(
+          dataDir,
+          getCommunityPlugins(configManager),
+        );
+        if (!pluginUpdateInfo || pluginUpdateInfo.updatableCount === 0) return;
+
+        const updatable = pluginUpdateInfo.plugins.filter((p) => p.updateAvailable);
+
+        // Deduplicate: skip if a pending nudge already covers these plugins
+        const pending = nudgeEngine.pending();
+        const alreadyQueued = pending.some((n) => n.category === 'plugin_update');
+        if (alreadyQueued) return;
+
+        const pluginList = updatable.map((p) => `${p.id} ${p.current} → ${p.latest}`).join(', ');
+
+        const ownerId = configManager.get<string>('owner.ownerId') || 'web:default';
+        nudgeEngine.schedule({
+          userId: ownerId,
+          category: 'plugin_update',
+          content: `Plugin updates available: ${pluginList}`,
+          priority: 'low',
+          deliverAfter: 0,
+          metadata: {
+            updatableCount: pluginUpdateInfo.updatableCount,
+            plugins: updatable.map((p) => ({
+              id: p.id,
+              current: p.current,
+              latest: p.latest,
+            })),
+            runtime: pluginUpdateInfo.runtime,
+          },
+        });
+
+        logger.info('Nudge: plugin update scheduled', {
+          count: pluginUpdateInfo.updatableCount,
+          plugins: pluginList,
+        });
+      } catch (err) {
+        logger.debug('Nudge: plugin update check skipped', err);
       }
     },
   });

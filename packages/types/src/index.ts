@@ -150,6 +150,17 @@ export const OWNER_ONLY_TOOLS: ReadonlySet<string> = new Set([
   // Discord channel management
   'discord_pair',
   'discord_unpair',
+  // Telegram channel management
+  'telegram_pair',
+  'telegram_unpair',
+  // Provider pairing
+  'openai_pair',
+  'openai_unpair',
+  'ollama_pair',
+  'ollama_unpair',
+  // Community plugin management
+  'plugin_install',
+  'plugin_remove',
 ]);
 
 /**
@@ -558,6 +569,8 @@ export interface SecretsManagerInterface {
   list(pattern?: string): Promise<string[]>;
   /** Convenience: resolve a provider API key by provider name */
   resolveProviderKey(providerName: string): Promise<string | null>;
+  /** Permanently destroy the underlying secrets store */
+  destroy(): Promise<void>;
   /** Close the underlying secrets engine */
   close(): Promise<void>;
 }
@@ -643,7 +656,10 @@ export interface ChannelPlugin extends PluginMeta {
 export interface ProviderPlugin extends PluginMeta {
   readonly type: 'provider';
   /** Create and return an initialized Provider instance. */
-  createProvider(secrets: SecretsManagerInterface): Promise<Provider>;
+  createProvider(
+    secrets: SecretsManagerInterface,
+    configManager: ConfigManagerInterface,
+  ): Promise<Provider>;
   /** Optional pairing tools for conversational setup (API key, model config). */
   getPairingTools?(secrets: SecretsManagerInterface, configManager: ConfigManagerInterface): Tool[];
 }

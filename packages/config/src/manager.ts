@@ -31,6 +31,26 @@ import { ConfigEngine } from '@wgtechlabs/config-engine';
 import type { TinyClawConfigData } from './types.js';
 import { CONFIG_DEFAULTS, TinyClawConfigSchema } from './types.js';
 
+/**
+ * config-engine 0.1.0 types its `schema` option as Zod 3 `ZodSchema`.
+ * This package depends on Zod 4, whose schema objects are not assignable
+ * to that type. Validation only needs `safeParse`, so use the pluggable
+ * validator and keep the Zod 4 schema.
+ */
+function validateConfig(data: unknown) {
+  const result = TinyClawConfigSchema.safeParse(data);
+  if (result.success) {
+    return { success: true as const, data: result.data };
+  }
+  return {
+    success: false as const,
+    errors: result.error.issues.map((issue) => {
+      const path = issue.path.length > 0 ? `\`${issue.path.join('.')}\` ` : '';
+      return `${path}${issue.message}`;
+    }),
+  };
+}
+
 export class ConfigManager implements ConfigManagerInterface {
   private engine: ConfigEngine<TinyClawConfigData>;
 
@@ -53,7 +73,7 @@ export class ConfigManager implements ConfigManagerInterface {
       cwd,
       configName: 'config',
       defaults: CONFIG_DEFAULTS,
-      schema: TinyClawConfigSchema,
+      validator: { validate: validateConfig },
       flushStrategy: 'batched',
       accessPropertiesByDotNotation: true,
     });

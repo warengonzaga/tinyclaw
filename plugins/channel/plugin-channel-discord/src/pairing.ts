@@ -29,6 +29,7 @@ export function createDiscordPairingTools(
       name: 'discord_pair',
       description:
         'Pair Tiny Claw with a Discord bot. ' +
+        'If the user has not provided a bot token yet, first walk them through creating one in the Discord Developer Portal and ask them to paste it here. ' +
         'Stores the bot token securely and enables the Discord channel plugin. ' +
         'After pairing, call tinyclaw_restart to connect the bot. ' +
         'To get a token: go to https://discord.com/developers/applications, ' +

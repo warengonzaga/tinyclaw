@@ -1,0 +1,39 @@
+{
+  "name": "@tinyclaw/plugin-provider-ollama",
+  "version": "2.0.0",
+  "description": "Ollama provider plugin for Tiny Claw",
+  "license": "GPL-3.0",
+  "author": "Waren Gonzaga",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warengonzaga/tinyclaw.git",
+    "directory": "plugins/provider/plugin-provider-ollama"
+  },
+  "homepage": "https://github.com/warengonzaga/tinyclaw/tree/main/plugins/provider/plugin-provider-ollama#readme",
+  "bugs": {
+    "url": "https://github.com/warengonzaga/tinyclaw/issues"
+  },
+  "keywords": [
+    "tinyclaw",
+    "plugin",
+    "provider",
+    "ollama"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tinyclaw/core": "workspace:*",
+    "@tinyclaw/logger": "workspace:*",
+    "@tinyclaw/types": "workspace:*"
+  }
+}

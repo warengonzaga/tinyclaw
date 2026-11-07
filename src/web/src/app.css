@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Ant Colony theme — neutral blacks + dark brown accents */
+  /* Tiny Claw theme — neutral blacks + signature orange-red accents */
   --color-bg-titlebar: #050505;
   --color-bg-primary: #0a0a0a;
   --color-bg-secondary: #111111;
@@ -11,10 +11,10 @@
 
   --color-text-normal: #e0e0e0;
   --color-text-muted: #8a8a8a;
-  --color-text-link: #c98540;
+  --color-text-link: #f47a3e;
 
-  --color-brand: #8b5a2b;
-  --color-brand-hover: #6d4422;
+  --color-brand: #e85216;
+  --color-brand-hover: #d44a12;
   --color-green: #7AB648;
   --color-yellow: #c49530;
   --color-red: #b24035;
