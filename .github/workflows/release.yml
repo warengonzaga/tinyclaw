@@ -51,7 +51,7 @@ jobs:
           fi
 
       - name: Create Release
-        uses: wgtechlabs/release-build-flow-action@v1.7.0
+        uses: wgtechlabs/release-build-flow-action@v1.8.0
         with:
           github-token: ${{ secrets.GH_PAT }}
           commit-convention: clean-commit
